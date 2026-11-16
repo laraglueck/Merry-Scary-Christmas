@@ -1,13 +1,15 @@
 # Network base (spec 03): one device hosts a room, up to two more join.
 # The host is the referee: other players only send requests, the host changes
 # the state and sends the new state to every player.
-# Used by the lobby now; later the hall uses it for the fuse puzzle.
+# Used by the lobby (room, counter) and the hall (the shared game, spec 04).
 extends Node
 
 const Settings = preload("res://scripts/settings.gd")
 const RoomCode = preload("res://scripts/net/room_code.gd")
+const GameRules = preload("res://scripts/rules/game_rules.gd")
 
-signal changed  # status, players or counter changed: the screen should update
+signal changed       # status, players or counter changed: the screen should update
+signal game_changed  # the shared game changed (spec 04)
 
 var status := "Create a room or join one."
 var connected := false
@@ -15,6 +17,7 @@ var my_index := -1          # 0 = Player 1 (host), 1 = Player 2, 2 = Player 3
 var players: Array = []     # player indexes in the room, e.g. [0, 1, 2]
 var counter := 0
 var room_code := ""         # host: the code others type in, e.g. "KRTW"
+var game := {}              # the shared game (spec 04): only the host changes it, everyone gets a copy
 
 var _peer_to_index := {}    # host only: network id -> player index (the host has id 1)
 var _rng := RandomNumberGenerator.new()
@@ -199,6 +202,58 @@ func _host_add_one(sender: int) -> void:
 	changed.emit()
 
 
+# ---------- the shared game (spec 04) ----------
+
+func can_start() -> bool:
+	return connected and my_index == 0 and players.size() == Settings.MAX_PLAYERS and game.is_empty()
+
+
+# Host: create the game and send it to everyone.
+func start_game() -> void:
+	if not can_start():
+		return
+	game = GameRules.new_game(_rng)
+	_send_game()
+	game_changed.emit()
+
+
+# Any player: "I want to do this". The host decides what happens.
+func send_action(action: String, data: Dictionary) -> void:
+	if not connected or game.is_empty():
+		return
+	if multiplayer.is_server():
+		_host_apply(1, action, data)
+	else:
+		_request_action.rpc_id(1, action, data)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _request_action(action: String, data: Dictionary) -> void:
+	if multiplayer.is_server():
+		_host_apply(multiplayer.get_remote_sender_id(), action, data)
+
+
+# Host only: check, then change (game_rules.gd), then tell everyone.
+func _host_apply(sender: int, action: String, data: Dictionary) -> void:
+	if not _peer_to_index.has(sender) or game.is_empty():
+		return
+	GameRules.apply(game, _peer_to_index[sender], action, data)
+	_send_game()
+	game_changed.emit()
+
+
+func _send_game() -> void:
+	for id in _peer_to_index:
+		if id != 1:
+			_receive_game.rpc_id(id, game)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_game(new_game: Dictionary) -> void:
+	game = new_game
+	game_changed.emit()
+
+
 # ---------- host: players come and go ----------
 
 func _on_peer_connected(id: int) -> void:
@@ -297,6 +352,7 @@ func _forget_room() -> void:
 	players = []
 	counter = 0
 	room_code = ""
+	game = {}
 	_peer_to_index = {}
 
 
@@ -308,4 +364,5 @@ func _close() -> void:
 	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+
 

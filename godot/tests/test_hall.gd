@@ -6,6 +6,7 @@
 extends "res://tests/base_test.gd"
 
 const HallScene = preload("res://scenes/hall.tscn")
+const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 
 const RED_RIGHT := ["white", "blue", "yellow", "black"]
 const GREEN_RIGHT := ["blue", "black", "yellow", "white"]
@@ -160,3 +161,53 @@ func test_everything_fits_in_the_window() -> void:
 	var penalty := find(hall, "PenaltyLabel")
 	if penalty != null:
 		assert_true(penalty.size.y < 40, "penalty counter is one line, height is %d" % penalty.size.y)
+
+
+# ---------- online: each device shows only its own player (spec 04) ----------
+
+func open_online_hall(net: Node) -> Node:
+	var hall = HallScene.instantiate()
+	hall.net = net
+	tree.root.add_child(hall)
+	return hall
+
+
+func test_online_hall_shows_only_my_player() -> void:
+	var room: Array = await make_started_room(47541)
+	var a = room[1]
+	var hall := open_online_hall(a)
+	press(hall, "FuseBoxButton")
+	var switch := find(hall, "PlayerButton0")
+	assert_eq(switch != null and switch.is_visible_in_tree(), false, "no player switch")
+	assert_contains(text_of(hall, "FuseTitle"), "Player 2", "who")
+	assert_contains(text_of(hall, "FuseTitle"), "GREEN", "own fuse")
+	if not a.game.is_empty():
+		var red_label := ", ".join(FuseRules.label_for(a.game["puzzle"], 0))
+		assert_contains(text_of(hall, "LabelHint"), "red fuse", "sees the red fuse's label")
+		assert_contains(text_of(hall, "LabelHint"), red_label, "label symbols")
+
+
+func test_online_right_wires_light_the_room_on_every_device() -> void:
+	var room: Array = await make_started_room(47542)
+	var host_hall := open_online_hall(room[0])
+	var a_hall := open_online_hall(room[1])
+	press(a_hall, "FuseBoxButton")
+	if not room[1].game.is_empty():
+		click_wires(a_hall, room[1].game["puzzle"]["fuses"][1]["order"])
+	var both_lit := func(): return "lit" in text_of(host_hall, "RoomLamp1") and "lit" in text_of(a_hall, "RoomLamp1")
+	assert_true(await wait_until(both_lit), "bathroom lit on host and on Player 2")
+	assert_contains(text_of(host_hall, "Message"), "Player 2 turned on the green fuse", "event on the host")
+
+
+func test_online_wrong_wires_cost_penalty_on_every_device() -> void:
+	var room: Array = await make_started_room(47543)
+	var host_hall := open_online_hall(room[0])
+	var b_hall := open_online_hall(room[2])
+	press(b_hall, "FuseBoxButton")
+	if not room[2].game.is_empty():
+		var wrong: Array = room[2].game["puzzle"]["fuses"][2]["order"].duplicate()
+		wrong.reverse()
+		click_wires(b_hall, wrong)
+	var both_10 := func(): return text_of(host_hall, "PenaltyLabel") == "Penalty: 10 s" and text_of(b_hall, "PenaltyLabel") == "Penalty: 10 s"
+	assert_true(await wait_until(both_10), "10 s on host and on Player 3")
+	assert_contains(text_of(b_hall, "Message"), "Player 3: wrong order", "event on Player 3")

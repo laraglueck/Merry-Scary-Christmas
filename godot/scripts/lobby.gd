@@ -1,10 +1,11 @@
 # The lobby (spec 03): create a room or join one, then share a counter.
 # All network work happens in network.gd; this script only shows it.
+# main.gd hands in its network (net); started alone, the lobby makes its own.
 extends Control
 
 const NetworkScript = preload("res://scripts/net/network.gd")
 
-var net: Node
+var net: Node = null
 
 var _create_button: Button
 var _address_field: LineEdit
@@ -14,12 +15,14 @@ var _room_code_label: Label
 var _players_label: Label
 var _counter_label: Label
 var _add_button: Button
+var _start_button: Button
 
 
 func _ready() -> void:
-	net = NetworkScript.new()
-	net.name = "Network"
-	add_child(net)
+	if net == null:
+		net = NetworkScript.new()
+		net.name = "Network"
+		add_child(net)
 	net.changed.connect(_refresh)
 	_build_ui()
 	_refresh()
@@ -37,6 +40,10 @@ func _on_add_pressed() -> void:
 	net.add_one()
 
 
+func _on_start_pressed() -> void:
+	net.start_game()
+
+
 func _refresh() -> void:
 	_status_label.text = net.status
 	_room_code_label.text = ("Room code: " + net.room_code) if net.room_code != "" else ""
@@ -50,6 +57,9 @@ func _refresh() -> void:
 	_join_button.disabled = busy
 	_address_field.editable = not busy
 	_add_button.disabled = not net.connected
+	_start_button.visible = net.connected and net.my_index == 0
+	_start_button.disabled = not net.can_start()
+	_start_button.text = "Start game" if net.can_start() else "Start game (needs %d players)" % 3
 
 
 # ---------- building the screen (runs once) ----------
@@ -131,3 +141,9 @@ func _build_ui() -> void:
 	_add_button.custom_minimum_size = Vector2(90, 48)
 	_add_button.pressed.connect(_on_add_pressed)
 	counter_row.add_child(_add_button)
+
+	_start_button = Button.new()
+	_start_button.name = "StartButton"
+	_start_button.custom_minimum_size = Vector2(0, 56)
+	_start_button.pressed.connect(_on_start_pressed)
+	page.add_child(_start_button)
