@@ -1,5 +1,7 @@
 # The hall (spec 02): house plan with legend and room lamps, fuse box, fuse panel.
-# One screen for now: the player buttons switch whose view we see.
+# Offline (no net, spec 02): one screen, the player buttons switch whose view we see.
+# Online (main.gd hands in a net with a game, spec 04): this device shows only
+# its own player; clicks go to the host, and the shared game comes back.
 # The rules live in fuse_rules.gd. This script only shows them and reacts to clicks.
 extends Control
 
@@ -15,6 +17,7 @@ const LAMP_OFF := Color("7a6a6a")
 
 # -1 means: a new random puzzle at every start. Tests set a fixed seed.
 @export var seed_value := -1
+var net: Node = null  # set by main.gd for online play
 
 var puzzle: Dictionary
 var current_player := 0
@@ -35,13 +38,40 @@ var _message: Label
 
 
 func _ready() -> void:
-	var rng := RandomNumberGenerator.new()
-	if seed_value >= 0:
-		rng.seed = seed_value
+	if _online():
+		current_player = net.my_index
+		_take_game()
+		net.game_changed.connect(_on_game_changed)
 	else:
-		rng.randomize()
-	puzzle = Rules.create_puzzle(rng)
+		var rng := RandomNumberGenerator.new()
+		if seed_value >= 0:
+			rng.seed = seed_value
+		else:
+			rng.randomize()
+		puzzle = Rules.create_puzzle(rng)
 	_build_ui()
+	if _online():
+		for button in _player_buttons:
+			button.visible = false  # each device is one player
+		_message.text = net.game["last_event"]
+	_refresh()
+
+
+func _online() -> bool:
+	return net != null and not net.game.is_empty()
+
+
+# Online: copy what we show from the shared game.
+func _take_game() -> void:
+	puzzle = net.game["puzzle"]
+	penalty_total = net.game["penalty_seconds"]
+
+
+func _on_game_changed() -> void:
+	if not _online():
+		return  # game is over (host left); main.gd switches the screen
+	_take_game()
+	_message.text = net.game["last_event"]
 	_refresh()
 
 
@@ -73,6 +103,10 @@ func _on_reset_pressed() -> void:
 
 # 4 wires chosen: ask the rules, then show the result.
 func _submit_attempt() -> void:
+	if _online():
+		net.send_action("try_fuse", {"wires": chosen.duplicate()})  # the host decides
+		chosen.clear()
+		return
 	var fuse: Dictionary = puzzle["fuses"][current_player]
 	var result := Rules.try_fuse(puzzle, current_player, chosen)
 	chosen.clear()
