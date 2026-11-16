@@ -21,32 +21,9 @@ func open_hall() -> Node:
 	return hall
 
 
-func find(hall: Node, node_name: String) -> Node:
-	var node := hall.find_child(node_name, true, false)
-	if node == null:
-		failures.append("node not found: " + node_name)
-	return node
-
-
-func press(hall: Node, node_name: String) -> void:
-	var button := find(hall, node_name)
-	if button != null:
-		button.pressed.emit()
-
-
-func text_of(hall: Node, node_name: String) -> String:
-	var node := find(hall, node_name)
-	return node.text if node != null else ""
-
-
 func click_wires(hall: Node, colours: Array) -> void:
 	for colour in colours:
 		press(hall, "Wire_" + colour)
-
-
-func is_disabled(hall: Node, node_name: String) -> bool:
-	var button := find(hall, node_name)
-	return button != null and button.disabled
 
 
 # ---------- house plan ----------
