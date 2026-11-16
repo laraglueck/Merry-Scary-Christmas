@@ -35,6 +35,7 @@ var _lit_before: Array[bool] = [false, false, false]
 var _flicker: ColorRect        # dark overlay that flickers (spec 05)
 var _flicker_timer: Timer
 var _flicker_rng := RandomNumberGenerator.new()
+var _flicker_steps: Array = []  # what is left of the current flicker cycle
 var _player_buttons: Array[Button] = []
 var _penalty_label: Label
 var _fuse_panel: PanelContainer
@@ -186,6 +187,16 @@ static func flicker_strength(lit_count: int) -> float:
 	return Settings.FLICKER_MAX_DARKNESS * float(total - clampi(lit_count, 0, total)) / total
 
 
+# One flicker cycle like a loose bulb, as steps [darkness, seconds]:
+# a calm pause first, then a short burst of 2 to 4 quick dips.
+static func flicker_cycle(rng: RandomNumberGenerator, strength: float) -> Array:
+	var steps := [[0.0, rng.randf_range(Settings.FLICKER_PAUSE_MIN_SECONDS, Settings.FLICKER_PAUSE_MAX_SECONDS)]]
+	for i in rng.randi_range(2, 4):
+		steps.append([strength * rng.randf_range(0.5, 1.0), rng.randf_range(0.04, 0.09)])  # dip
+		steps.append([0.0, rng.randf_range(0.05, 0.12)])                                # light back
+	return steps
+
+
 func flicker_active() -> bool:
 	return _flicker_timer != null and not _flicker_timer.is_stopped()
 
@@ -193,16 +204,19 @@ func flicker_active() -> bool:
 func _update_flicker(lit_count: int) -> void:
 	if flicker_strength(lit_count) <= 0.0:
 		_flicker_timer.stop()
+		_flicker_steps.clear()
 		_flicker.color.a = 0.0  # power is back: steady light
 	elif _flicker_timer.is_stopped():
 		_flicker_timer.start(0.1)
 
 
-# Mostly calm, now and then the light dips. Then wait a random short time.
+# Next step of the cycle; a new cycle (with the current strength) when one is done.
 func _on_flicker_tick() -> void:
-	var strength := flicker_strength(Rules.lit_rooms(puzzle).size())
-	_flicker.color.a = _flicker_rng.randf_range(0.0, strength) if _flicker_rng.randf() < 0.6 else 0.0
-	_flicker_timer.start(_flicker_rng.randf_range(0.05, 0.4))
+	if _flicker_steps.is_empty():
+		_flicker_steps = flicker_cycle(_flicker_rng, flicker_strength(Rules.lit_rooms(puzzle).size()))
+	var step: Array = _flicker_steps.pop_front()
+	_flicker.color.a = step[0]
+	_flicker_timer.start(step[1])
 
 
 # A room tile flashes bright for a moment when its light comes on.
