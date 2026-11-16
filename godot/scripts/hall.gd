@@ -14,6 +14,9 @@ const UI_COLOURS := {
 }
 const LAMP_ON := Color("ffd76a")
 const LAMP_OFF := Color("7a6a6a")
+const ROOM_DARK := Color("2b2424")  # house plan tile, fuse off (spec 05)
+const ROOM_LIT := Color("f3c66b")   # house plan tile, fuse on
+const ROOM_TEXT_ON_LIT := Color("3b2210")
 
 # -1 means: a new random puzzle at every start. Tests set a fixed seed.
 @export var seed_value := -1
@@ -27,6 +30,11 @@ var penalty_total := 0
 # Nodes we change later (built in _build_ui)
 var _legend_label: Label
 var _lamps: Array[Label] = []
+var _tiles: Array[PanelContainer] = []
+var _lit_before: Array[bool] = [false, false, false]
+var _flicker: ColorRect        # dark overlay that flickers (spec 05)
+var _flicker_timer: Timer
+var _flicker_rng := RandomNumberGenerator.new()
 var _player_buttons: Array[Button] = []
 var _penalty_label: Label
 var _fuse_panel: PanelContainer
@@ -132,7 +140,12 @@ func _refresh() -> void:
 		var room: String = puzzle["fuses"][i]["room"]
 		var is_lit := room in lit
 		_lamps[i].text = "%s: %s" % [room, "lit" if is_lit else "dark"]
-		_lamps[i].add_theme_color_override("font_color", LAMP_ON if is_lit else LAMP_OFF)
+		_lamps[i].add_theme_color_override("font_color", ROOM_TEXT_ON_LIT if is_lit else LAMP_OFF)
+		_tiles[i].add_theme_stylebox_override("panel", _box(ROOM_LIT if is_lit else ROOM_DARK, Color("3b2a26"), 8))
+		if is_lit and not _lit_before[i]:
+			_glow(_tiles[i])
+		_lit_before[i] = is_lit
+	_update_flicker(lit.size())
 
 	for i in _player_buttons.size():
 		_player_buttons[i].button_pressed = (i == current_player)
@@ -163,6 +176,39 @@ func _fuse_seen_by(player: int) -> int:
 		if Rules.label_viewer(i) == player:
 			return i
 	return -1
+
+
+# ---------- atmosphere (spec 05) ----------
+
+# How dark the flicker may get: strongest with 0 fuses on, 0 with all fuses on.
+static func flicker_strength(lit_count: int) -> float:
+	var total := Settings.FUSES.size()
+	return Settings.FLICKER_MAX_DARKNESS * float(total - clampi(lit_count, 0, total)) / total
+
+
+func flicker_active() -> bool:
+	return _flicker_timer != null and not _flicker_timer.is_stopped()
+
+
+func _update_flicker(lit_count: int) -> void:
+	if flicker_strength(lit_count) <= 0.0:
+		_flicker_timer.stop()
+		_flicker.color.a = 0.0  # power is back: steady light
+	elif _flicker_timer.is_stopped():
+		_flicker_timer.start(0.1)
+
+
+# Mostly calm, now and then the light dips. Then wait a random short time.
+func _on_flicker_tick() -> void:
+	var strength := flicker_strength(Rules.lit_rooms(puzzle).size())
+	_flicker.color.a = _flicker_rng.randf_range(0.0, strength) if _flicker_rng.randf() < 0.6 else 0.0
+	_flicker_timer.start(_flicker_rng.randf_range(0.05, 0.4))
+
+
+# A room tile flashes bright for a moment when its light comes on.
+func _glow(tile: Control) -> void:
+	tile.modulate = Color(1.8, 1.8, 1.8)
+	create_tween().tween_property(tile, "modulate", Color.WHITE, 0.8)
 
 
 # ---------- building the screen (runs once) ----------
@@ -221,7 +267,11 @@ func _build_ui() -> void:
 	_legend_label.name = "LegendLabel"
 	_label(plan, "Rooms", 18).add_theme_color_override("font_color", Color("c9b8a0"))
 	for i in Settings.FUSES.size():
-		var lamp := _label(plan, "", 20)
+		var tile := PanelContainer.new()
+		tile.name = "RoomTile%d" % i
+		plan.add_child(tile)
+		_tiles.append(tile)
+		var lamp := _label(tile, "", 20)
 		lamp.name = "RoomLamp%d" % i
 		_lamps.append(lamp)
 
@@ -274,6 +324,20 @@ func _build_ui() -> void:
 	_message.name = "Message"
 	_message.add_theme_color_override("font_color", Color("ffd76a"))
 
+	# Flickering light (spec 05): a dark layer over everything that lets clicks through.
+	_flicker = ColorRect.new()
+	_flicker.name = "FlickerOverlay"
+	_flicker.color = Color(0, 0, 0, 0)
+	_flicker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flicker.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_flicker)
+	_flicker_rng.randomize()
+	_flicker_timer = Timer.new()
+	_flicker_timer.name = "FlickerTimer"
+	_flicker_timer.one_shot = true
+	_flicker_timer.timeout.connect(_on_flicker_tick)
+	add_child(_flicker_timer)
+
 
 # wrap = true only for labels with a fixed width (inside a panel or the page).
 # In a row (HBoxContainer) a wrapping label gets squeezed to 1 pixel width
@@ -301,13 +365,13 @@ func _card(parent: Node, heading: String) -> VBoxContainer:
 	return content
 
 
-func _box(fill: Color, border: Color) -> StyleBoxFlat:
+func _box(fill: Color, border: Color, margin := 16) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
 	style.border_color = border
 	style.set_border_width_all(3)
 	style.set_corner_radius_all(10)
-	style.set_content_margin_all(16)
+	style.set_content_margin_all(margin)
 	return style
 
 
@@ -325,3 +389,4 @@ func _wire_button(colour: String) -> Button:
 		button.add_theme_color_override(state, text_colour)
 	button.pressed.connect(_on_wire_pressed.bind(colour))
 	return button
+

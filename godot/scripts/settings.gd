@@ -22,3 +22,6 @@ const DISCOVERY_ADDRESSES := ["255.255.255.255", "127.0.0.1"]  # Wi-Fi broadcast
 const ANNOUNCE_INTERVAL_SECONDS := 0.5
 const ROOM_CODE_LENGTH := 4
 const ROOM_CODE_LETTERS := "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I and O: easy to read aloud
+
+# Hall atmosphere
+const FLICKER_MAX_DARKNESS := 0.45  # 0 = no flicker, 1 = completely dark

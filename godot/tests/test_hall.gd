@@ -7,6 +7,7 @@ extends "res://tests/base_test.gd"
 
 const HallScene = preload("res://scenes/hall.tscn")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
+const HallScript = preload("res://scripts/hall.gd")
 
 const RED_RIGHT := ["white", "blue", "yellow", "black"]
 const GREEN_RIGHT := ["blue", "black", "yellow", "white"]
@@ -154,7 +155,7 @@ func test_everything_fits_in_the_window() -> void:
 	await tree.process_frame  # let Godot arrange the boxes
 	await tree.process_frame
 	var window := Rect2(Vector2.ZERO, Vector2(1152, 648))
-	for node_name in ["PenaltyLabel", "FusePanel", "RoomLamp2", "Message"]:
+	for node_name in ["PenaltyLabel", "FusePanel", "RoomLamp2", "RoomTile2", "Message"]:
 		var node := find(hall, node_name)
 		if node != null:
 			assert_true(window.encloses(node.get_global_rect()), "%s inside the window, is %s" % [node_name, node.get_global_rect()])
@@ -211,3 +212,50 @@ func test_online_wrong_wires_cost_penalty_on_every_device() -> void:
 	var both_10 := func(): return text_of(host_hall, "PenaltyLabel") == "Penalty: 10 s" and text_of(b_hall, "PenaltyLabel") == "Penalty: 10 s"
 	assert_true(await wait_until(both_10), "10 s on host and on Player 3")
 	assert_contains(text_of(b_hall, "Message"), "Player 3: wrong order", "event on Player 3")
+
+
+# ---------- atmosphere (spec 05) ----------
+
+func tile_colour(hall: Node, index: int) -> Color:
+	var tile := find(hall, "RoomTile%d" % index)
+	if tile == null:
+		return Color.TRANSPARENT
+	return tile.get_theme_stylebox("panel").bg_color
+
+
+func test_flicker_gets_weaker_with_each_fuse() -> void:
+	var strengths := []
+	for lit in [0, 1, 2, 3]:
+		strengths.append(HallScript.flicker_strength(lit))
+	assert_true(strengths[0] > strengths[1] and strengths[1] > strengths[2] and strengths[2] > strengths[3], "weaker each time: %s" % [strengths])
+	assert_eq(strengths[3], 0.0, "no flicker with all 3 fuses on")
+
+
+func test_hall_flickers_until_all_fuses_are_on() -> void:
+	var hall := open_hall()
+	assert_eq(hall.flicker_active(), true, "flickers at the start")
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(hall.flicker_active(), true, "still flickers with 1 fuse on")
+	press(hall, "PlayerButton1")
+	click_wires(hall, GREEN_RIGHT)
+	press(hall, "PlayerButton2")
+	click_wires(hall, GOLD_RIGHT)
+	assert_eq(hall.flicker_active(), false, "stops with all 3 fuses on")
+	var overlay := find(hall, "FlickerOverlay")
+	assert_eq(overlay != null and overlay.color.a == 0.0, true, "overlay fully clear")
+
+
+func test_flicker_overlay_lets_clicks_through() -> void:
+	var overlay := find(open_hall(), "FlickerOverlay")
+	assert_eq(overlay != null and overlay.mouse_filter == Control.MOUSE_FILTER_IGNORE, true, "ignores the mouse")
+
+
+func test_room_tiles_light_up_with_their_fuse() -> void:
+	var hall := open_hall()
+	var dark := tile_colour(hall, 0)
+	assert_eq(tile_colour(hall, 1), dark, "all tiles dark at the start")
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(tile_colour(hall, 0), HallScript.ROOM_LIT, "living/dining room tile lit")
+	assert_eq(tile_colour(hall, 1), HallScript.ROOM_DARK, "bathroom tile still dark")
