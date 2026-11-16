@@ -12,3 +12,8 @@ const FUSES := [
 	{"colour": "green", "room": "bathroom"},
 	{"colour": "gold", "room": "bedroom"},
 ]
+
+# Network
+const NETWORK_PORT := 47411
+const MAX_PLAYERS := 3
+const JOIN_TIMEOUT_SECONDS := 5.0
