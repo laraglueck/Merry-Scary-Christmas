@@ -24,4 +24,6 @@ const ROOM_CODE_LENGTH := 4
 const ROOM_CODE_LETTERS := "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I and O: easy to read aloud
 
 # Hall atmosphere
-const FLICKER_MAX_DARKNESS := 0.45  # 0 = no flicker, 1 = completely dark
+const FLICKER_MAX_DARKNESS := 0.25      # 0 = no flicker, 1 = completely dark
+const FLICKER_PAUSE_MIN_SECONDS := 0.6   # calm time between two bursts
+const FLICKER_PAUSE_MAX_SECONDS := 1.8

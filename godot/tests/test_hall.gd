@@ -8,6 +8,7 @@ extends "res://tests/base_test.gd"
 const HallScene = preload("res://scenes/hall.tscn")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const HallScript = preload("res://scripts/hall.gd")
+const Settings = preload("res://scripts/settings.gd")
 
 const RED_RIGHT := ["white", "blue", "yellow", "black"]
 const GREEN_RIGHT := ["blue", "black", "yellow", "white"]
@@ -259,3 +260,24 @@ func test_room_tiles_light_up_with_their_fuse() -> void:
 	click_wires(hall, RED_RIGHT)
 	assert_eq(tile_colour(hall, 0), HallScript.ROOM_LIT, "living/dining room tile lit")
 	assert_eq(tile_colour(hall, 1), HallScript.ROOM_DARK, "bathroom tile still dark")
+
+
+# Bug from manual test 1 (spec 05): flicker was too strong and too restless.
+
+func test_flicker_is_gentle() -> void:
+	assert_true(HallScript.flicker_strength(0) <= 0.3, "at most 30 %% dark, is %s" % HallScript.flicker_strength(0))
+
+
+func test_flicker_comes_in_short_bursts_with_calm_pauses() -> void:
+	var rng := RandomNumberGenerator.new()
+	for seed_value in [1, 2, 3, 4, 5]:
+		rng.seed = seed_value
+		var steps: Array = HallScript.flicker_cycle(rng, 0.3)
+		assert_eq(steps[0][0], 0.0, "starts calm")
+		var pause: float = steps[0][1]
+		assert_true(pause >= Settings.FLICKER_PAUSE_MIN_SECONDS and pause <= Settings.FLICKER_PAUSE_MAX_SECONDS, "calm pause, is %s s" % pause)
+		var dips := steps.filter(func(step): return step[0] > 0.0)
+		assert_true(dips.size() >= 2 and dips.size() <= 4, "2 to 4 dips, is %d" % dips.size())
+		for dip in dips:
+			assert_true(dip[1] <= 0.1, "dip is short, is %s s" % dip[1])
+			assert_true(dip[0] <= 0.3, "dip not darker than the strength, is %s" % dip[0])

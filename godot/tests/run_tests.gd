@@ -42,7 +42,16 @@ func _run_all() -> void:
 		if not (file_name.begins_with("test_") and file_name.ends_with(".gd")):
 			continue
 		print("\n" + file_name)
+		catcher.errors.clear()
 		var script: GDScript = load("res://tests/" + file_name)
+		# A test file Godot can't read (e.g. it uses a name that doesn't exist yet)
+		# must count as red, not be skipped silently.
+		if script == null or not script.can_instantiate():
+			failed += 1
+			print("  FAIL  (could not load the file)")
+			for problem in catcher.errors:
+				print("        ", problem)
+			continue
 		for method in script.get_script_method_list():
 			var name: String = method["name"]
 			if not name.begins_with("test_"):
