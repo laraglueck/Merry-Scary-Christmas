@@ -5,6 +5,8 @@
 extends "res://tests/base_test.gd"
 
 const NetworkScript = preload("res://scripts/net/network.gd")
+const RoomCode = preload("res://scripts/net/room_code.gd")
+const Settings = preload("res://scripts/settings.gd")
 
 
 func make_device(device_name: String) -> Node:
@@ -137,3 +139,85 @@ func test_players_see_when_host_leaves() -> void:
 	host.get_parent().free()  # the host's device is gone
 	assert_true(await wait_until(func(): return "host left" in a.status.to_lower()), "status: " + a.status)
 	assert_eq(a.connected, false, "A not connected any more")
+
+
+# ---------- room code (spec 03b) ----------
+
+func test_host_gets_a_room_code() -> void:
+	var host := make_device("Host")
+	host.host_room(47511)
+	assert_true(RoomCode.is_valid_code(host.room_code), "valid code: '%s'" % host.room_code)
+	assert_contains(host.status, host.room_code, "code shown in status")
+
+
+func test_join_by_room_code() -> void:
+	var host := make_device("Host")
+	host.host_room(47512)
+	var a := make_device("A")
+	a.join(host.room_code)
+	assert_true(await wait_until(func(): return a.connected), "A connected with the code, status: " + a.status)
+	assert_eq(a.my_index, 1, "A is Player 2")
+
+
+func test_join_by_code_in_lower_case_with_spaces() -> void:
+	var host := make_device("Host")
+	host.host_room(47513)
+	var a := make_device("A")
+	a.join("  " + host.room_code.to_lower() + " ")
+	assert_true(await wait_until(func(): return a.connected), "A connected, status: " + a.status)
+
+
+func test_two_players_join_by_code_one_after_another() -> void:
+	var host := make_device("Host")
+	host.host_room(47514)
+	var a := make_device("A")
+	a.join(host.room_code)
+	await wait_until(func(): return a.connected)
+	var b := make_device("B")
+	b.join(host.room_code)
+	assert_true(await wait_until(func(): return b.connected), "B connected, status: " + b.status)
+	assert_eq([a.my_index, b.my_index], [1, 2], "player indexes")
+
+
+func test_unknown_room_code_is_not_found() -> void:
+	var a := make_device("A")
+	a.join("ZZZZ", Settings.NETWORK_PORT, 0.5)
+	assert_true(await wait_until(func(): return "not found" in a.status.to_lower()), "status: " + a.status)
+	assert_eq(a.connected, false, "not connected")
+	assert_eq(a.is_active(), false, "not searching any more")
+
+
+func test_join_by_address_still_works() -> void:
+	var host := make_device("Host")
+	host.host_room(47516)
+	var a := make_device("A")
+	a.join("127.0.0.1", 47516)
+	assert_true(await wait_until(func(): return a.connected), "A connected with the address")
+
+
+func test_invalid_input_is_rejected() -> void:
+	var a := make_device("A")
+	a.join("hello!")
+	assert_contains(a.status, "not a valid room code or address", "status")
+	assert_eq(a.is_active(), false, "not searching")
+
+
+func test_code_is_gone_when_host_leaves() -> void:
+	var host := make_device("Host")
+	host.host_room(47518)
+	var code: String = host.room_code
+	host.get_parent().free()
+	await wait_frames(5)
+	var a := make_device("A")
+	a.join(code, Settings.NETWORK_PORT, 0.5)
+	assert_true(await wait_until(func(): return "not found" in a.status.to_lower()), "status: " + a.status)
+
+
+func test_room_with_other_code_is_ignored() -> void:
+	var host := make_device("Host")
+	host.host_room(47519)
+	var other_code := "ZZZZ" if host.room_code != "ZZZZ" else "YYYY"
+	var a := make_device("A")
+	a.join(other_code, Settings.NETWORK_PORT, 0.5)
+	assert_true(await wait_until(func(): return "not found" in a.status.to_lower()), "status: " + a.status)
+	assert_eq(a.connected, false, "did not join the wrong room")

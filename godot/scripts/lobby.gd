@@ -10,6 +10,7 @@ var _create_button: Button
 var _address_field: LineEdit
 var _join_button: Button
 var _status_label: Label
+var _room_code_label: Label
 var _players_label: Label
 var _counter_label: Label
 var _add_button: Button
@@ -29,7 +30,7 @@ func _on_create_pressed() -> void:
 
 
 func _on_join_pressed() -> void:
-	net.join_room(_address_field.text)
+	net.join(_address_field.text)
 
 
 func _on_add_pressed() -> void:
@@ -38,6 +39,7 @@ func _on_add_pressed() -> void:
 
 func _refresh() -> void:
 	_status_label.text = net.status
+	_room_code_label.text = ("Room code: " + net.room_code) if net.room_code != "" else ""
 	var names := []
 	for index in net.players:
 		names.append("Player %d%s" % [index + 1, " (you)" if index == net.my_index else ""])
@@ -90,7 +92,7 @@ func _build_ui() -> void:
 	page.add_child(join_row)
 	_address_field = LineEdit.new()
 	_address_field.name = "AddressField"
-	_address_field.placeholder_text = "Host address, e.g. 192.168.1.42 (same computer: 127.0.0.1)"
+	_address_field.placeholder_text = "Room code (e.g. KRTW) or host address"
 	_address_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	join_row.add_child(_address_field)
 	_join_button = Button.new()
@@ -105,6 +107,12 @@ func _build_ui() -> void:
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # full width: wrapping is safe here
 	_status_label.add_theme_color_override("font_color", Color("ffd76a"))
 	page.add_child(_status_label)
+
+	_room_code_label = Label.new()
+	_room_code_label.name = "RoomCodeLabel"
+	_room_code_label.add_theme_font_size_override("font_size", 40)
+	_room_code_label.add_theme_color_override("font_color", Color("d4af37"))
+	page.add_child(_room_code_label)
 
 	_players_label = Label.new()
 	_players_label.name = "PlayersLabel"

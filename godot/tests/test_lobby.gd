@@ -2,6 +2,7 @@
 extends "res://tests/base_test.gd"
 
 const LobbyScene = preload("res://scenes/lobby.tscn")
+const RoomCode = preload("res://scripts/net/room_code.gd")
 
 
 func open_lobby() -> Node:
@@ -30,11 +31,19 @@ func test_create_room_makes_you_player_1_and_counter_works() -> void:
 	assert_eq(text_of(lobby, "CounterLabel"), "Counter: 1", "counter after +1")
 
 
-func test_join_with_invalid_address_shows_error() -> void:
+func test_join_with_invalid_input_shows_error() -> void:
 	var lobby := open_lobby()
 	var field := find(lobby, "AddressField")
 	if field != null:
-		field.text = "hello"
+		field.text = "hello!"
 	press(lobby, "JoinButton")
-	assert_contains(text_of(lobby, "StatusLabel"), "not a valid address", "status")
+	assert_contains(text_of(lobby, "StatusLabel"), "not a valid room code or address", "status")
 	assert_eq(is_disabled(lobby, "JoinButton"), false, "join still possible")
+
+
+func test_create_room_shows_room_code() -> void:
+	var lobby := open_lobby()
+	press(lobby, "CreateButton")
+	var text := text_of(lobby, "RoomCodeLabel")
+	assert_true(text.begins_with("Room code: "), "label: " + text)
+	assert_true(RoomCode.is_valid_code(text.trim_prefix("Room code: ")), "valid code in: " + text)

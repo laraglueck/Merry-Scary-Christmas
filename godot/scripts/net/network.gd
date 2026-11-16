@@ -5,6 +5,7 @@
 extends Node
 
 const Settings = preload("res://scripts/settings.gd")
+const RoomCode = preload("res://scripts/net/room_code.gd")
 
 signal changed  # status, players or counter changed: the screen should update
 
@@ -13,11 +14,23 @@ var connected := false
 var my_index := -1          # 0 = Player 1 (host), 1 = Player 2, 2 = Player 3
 var players: Array = []     # player indexes in the room, e.g. [0, 1, 2]
 var counter := 0
+var room_code := ""         # host: the code others type in, e.g. "KRTW"
 
 var _peer_to_index := {}    # host only: network id -> player index (the host has id 1)
+var _rng := RandomNumberGenerator.new()
+
+# Host: tells the Wi-Fi "room KRTW is here" every 0.5 s
+var _announce_socket: PacketPeerUDP
+var _announce_wait := 0.0
+var _room_port := 0
+# Player: listens for the announcement of the room code we are looking for
+var _search_socket: PacketPeerUDP
+var _search_code := ""
+var _search_time_left := 0.0
 
 
 func _ready() -> void:
+	_rng.randomize()
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
@@ -29,9 +42,19 @@ func _exit_tree() -> void:
 	_close()
 
 
-# True while hosting, joining or connected.
+# True while hosting, searching, joining or connected.
 func is_active() -> bool:
-	return multiplayer.multiplayer_peer is ENetMultiplayerPeer
+	return multiplayer.multiplayer_peer is ENetMultiplayerPeer or _search_socket != null
+
+
+func _process(delta: float) -> void:
+	if _announce_socket != null:
+		_announce_wait -= delta
+		if _announce_wait <= 0.0:
+			_announce_wait = Settings.ANNOUNCE_INTERVAL_SECONDS
+			_announce()
+	if _search_socket != null:
+		_listen_for_room(delta)
 
 
 # ---------- pure helpers ----------
@@ -68,11 +91,25 @@ func host_room(port := Settings.NETWORK_PORT) -> void:
 	connected = true
 	players = [0]
 	counter = 0
+	room_code = RoomCode.make_code(_rng)
+	_room_port = port
+	_announce_socket = PacketPeerUDP.new()
+	_announce_socket.set_broadcast_enabled(true)
+	_announce_wait = 0.0  # announce right away in the next frame
 	var addresses := lan_addresses(Array(IP.get_local_addresses()))
-	if addresses.is_empty():
-		_set_status("Room open. No Wi-Fi found: on this computer join with 127.0.0.1.")
+	var plan_b := ", ".join(addresses) if not addresses.is_empty() else "127.0.0.1 (this computer only)"
+	_set_status("Room open. Room code: %s  (plan B: join with address %s)" % [room_code, plan_b])
+
+
+# One field for both: a room code ("KRTW") or the host's address (plan B).
+func join(text: String, port := Settings.NETWORK_PORT, timeout := Settings.JOIN_TIMEOUT_SECONDS) -> void:
+	var cleaned := text.strip_edges()
+	if cleaned.is_valid_ip_address():
+		join_room(cleaned, port, timeout)
+	elif RoomCode.is_valid_code(cleaned):
+		_search_for_room(RoomCode.normalize(cleaned), timeout)
 	else:
-		_set_status("Room open. Others join with: " + ", ".join(addresses))
+		_set_status("Not a valid room code or address: \"%s\"" % cleaned)
 
 
 func join_room(address: String, port := Settings.NETWORK_PORT, timeout := Settings.JOIN_TIMEOUT_SECONDS) -> void:
@@ -88,6 +125,52 @@ func join_room(address: String, port := Settings.NETWORK_PORT, timeout := Settin
 	multiplayer.multiplayer_peer = peer
 	_set_status("Connecting to %s ..." % address)
 	get_tree().create_timer(timeout).timeout.connect(_on_join_timeout.bind(peer, address))
+
+
+# ---------- finding a room by its code ----------
+
+# Host: "MSC1|KRTW|47411" to the whole Wi-Fi and to this computer.
+func _announce() -> void:
+	var message := RoomCode.announce_message(room_code, _room_port).to_utf8_buffer()
+	for address in Settings.DISCOVERY_ADDRESSES:
+		_announce_socket.set_dest_address(address, Settings.DISCOVERY_PORT)
+		_announce_socket.put_packet(message)
+
+
+func _search_for_room(code: String, timeout: float) -> void:
+	_search_socket = PacketPeerUDP.new()
+	var error := _search_socket.bind(Settings.DISCOVERY_PORT, "0.0.0.0")
+	if error != OK:
+		_search_socket = null
+		_set_status("Can't search right now (port %d busy). Try again, or type the host's address." % Settings.DISCOVERY_PORT)
+		return
+	_search_code = code
+	_search_time_left = timeout
+	_set_status("Looking for room %s ..." % code)
+
+
+# Player: read all messages that arrived; join the host with our code.
+func _listen_for_room(delta: float) -> void:
+	while _search_socket.get_available_packet_count() > 0:
+		var text := _search_socket.get_packet().get_string_from_utf8()
+		var sender := _search_socket.get_packet_ip()
+		var room := RoomCode.parse_announce(text)
+		if room.get("code", "") == _search_code:
+			_stop_search()
+			join_room(sender, room["port"])
+			return
+	_search_time_left -= delta
+	if _search_time_left <= 0.0:
+		var code := _search_code
+		_stop_search()
+		_set_status("Room %s not found. Same Wi-Fi? Room still open? Or type the host's address." % code)
+
+
+func _stop_search() -> void:
+	if _search_socket != null:
+		_search_socket.close()
+	_search_socket = null
+	_search_code = ""
 
 
 # ---------- the shared counter ----------
@@ -213,10 +296,16 @@ func _forget_room() -> void:
 	my_index = -1
 	players = []
 	counter = 0
+	room_code = ""
 	_peer_to_index = {}
 
 
 func _close() -> void:
-	if is_active():
+	_stop_search()
+	if _announce_socket != null:
+		_announce_socket.close()
+		_announce_socket = null
+	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+
