@@ -19,7 +19,19 @@ class ErrorCatcher extends Logger:
 		pass
 
 
-func _init() -> void:
+var _started := false
+
+
+# Wait for the first frame: only then is the scene tree ready for scenes.
+# _run_all may pause (await) inside a test; the loop keeps running meanwhile.
+func _process(_delta: float) -> bool:
+	if not _started:
+		_started = true
+		_run_all()
+	return false
+
+
+func _run_all() -> void:
 	var catcher := ErrorCatcher.new()
 	OS.add_logger(catcher)
 	var passed := 0
@@ -36,8 +48,11 @@ func _init() -> void:
 			if not name.begins_with("test_"):
 				continue
 			var suite = script.new()
+			suite.tree = self
 			catcher.errors.clear()
-			suite.call(name)
+			await suite.call(name)  # tests may wait for frames
+			for child in root.get_children():
+				child.free()
 			var problems: Array[String] = []
 			problems.append_array(suite.failures)
 			problems.append_array(catcher.errors)
