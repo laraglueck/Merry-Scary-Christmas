@@ -2,6 +2,7 @@
 extends RefCounted
 
 var failures: Array[String] = []
+var tree: SceneTree  # set by run_tests.gd, needed to open scenes
 
 
 func assert_eq(actual, expected, what := "") -> void:
