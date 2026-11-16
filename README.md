@@ -2,6 +2,16 @@
 
 Cooperative Christmas escape room for the Introduction to Programming group project.
 
+## Godot version (current work)
+
+The game is built with **Godot 4.7.2** in the folder `godot/`, on the branch
+`godot-setup`. Open `godot/project.godot` and press ▶ (Mac: ⌘ B).
+
+**New here? Start with [docs/TEAM-GUIDE.md](docs/TEAM-GUIDE.md):** how the game is
+built, how to add your room or puzzle, tests and Git rules.
+
+The Streamlit sections below describe the old placeholder page.
+
 ## Run locally
 
 1. Install Python 3.11 or newer.
