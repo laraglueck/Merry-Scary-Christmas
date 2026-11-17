@@ -16,6 +16,12 @@ code, the counter with +1 was only a network test, the code field runs across th
 - "Create room" is as wide as the code field and "Join" together. The room code and the
   players line only show once there is a room (no empty gap, no "nobody yet").
 
+## Change after manual test (17.11., Mathies)
+- Players 2 and 3 see "Waiting for Player 1 to start the game..." once they are in the room.
+- "Start game" is green and not as wide as the screen ("Resume" sits next to it).
+- Everything sits in the middle of the screen (left-right and top-bottom), texts centred,
+  with more room between the lines.
+
 ## Out of scope
 New artwork for the lobby, removing the counter from network.gd.
 

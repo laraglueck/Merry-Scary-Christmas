@@ -17,6 +17,7 @@ var _players_label: Label
 var _start_button: Button
 var _resume_button: Button
 var _confirm_box: Control  # "Start a new game? The saved game will be lost."
+var _wait_label: Label     # Players 2 and 3: "Waiting for Player 1 ..." (03c)
 
 
 func _ready() -> void:
@@ -78,6 +79,7 @@ func _refresh() -> void:
 	_resume_button.visible = host_with_save
 	_resume_button.disabled = not net.can_resume()
 	_resume_button.text = "Resume saved game" if net.can_resume() else "Resume saved game (needs %d players)" % 3
+	_wait_label.visible = net.connected and net.my_index > 0
 	if not host_with_save:
 		_confirm_box.visible = false
 
@@ -94,18 +96,20 @@ func _build_ui() -> void:
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 32)
-	add_child(margin)
+	# Everything in the middle of the screen, one column, with room between the lines (03c).
+	var centre := CenterContainer.new()
+	centre.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(centre)
 
 	var page := VBoxContainer.new()
-	page.add_theme_constant_override("separation", 18)
-	margin.add_child(page)
+	page.name = "LobbyPage"
+	page.add_theme_constant_override("separation", 26)
+	centre.add_child(page)
 
 	var title := Label.new()
+	title.name = "LobbyTitle"
 	title.text = "Merry Scary Christmas: Lobby"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 34)
 	title.add_theme_color_override("font_color", Color("e8d9c0"))
 	page.add_child(title)
@@ -114,12 +118,13 @@ func _build_ui() -> void:
 	_create_button.name = "CreateButton"
 	_create_button.text = "Create room"
 	_create_button.custom_minimum_size = Vector2(532, 52)  # as wide as the code field + Join (03c)
-	_create_button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_create_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_create_button.pressed.connect(_on_create_pressed)
 	page.add_child(_create_button)
 
 	var join_row := HBoxContainer.new()
 	join_row.add_theme_constant_override("separation", 12)
+	join_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	page.add_child(join_row)
 	_address_field = LineEdit.new()
 	_address_field.name = "AddressField"
@@ -137,49 +142,63 @@ func _build_ui() -> void:
 
 	_status_label = Label.new()
 	_status_label.name = "StatusLabel"
-	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # full width: wrapping is safe here
+	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # as wide as the column: wrapping is safe
+	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status_label.add_theme_color_override("font_color", Color("ffd76a"))
 	page.add_child(_status_label)
 
 	_room_code_label = Label.new()
 	_room_code_label.name = "RoomCodeLabel"
+	_room_code_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_room_code_label.add_theme_font_size_override("font_size", 40)
 	_room_code_label.add_theme_color_override("font_color", Color("d4af37"))
 	page.add_child(_room_code_label)
 
 	_players_label = Label.new()
 	_players_label.name = "PlayersLabel"
+	_players_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	page.add_child(_players_label)
+
+	_wait_label = Label.new()
+	_wait_label.name = "WaitLabel"
+	_wait_label.text = "Waiting for Player 1 to start the game..."
+	_wait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_wait_label.add_theme_color_override("font_color", Color("ffd76a"))
+	_wait_label.visible = false
+	page.add_child(_wait_label)
 
 	# Start and Resume side by side, so the question below still fits on the screen.
 	var start_row := HBoxContainer.new()
 	start_row.add_theme_constant_override("separation", 12)
+	start_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	page.add_child(start_row)
 	_start_button = Button.new()
 	_start_button.name = "StartButton"
-	_start_button.custom_minimum_size = Vector2(0, 56)
-	_start_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_start_button.custom_minimum_size = Vector2(340, 56)
 	_start_button.pressed.connect(_on_start_pressed)
+	_paint_button(_start_button, Color("2f7d3a"))  # green like Join (03c)
 	start_row.add_child(_start_button)
 
 	_resume_button = Button.new()
 	_resume_button.name = "ResumeButton"
-	_resume_button.custom_minimum_size = Vector2(0, 56)
-	_resume_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_resume_button.custom_minimum_size = Vector2(380, 56)
 	_resume_button.pressed.connect(_on_resume_pressed)
 	start_row.add_child(_resume_button)
 
 	_confirm_box = VBoxContainer.new()
 	_confirm_box.name = "ConfirmNewGame"
+	_confirm_box.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_confirm_box.visible = false
 	page.add_child(_confirm_box)
 	var question := Label.new()
 	question.name = "ConfirmNewGameLabel"
 	question.text = "Start a new game? The saved game will be lost."
+	question.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	question.add_theme_color_override("font_color", Color("ffd76a"))
 	_confirm_box.add_child(question)
 	var answers := HBoxContainer.new()
 	answers.add_theme_constant_override("separation", 12)
+	answers.alignment = BoxContainer.ALIGNMENT_CENTER
 	_confirm_box.add_child(answers)
 	var yes := Button.new()
 	yes.name = "YesNewGameButton"
