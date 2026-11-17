@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b6fe1v5sqmrm2"
-path="res://.godot/imported/char_santa_awake.png-51da5608aaf6b7d53518d7cd9c50934f.ctex"
+uid="uid://d1sojyeesv7h"
+path="res://.godot/imported/char_jingles_awake.png-4b83121867af093f22783f1b3c2376e1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/images/char_santa_awake.png"
-dest_files=["res://.godot/imported/char_santa_awake.png-51da5608aaf6b7d53518d7cd9c50934f.ctex"]
+source_file="res://assets/images/char_jingles_awake.png"
+dest_files=["res://.godot/imported/char_jingles_awake.png-4b83121867af093f22783f1b3c2376e1.ctex"]
 
 [params]
 
