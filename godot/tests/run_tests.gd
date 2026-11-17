@@ -3,6 +3,7 @@
 # reports an error while it runs (so a crash can never look green).
 # Start from the repo folder:
 #   godot --headless --path godot --script res://tests/run_tests.gd
+# Tests never touch the real save (spec 15): they use TEST_SAVE, deleted before every test.
 extends SceneTree
 
 
@@ -19,6 +20,8 @@ class ErrorCatcher extends Logger:
 		pass
 
 
+const TEST_SAVE := "user://test_saved_game.save"
+
 var _started := false
 
 
@@ -32,6 +35,7 @@ func _process(_delta: float) -> bool:
 
 
 func _run_all() -> void:
+	OS.set_environment("MERRY_SCARY_SAVE", TEST_SAVE)
 	var catcher := ErrorCatcher.new()
 	OS.add_logger(catcher)
 	var passed := 0
@@ -56,6 +60,7 @@ func _run_all() -> void:
 			var name: String = method["name"]
 			if not name.begins_with("test_"):
 				continue
+			DirAccess.remove_absolute(TEST_SAVE)  # every test starts without a save
 			var suite = script.new()
 			suite.tree = self
 			catcher.errors.clear()
