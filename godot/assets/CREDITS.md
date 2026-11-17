@@ -33,9 +33,9 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | char_gingerbread.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_santa_asleep.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_santa_awake.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| item_fuse_red.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| item_fuse_green.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| item_fuse_gold.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| item_fuse_red.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
+| item_fuse_green.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
+| item_fuse_gold.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_gift_1.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | item_gift_2.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | item_gift_3.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |

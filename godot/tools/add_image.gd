@@ -12,6 +12,7 @@ const Names = preload("res://tools/asset_names.gd")
 
 const WEBP_QUALITY := 0.85
 const MAX_KILOBYTES := 500
+const VISIBLE_ALPHA := 0.5  # a pixel more solid than this counts as part of the object
 
 
 func _init() -> void:
@@ -35,6 +36,13 @@ func _run(args: PackedStringArray) -> int:
 	if image == null:
 		print("Could not read the picture: %s" % source)
 		return 1
+
+	# A cut-out picture (see-through background) loses its empty margins first,
+	# so the object itself fills the file, however much space was around it.
+	if image.detect_alpha() != Image.ALPHA_NONE:
+		var used := _solid_rect(image)
+		if used.size.x > 0 and used.size.y > 0:
+			image = image.get_region(used)
 
 	# Shrink to fit inside the listed size; a smaller picture stays as it is.
 	var target: Vector2i = images[file_name]
@@ -61,6 +69,25 @@ func _run(args: PackedStringArray) -> int:
 	if kilobytes > MAX_KILOBYTES:
 		print("WARNING: larger than %d KB, the limit for one image." % MAX_KILOBYTES)
 	return 0
+
+
+# The smallest rectangle that holds every clearly visible pixel. Faint specks
+# that a background remover left behind (almost see-through) are ignored.
+func _solid_rect(image: Image) -> Rect2i:
+	var left := image.get_width()
+	var top := image.get_height()
+	var right := -1
+	var bottom := -1
+	for y in image.get_height():
+		for x in image.get_width():
+			if image.get_pixel(x, y).a > VISIBLE_ALPHA:
+				left = mini(left, x)
+				right = maxi(right, x)
+				top = mini(top, y)
+				bottom = maxi(bottom, y)
+	if right < 0:
+		return Rect2i()
+	return Rect2i(left, top, right - left + 1, bottom - top + 1)
 
 
 # The brighter a pixel, the more see-through it gets: pure white disappears,
