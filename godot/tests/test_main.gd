@@ -32,10 +32,20 @@ func make_started_mains(port: int) -> Array:
 	return [host, a, b]
 
 
-func test_main_starts_with_the_lobby() -> void:
+func test_main_starts_with_the_title() -> void:
 	var main := make_main_device("Solo")
+	assert_eq(main.screen_name, "title", "title first (spec 11)")
+	assert_true(main.find_child("StartButton", true, false) != null, "start button shown")
+	assert_true(main.find_child("CreateButton", true, false) == null, "no lobby yet")
+
+
+func test_main_start_on_the_title_opens_the_lobby() -> void:
+	var main := make_main_device("Solo2")
+	press(main, "StartButton")
+	assert_eq(main.screen_name, "lobby", "lobby after Start")
+	await wait_frames(2)  # the old title is removed at the end of a frame
 	assert_true(main.find_child("CreateButton", true, false) != null, "lobby shown")
-	assert_true(main.find_child("FuseTitle", true, false) == null, "no hall yet")
+	assert_true(main.find_child("TitleLabel", true, false) == null, "title gone")
 
 
 func test_main_switches_everyone_to_the_hall_when_the_game_starts() -> void:

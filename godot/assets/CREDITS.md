@@ -30,10 +30,11 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | room_bedroom_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_bedroom_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_elf.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_snowman.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| char_snowman.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
 | char_gingerbread.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_santa_asleep.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_santa_awake.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| char_santa_awake.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
+| char_nutcracker.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
 | item_fuse_red.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_green.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_gold.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
@@ -64,7 +65,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | wire_yellow.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | wire_white.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | wire_black.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| ui_title.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| ui_title.webp | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | house in the snow, background of the title screen |
 | ui_win.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_lose.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_fuse_box.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | close-up of the open fuse box, 1376 x 768 |
