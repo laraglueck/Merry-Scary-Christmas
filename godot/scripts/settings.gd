@@ -31,6 +31,10 @@ const ITEMS := [
 	{"id": "key", "name": "Key", "picture": "item_key.png"},              # attic (Lara)
 ]
 
+# Save and resume (spec 15): the host's save file, in Godot's data folder (not the repo).
+# Tests use another file: the environment variable MERRY_SCARY_SAVE (see run_tests.gd).
+const SAVE_PATH := "user://saved_game.save"
+
 # Network
 const NETWORK_PORT := 47411
 const MAX_PLAYERS := 3
