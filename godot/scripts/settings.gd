@@ -13,6 +13,11 @@ const FUSES := [
 	{"colour": "gold", "room": "bedroom"},
 ]
 
+# Bathroom (spec 10): four turns of the taps, each hot or cold.
+const TAPS := ["hot", "cold"]
+const TAP_TURNS := 4
+const TAP_PENALTY_SECONDS := 20
+
 # Network
 const NETWORK_PORT := 47411
 const MAX_PLAYERS := 3
