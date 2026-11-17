@@ -29,11 +29,17 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | room_bathroom_drained.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | edit of room_bathroom_lit, tub drained, 1376 x 768 |
 | room_bedroom_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_bedroom_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_snowman.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | background removed with macOS Remove Background |
-| char_nutcracker.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | background removed with macOS Remove Background |
-| char_santa.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| char_snowman.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
+| char_santa.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
 | char_jingles_asleep.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_jingles_awake.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| char_nutcracker.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
+| char_santa_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, white background removed with add_image.gd |
+| char_santa_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, white background removed with add_image.gd |
+| char_snowman_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, white background removed with add_image.gd |
+| char_snowman_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, white background removed with add_image.gd |
+| char_nutcracker_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, white background removed with add_image.gd |
+| char_nutcracker_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, white background removed with add_image.gd |
 | item_fuse_red.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_green.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_gold.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
@@ -64,7 +70,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | wire_yellow.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | wire_white.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | wire_black.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| ui_title.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| ui_title.webp | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | house in the snow, background of the title screen |
 | ui_win.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_lose.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_fuse_box.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | close-up of the open fuse box, 1376 x 768 |
@@ -78,14 +84,24 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
 | sfx_fuse_click.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sfx_spark.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sfx_creak.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sfx_snore.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sfx_wind.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| sfx_spark.mp3 | sounds | Pixabay, original file `faespencer-high-voltage-spark-486895.mp3` | faespencer | Pixabay Content License | No |  |
+| sfx_creak.mp3 | sounds | Pixabay, original file `dragon-studio-floorboard-creak-03-499651.mp3` | DRAGON-STUDIO | Pixabay Content License | No |  |
+| sfx_snore.mp3 | sounds | Pixabay, original file `audiopapkin-male-snoring-297875.mp3` | audiopapkin | Pixabay Content License | No |  |
+| sfx_wind.mp3 | sounds | Pixabay, original file `dragon-studio-winter-wind-402331.mp3` | DRAGON-STUDIO | Pixabay Content License | No |  |
 | sfx_bells.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sfx_gift.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sfx_scare.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sfx_win.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sfx_lose.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| music_lobby.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| music_house.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| sfx_gift.mp3 | sounds | Pixabay, original file `universfield-magic-surprise-141291.mp3` | Universfield | Pixabay Content License | No |  |
+| sfx_scare.mp3 | sounds | Pixabay, original file `alex_jauk-sudden-screaming-sound-193070.mp3` | alex_jauk | Pixabay Content License | No |  |
+| sfx_win.mp3 | sounds | Pixabay, original file `emand_edroff-victory-bell-success-fanfare-576275.mp3` | emand_edroff | Pixabay Content License | No |  |
+| sfx_lose.mp3 | sounds | Pixabay, original file `emand_edroff-comedic-trombone-disappointment-576276.mp3` | emand_edroff | Pixabay Content License | No |  |
+| sfx_faucet.mp3 | sounds | Pixabay, original file `alex_jauk-squeaky-old-faucet-197041.mp3` | alex_jauk | Pixabay Content License | No |  |
+| sfx_clock_tick.mp3 | sounds | Pixabay, original file `dragon-studio-slow-cinematic-clock-ticking-357979.mp3` | DRAGON-STUDIO | Pixabay Content License | No |  |
+| sfx_clock_wrong.mp3 | sounds | Pixabay, original file `freesound_community-metal-scraping-47621.mp3` | freesound_community | Pixabay Content License | No |  |
+| sfx_clock_chime.mp3 | sounds | Pixabay, original file `freesound_community-clock-chime-88027.mp3` | freesound_community | Pixabay Content License | No |  |
+| sfx_door_unlock.mp3 | sounds | Pixabay, original file `dragon-studio-heavy-door-unlocking-515258.mp3` | DRAGON-STUDIO | Pixabay Content License | No |  |
+| sfx_key_lock.mp3 | sounds | Pixabay, original file `hasin2004-key-lock-sound-247454.mp3` | hasin2004 | Pixabay Content License | No |  |
+| sfx_easter_egg.mp3 | sounds | Pixabay, original file `dragon-studio-bells-jingling-2-372467.mp3` | DRAGON-STUDIO | Pixabay Content License | No |  |
+| sfx_rain.mp3 | sounds | Pixabay, original file `boons_freak-rain-sound-188158.mp3` | boons_freak | Pixabay Content License | No | 2.9 MB, above the 2 MB guideline |
+| sfx_storm.mp3 | sounds | Pixabay, original file `sarthakraj_308-heavy-wind-storm-326096.mp3` | sarthakraj_308 | Pixabay Content License | No |  |
+| music_lobby.mp3 | sounds | Pixabay, original file `audioatlant-evil-jingle-christmas-horror-trailer-version-635742.mp3` | audioatlant | Pixabay Content License | No | 2.4 MB, above the 2 MB guideline |
+| music_house.mp3 | sounds | Pixabay, original file `cinematic-soul-dark-ambient-background-music-617907.mp3` | check on Pixabay | Pixabay Content License | No |  |
+| voice_title.mp3 | sounds | ElevenLabs (elevenlabs.io), generated voice | Leon | check ElevenLabs plan terms | Yes (ElevenLabs) | spoken intro for the title screen |

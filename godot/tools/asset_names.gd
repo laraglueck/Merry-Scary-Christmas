@@ -36,6 +36,10 @@ static func images() -> Dictionary:
 	# Characters
 	for character in ["santa", "snowman", "nutcracker", "jingles_asleep", "jingles_awake"]:  # three heroes, then the villain Scary Jingles
 		list["char_%s.png" % character] = SIZE_CHARACTER
+	# The same figures with a green or yellow scarf / jacket (the first ones wear red).
+	for character in ["santa", "snowman", "nutcracker"]:
+		for colour in ["green", "yellow"]:
+			list["char_%s_%s.png" % [character, colour]] = SIZE_CHARACTER
 
 	# Items
 	for colour in ["red", "green", "gold"]:
@@ -75,8 +79,11 @@ static func images() -> Dictionary:
 # Every sound file.
 static func sounds() -> Array:
 	var list := []
-	for effect in ["fuse_click", "spark", "creak", "snore", "wind", "bells", "gift", "scare", "win", "lose"]:
+	for effect in ["fuse_click", "spark", "creak", "snore", "wind", "bells", "gift", "scare", "win", "lose",
+			"faucet", "clock_tick", "clock_wrong", "clock_chime", "door_unlock", "key_lock",
+			"easter_egg", "rain", "storm"]:
 		list.append("sfx_%s.mp3" % effect)
 	list.append("music_lobby.mp3")
 	list.append("music_house.mp3")
+	list.append("voice_title.mp3")  # spoken intro on the title screen
 	return list

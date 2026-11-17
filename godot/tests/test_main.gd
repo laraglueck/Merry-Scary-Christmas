@@ -2,6 +2,7 @@
 extends "res://tests/base_test.gd"
 
 const MainScene = preload("res://scenes/main.tscn")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 
 
 # One device running the whole game (main scene), with its own multiplayer.
@@ -32,10 +33,32 @@ func make_started_mains(port: int) -> Array:
 	return [host, a, b]
 
 
-func test_main_starts_with_the_lobby() -> void:
+func test_main_starts_with_the_loading_screen() -> void:
 	var main := make_main_device("Solo")
+	assert_eq(main.screen_name, "intro", "loading screen first (spec 12)")
+	assert_true(main.find_child("SubtitleLabel", true, false) != null, "story shown")
+
+
+func test_main_loading_screen_then_title_then_lobby() -> void:
+	var main := make_main_device("Solo2")
+	main.screen.finished.emit()
+	assert_eq(main.screen_name, "title", "title after the story")
+	press(main, "StartButton")
+	assert_eq(main.screen_name, "lobby", "lobby after Start")
+	await wait_frames(2)  # the old screens are removed at the end of a frame
 	assert_true(main.find_child("CreateButton", true, false) != null, "lobby shown")
-	assert_true(main.find_child("FuseTitle", true, false) == null, "no hall yet")
+	assert_true(main.find_child("TitleLabel", true, false) == null, "title gone")
+	assert_true(main.find_child("SubtitleLabel", true, false) == null, "story gone")
+
+
+func test_main_music_loops_through_the_screens() -> void:
+	var main := make_main_device("Solo3")
+	var music: AudioStreamPlayer = main.get_node_or_null("Music")
+	assert_true(music != null and music.stream != null, "music in main")
+	assert_true(music != null and music.stream.loop, "music loops")
+	main.screen.finished.emit()
+	await wait_frames(2)
+	assert_true(main.get_node_or_null("Music") == music, "same music on the title")
 
 
 func test_main_switches_everyone_to_the_hall_when_the_game_starts() -> void:
@@ -55,3 +78,140 @@ func test_main_back_to_lobby_when_host_leaves() -> void:
 	assert_true(await wait_until(func(): return a.screen_name == "lobby"), "Player 2 back in the lobby")
 	await wait_frames(2)
 	assert_contains(text_of(a, "StatusLabel"), "host left", "status")
+
+
+# ---------- walking together (spec 07) ----------
+
+func light_fuse(net: Node, fuse_index: int) -> void:
+	net.send_action("try_fuse", {"wires": net.game["puzzle"]["fuses"][fuse_index]["order"].duplicate()})
+
+
+func screens_are(mains: Array, wanted: String) -> Callable:
+	return func(): return mains.all(func(m): return m.screen_name == wanted)
+
+
+func test_everyone_walks_into_the_bathroom_and_back() -> void:
+	var mains: Array = await make_started_mains(47562)
+	await wait_until(screens_are(mains, "hall"))
+	var a = mains[1]
+	light_fuse(a.net, 1)
+	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"][1]["solved"])
+	a.net.send_action("go_to", {"place": "bathroom"})
+	assert_true(await wait_until(screens_are(mains, "bathroom")), "all three in the bathroom")
+	assert_eq(mains[2].screen.scene_file_path, "res://scenes/bathroom.tscn", "Gloria's bathroom screen")
+	mains[2].net.send_action("go_to", {"place": "hall"})
+	assert_true(await wait_until(screens_are(mains, "hall")), "all three back in the hall")
+
+
+func test_unbuilt_room_shows_a_placeholder_with_a_way_back() -> void:
+	var mains: Array = await make_started_mains(47563)
+	await wait_until(screens_are(mains, "hall"))
+	light_fuse(mains[0].net, 0)
+	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"][0]["solved"])
+	mains[0].net.send_action("go_to", {"place": "living_room"})
+	assert_true(await wait_until(screens_are(mains, "living_room")), "all three in the living room")
+	await wait_frames(2)
+	assert_contains(text_of(mains[1], "PlaceTitle"), "living/dining room", "placeholder title")
+	press(mains[1], "BackButton")
+	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
+
+
+# ---------- the clock (spec 13) ----------
+
+func test_every_screen_shows_the_clock() -> void:
+	var solo := make_main_device("Solo4")
+	var before := solo.find_child("ClockLabel", true, false)
+	assert_true(before == null or not before.visible, "no clock before the game")
+	var mains: Array = await make_started_mains(47573)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.advance_clock(61.0)
+	var shows_its_time := func(m): return text_of(m, "ClockLabel") == "Midnight in " + ClockRules.as_text(ClockRules.time_left(m.net.game))
+	var all_show := func(): return mains.all(func(m): return ClockRules.time_left(m.net.game) <= 539 and shows_its_time.call(m))
+	assert_true(await wait_until(all_show), "all three show the time left")
+	assert_contains(text_of(mains[2], "ClockLabel"), "Midnight in 08:5", "about 8:59 left")
+	var clock: Node = mains[2].find_child("ClockLabel", true, false)
+	assert_true(clock != null and clock.is_visible_in_tree(), "clock visible on Player 3")
+
+
+func test_last_minute_in_red() -> void:
+	var mains: Array = await make_started_mains(47574)
+	await wait_until(screens_are(mains, "hall"))
+	var clock: Node = mains[1].find_child("ClockLabel", true, false)
+	var colour: Color = clock.get_theme_color("font_color") if clock != null else Color.RED
+	assert_true(colour.g > 0.6, "not red with 10 minutes left: %s" % colour)
+	mains[0].net.advance_clock(545.0)
+	await wait_until(func(): return ClockRules.time_left(mains[1].net.game) <= 55)
+	colour = clock.get_theme_color("font_color") if clock != null else Color.WHITE
+	assert_true(colour.r > 0.8 and colour.g < 0.4, "red in the last minute: %s" % colour)
+
+
+func test_midnight_shows_the_loss_without_a_way_back() -> void:
+	var mains: Array = await make_started_mains(47575)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.advance_clock(600.0)
+	assert_true(await wait_until(screens_are(mains, "midnight")), "all three at midnight")
+	await wait_frames(2)
+	assert_eq(text_of(mains[1], "PlaceTitle"), "Midnight", "title")
+	var title: Control = mains[1].find_child("PlaceTitle", true, false)
+	if title != null:
+		var middle: float = title.get_viewport().get_visible_rect().size.x / 2
+		assert_true(absf(title.get_global_rect().get_center().x - middle) < 40, "title in the middle of the screen")
+	assert_contains(text_of(mains[1], "Message"), "Midnight", "what happened")
+	var back: Node = mains[1].find_child("BackButton", true, false)
+	assert_true(back != null and not back.visible, "no way back to the hall")
+	var clock: Node = mains[1].find_child("ClockLabel", true, false)
+	assert_true(clock != null and not clock.visible, "clock hidden after the game")
+
+
+# ---------- the inventory (spec 14) ----------
+
+func slot_shows(main: Node, item: String) -> bool:
+	var picture: Node = main.find_child("InventoryPicture_" + item, true, false)
+	return picture != null and picture.visible and text_of(main, "InventoryName_" + item) != ""
+
+
+func test_inventory_bar_on_every_screen_while_the_game_runs() -> void:
+	var solo := make_main_device("Solo5")
+	var before: Node = solo.find_child("InventoryBar", true, false)
+	assert_true(before != null and not before.visible, "no bar before the game")
+	var mains: Array = await make_started_mains(47576)
+	await wait_until(screens_are(mains, "hall"))
+	var bar: Control = mains[1].find_child("InventoryBar", true, false)
+	assert_true(bar != null and bar.is_visible_in_tree(), "bar shown in the game")
+	for item in ["gift_1", "gift_2", "gift_3", "photo", "key"]:
+		assert_true(mains[1].find_child("InventorySlot_" + item, true, false) != null, "slot for " + item)
+		assert_eq(slot_shows(mains[1], item), false, item + " not found yet")
+	if bar != null:
+		await wait_frames(2)
+		var r := bar.get_global_rect()
+		var screen: Rect2 = bar.get_viewport().get_visible_rect()
+		assert_true(screen.encloses(r), "bar fully on screen: %s" % r)
+		assert_true(r.position.x > screen.size.x / 2 and r.position.y > screen.size.y / 2, "bottom right: %s" % r)
+		var parts: Array = [bar]
+		parts.append_array(bar.find_children("*", "Control", true, false))
+		for part in parts:
+			assert_eq(part.mouse_filter, Control.MOUSE_FILTER_IGNORE, "%s lets clicks through" % part.name)
+
+
+func test_a_found_present_shows_on_all_three_screens() -> void:
+	var mains: Array = await make_started_mains(47577)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.game["bathroom"]["solved"] = true  # the host's game: taps solved
+	mains[2].net.send_action("take_gift", {"room": "bathroom"})
+	var everyone_sees := func(): return mains.all(func(m): return slot_shows(m, "gift_2"))
+	assert_true(await wait_until(everyone_sees), "Present 2 in the bar on all three")
+	assert_eq(text_of(mains[1], "InventoryName_gift_2"), "Present 2", "its name")
+	var picture: Node = mains[1].find_child("InventoryPicture_gift_2", true, false)
+	var file: String = picture.texture.resource_path.get_file() if picture != null and picture.texture != null else ""
+	assert_eq(file, "item_gift_2.png", "its picture")
+	assert_eq(slot_shows(mains[1], "gift_1"), false, "Present 1 still missing")
+
+
+func test_inventory_bar_hidden_after_midnight() -> void:
+	var mains: Array = await make_started_mains(47578)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.advance_clock(600.0)
+	await wait_until(screens_are(mains, "midnight"))
+	var bar: Node = mains[1].find_child("InventoryBar", true, false)
+	assert_true(bar != null and not bar.visible, "bar hidden after the game")
+

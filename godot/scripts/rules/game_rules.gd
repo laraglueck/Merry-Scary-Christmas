@@ -7,22 +7,31 @@ extends RefCounted
 
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
+const HouseRules = preload("res://scripts/rules/house_rules.gd")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
+const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 
 
 static func new_game(rng: RandomNumberGenerator) -> Dictionary:
 	return {
-		"phase": "hall",                            # which screen everyone sees
+		"phase": "hall",                            # "hall" = the game runs inside the house
+		"location": "hall",                         # where the whole team is (spec 07)
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
 		"living_room": LivingRoomRules.create_room(rng),  # clock lock (Lara)
 		"penalty_seconds": 0,                       # all penalties so far
+		"inventory": [],                            # what the team carries (spec 14), e.g. ["gift_2"]
+		"seconds_played": 0,                        # the clock (spec 13): time left = 600 - this - penalties
 		"last_event": "",                           # shown to everyone, e.g. "Player 1: wrong order, -10 s"
 	}
 
 
 # Host only: one player's action changes the game. Unknown actions change nothing.
+# After midnight (or another end) nothing changes any more (spec 13).
 static func apply(game: Dictionary, player: int, action: String, data: Dictionary) -> void:
+	if game.get("phase") != "hall":
+		return
 	match action:
 		"try_fuse":
 			_try_fuse(game, player, data)
@@ -31,6 +40,9 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 		"take_gift":
 			if data.get("room") == "bathroom":
 				_take_bathroom_gift(game, player)
+		"go_to":
+			_go_to(game, player, data)
+	ClockRules.check_midnight(game)  # a penalty can use up the last seconds
 
 
 # Player i always works on fuse i (Player 1 = red, Player 2 = green, Player 3 = gold).
@@ -74,6 +86,22 @@ static func _take_bathroom_gift(game: Dictionary, player: int) -> void:
 	var who := "Player %d" % (player + 1)
 	var result := BathroomRules.take_gift(game["bathroom"])
 	if result["ok"]:
+		InventoryRules.add(game, "gift_2")
 		game["last_event"] = "%s found the second present!" % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
+
+
+# Walking (spec 07): the whole team moves; a refused move only explains why.
+static func _go_to(game: Dictionary, player: int, data: Dictionary) -> void:
+	var who := "Player %d" % (player + 1)
+	var place := str(data.get("place", ""))
+	var error := HouseRules.go_to(game, place)
+	if error != "":
+		game["last_event"] = "%s: %s" % [who, error]
+	elif place == "hall":
+		game["last_event"] = "%s led the team back to the hall." % who
+	elif place == "attic":
+		game["last_event"] = "%s climbed the stairs to the attic." % who
+	else:
+		game["last_event"] = "%s opened the %s door." % [who, HouseRules.place_name(place)]

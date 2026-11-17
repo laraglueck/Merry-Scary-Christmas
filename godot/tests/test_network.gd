@@ -4,6 +4,9 @@ extends "res://tests/base_test.gd"
 
 const RoomCode = preload("res://scripts/net/room_code.gd")
 const Settings = preload("res://scripts/settings.gd")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
+const SaveGame = preload("res://scripts/save_game.gd")
+const GameRules = preload("res://scripts/rules/game_rules.gd")
 
 
 # ---------- pure helpers ----------
@@ -252,3 +255,78 @@ func test_game_ends_for_others_when_host_leaves() -> void:
 	room[0].get_parent().free()
 	assert_true(await wait_until(func(): return a.game.is_empty()), "A's game is gone")
 	assert_contains(a.status, "host left", "status")
+
+
+# ---------- the clock (spec 13) ----------
+
+func test_only_the_host_counts_the_time_and_everyone_sees_it() -> void:
+	var room: Array = await make_started_room(47571)
+	var before: int = room[1].game.get("seconds_played", -1)
+	room[1].advance_clock(30.0)  # a player's clock does not count
+	assert_eq(room[1].game.get("seconds_played", -1), before, "Player 2 does not count")
+	room[0].advance_clock(61.0)
+	var left: int = ClockRules.time_left(room[0].game)
+	assert_true(left >= 536 and left <= 539, "host: 61 s gone, %d s left" % left)
+	var same := func(): return room.all(func(net): return ClockRules.time_left(net.game) == ClockRules.time_left(room[0].game))
+	assert_true(await wait_until(same), "everyone has the host's time")
+
+
+func test_midnight_ends_the_game_for_everyone() -> void:
+	var room: Array = await make_started_room(47572)
+	room[0].advance_clock(600.0)
+	var all_midnight := func(): return room.all(func(net): return net.game.get("phase") == "midnight")
+	assert_true(await wait_until(all_midnight), "everyone at midnight")
+
+
+# ---------- save and resume (spec 15) ----------
+
+func saved() -> Dictionary:
+	return SaveGame.load_from(SaveGame.path())
+
+
+func test_the_host_saves_after_every_action() -> void:
+	var room: Array = await make_started_room(47581)
+	assert_eq(saved().get("penalty_seconds", -1), 0, "saved at the start")
+	var wrong: Array = room[0].game["puzzle"]["fuses"][0]["order"].duplicate()
+	wrong.reverse()
+	room[0].send_action("try_fuse", {"wires": wrong})  # the host's own action is applied at once
+	assert_eq(saved().get("penalty_seconds", -1), 10, "saved right after the action, not only at the next second")
+
+
+func test_the_host_saves_the_clock() -> void:
+	var room: Array = await make_started_room(47582)
+	room[0].advance_clock(30.0)
+	assert_true(saved().get("seconds_played", 0) >= 30, "the time is saved: %s" % saved().get("seconds_played"))
+
+
+func test_midnight_deletes_the_save() -> void:
+	var room: Array = await make_started_room(47583)
+	room[0].advance_clock(600.0)
+	assert_eq(SaveGame.exists(SaveGame.path()), false, "nothing to resume after the game")
+
+
+func test_resume_brings_the_saved_game_back_to_everyone() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var old := GameRules.new_game(rng)
+	old["penalty_seconds"] = 30
+	old["inventory"] = ["gift_2"]
+	SaveGame.save(old, SaveGame.path())
+	var room: Array = await make_full_room(47584)
+	assert_eq(room[0].has_saved_game(), true, "the host sees the save")
+	assert_eq(room[0].can_resume(), true, "3 players and a save: can resume")
+	room[0].resume_game()
+	var everyone_has_it := func(): return room.all(func(net): return net.game.get("penalty_seconds") == 30 and net.game.get("inventory") == ["gift_2"])
+	assert_true(await wait_until(everyone_has_it), "all three play the saved game")
+	assert_eq(room[0].can_resume(), false, "not twice")
+
+
+func test_no_resume_without_a_save_or_players() -> void:
+	var room: Array = await make_full_room(47585)
+	assert_eq(room[0].can_resume(), false, "no save")
+	room[0].resume_game()
+	assert_eq(room[0].game, {}, "nothing started")
+	var rng := RandomNumberGenerator.new()
+	SaveGame.save(GameRules.new_game(rng), SaveGame.path())
+	assert_eq(room[1].can_resume(), false, "only the host resumes")
+

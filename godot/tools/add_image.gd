@@ -13,6 +13,11 @@ const Names = preload("res://tools/asset_names.gd")
 const WEBP_QUALITY := 0.85
 const MAX_KILOBYTES := 500
 const VISIBLE_ALPHA := 0.5  # a pixel more solid than this counts as part of the object
+const BACKGROUND_WHITE := 0.86  # a character's background: every colour channel at least this bright
+const EDGE_SOFTNESS := 0.3      # light pixels at the edge of a cut-out fade out over this range
+const PURE_WHITE := 0.97        # "pure white" like a generated picture's background
+const GAP_PURE_SHARE := 0.9     # an enclosed white gap this pure counts as background
+const MIN_GAP_PIXELS := 200     # smaller white spots inside a figure always stay
 
 
 func _init() -> void:
@@ -36,6 +41,11 @@ func _run(args: PackedStringArray) -> int:
 	if image == null:
 		print("Could not read the picture: %s" % source)
 		return 1
+
+	# A character on a white background (e.g. a JPG): the white around it becomes
+	# see-through. White inside the character (beard, snow) stays, see _cut_out_white.
+	if file_name.begins_with("char_") and image.detect_alpha() == Image.ALPHA_NONE:
+		_cut_out_white(image)
 
 	# A cut-out picture (see-through background) loses its empty margins first,
 	# so the object itself fills the file, however much space was around it.
@@ -101,3 +111,89 @@ func _white_to_transparent(image: Image) -> void:
 			var brightness := minf(colour.r, minf(colour.g, colour.b))
 			colour.a = 1.0 - brightness
 			image.set_pixel(x, y, colour)
+
+
+# Makes the white background around a character see-through:
+# - all white connected to the picture's border (flood fill);
+# - white gaps enclosed by the character (between an arm and the body) when they are
+#   almost all pure white like the background. White parts of the character itself
+#   (a beard, a snowman's shaded body) are hardly ever pure white, so they stay.
+# Light pixels right at the edge of the character fade out, so the outline stays
+# smooth instead of jagged.
+func _cut_out_white(image: Image) -> void:
+	image.convert(Image.FORMAT_RGBA8)
+	var width := image.get_width()
+	var height := image.get_height()
+	var data := image.get_data()
+	var seen := PackedByteArray()  # 1 = looked at, 2 = background (see-through)
+	seen.resize(width * height)
+
+	var border := PackedInt32Array()
+	for x in width:
+		border.append(x)
+		border.append((height - 1) * width + x)
+	for y in height:
+		border.append(y * width)
+		border.append(y * width + width - 1)
+	for index in _white_area(data, width, height, border, seen):
+		seen[index] = 2
+
+	for start in width * height:
+		if seen[start] != 0 or not _is_light(data, start):
+			continue
+		var gap := _white_area(data, width, height, PackedInt32Array([start]), seen)
+		var pure := 0
+		for index in gap:
+			if _is_light(data, index, PURE_WHITE):
+				pure += 1
+		if gap.size() >= MIN_GAP_PIXELS and pure >= gap.size() * GAP_PURE_SHARE:
+			for index in gap:
+				seen[index] = 2
+
+	for index in width * height:
+		if seen[index] == 2:
+			data[index * 4 + 3] = 0
+			continue
+		# Soft edge: a pixel next to the removed background fades by how light it is.
+		var x := index % width
+		var touches := (x > 0 and seen[index - 1] == 2) or (x < width - 1 and seen[index + 1] == 2) \
+				or (index >= width and seen[index - width] == 2) \
+				or (index < (height - 1) * width and seen[index + width] == 2)
+		if not touches:
+			continue
+		var at := index * 4
+		var darkest := mini(data[at], mini(data[at + 1], data[at + 2])) / 255.0
+		var alpha := clampf((1.0 - darkest) / EDGE_SOFTNESS, 0.0, 1.0)
+		data[at + 3] = int(alpha * 255)
+	image.set_data(width, height, false, Image.FORMAT_RGBA8, data)
+
+
+# Every channel of this pixel at least `limit` bright.
+func _is_light(data: PackedByteArray, index: int, limit := BACKGROUND_WHITE) -> bool:
+	var at := index * 4
+	var level := int(limit * 255)
+	return data[at] >= level and data[at + 1] >= level and data[at + 2] >= level
+
+
+# All light pixels connected to the start pixels (flood fill); marks them as seen.
+func _white_area(data: PackedByteArray, width: int, height: int, starts: PackedInt32Array, seen: PackedByteArray) -> PackedInt32Array:
+	var area := PackedInt32Array()
+	var queue := starts.duplicate()
+	var next := 0
+	while next < queue.size():
+		var index := queue[next]
+		next += 1
+		if seen[index] != 0 or not _is_light(data, index):
+			continue
+		seen[index] = 1
+		area.append(index)
+		var x := index % width
+		if x > 0:
+			queue.append(index - 1)
+		if x < width - 1:
+			queue.append(index + 1)
+		if index >= width:
+			queue.append(index - width)
+		if index < (height - 1) * width:
+			queue.append(index + width)
+	return area

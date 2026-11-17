@@ -1,22 +1,58 @@
-# The hall (spec 02): house plan with legend and room lamps, fuse box, fuse panel.
+# The hall (specs 02, 05, 07, 08, 08b): Gloria's picture with clickable spots for the fuse
+# box, the three doors, the attic stairs and the house plan, plus close-ups of the fuse box
+# and the house plan. Keys: left/right choose a spot (or a cable), Enter uses it, Esc goes back.
+# In the fuse box, the cables are clicked in order (spec 02; dragging was taken back, spec 08b).
 # Offline (no net, spec 02): one screen, the player buttons switch whose view we see.
 # Online (main.gd hands in a net with a game, spec 04): this device shows only
 # its own player; clicks go to the host, and the shared game comes back.
-# The rules live in fuse_rules.gd. This script only shows them and reacts to clicks.
+# The rules live in fuse_rules.gd and house_rules.gd. This script only shows them.
 extends Control
 
 const Rules = preload("res://scripts/rules/fuse_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
+const HouseRules = preload("res://scripts/rules/house_rules.gd")
 
+const IMAGES := "res://assets/images/"
+const HIGHLIGHT := Color("ffd76a")
 const UI_COLOURS := {
 	"blue": Color("2f6fd6"), "yellow": Color("e8c62e"), "white": Color("f2f2f2"), "black": Color("1e1e1e"),
 	"red": Color("d0473c"), "green": Color("4caf50"), "gold": Color("d4af37"),
 }
-const LAMP_ON := Color("ffd76a")
-const LAMP_OFF := Color("7a6a6a")
-const ROOM_DARK := Color("2b2424")  # house plan tile, fuse off (spec 05)
-const ROOM_LIT := Color("f3c66b")   # house plan tile, fuse on
-const ROOM_TEXT_ON_LIT := Color("3b2210")
+# Each symbol's own fixed colour (spec 08b). Not its wire colour: the legend is
+# shuffled every game, so a symbol in its wire colour would give the answer away.
+const SYMBOL_COLOURS := {
+	"star": Color("f5c242"), "bell": Color("d64541"), "tree": Color("3fa34d"), "snowflake": Color("7cc6ea"),
+}
+const LAMP_OFF := Color("d8cbb8")
+const ROOM_DARK := Color(0.04, 0.03, 0.03, 0.62)  # a room on the house plan, fuse off (spec 05)
+const ROOM_LIT := Color(1.0, 0.86, 0.5, 0.12)     # a room on the house plan, fuse on
+const ROOM_LIT_EDGE := Color(1.0, 0.8, 0.4, 0.9)
+const ROOM_TEXT_ON_LIT := Color("fff3d6")
+
+# Everything on a picture is measured in the picture's own pixels (all pictures are
+# 1376 x 768) and moves and scales with the picture, whatever the window's shape (spec 08b).
+# If a new picture moves things, change these numbers.
+const PICTURE_SIZE := Vector2(1376, 768)
+# room_hall.webp, left to right (the arrow keys follow this order).
+const SPOTS := [
+	{"name": "fuse_box", "node": "FuseBoxButton", "rect": Rect2(0, 85, 100, 245)},
+	{"name": "living_room", "node": "Door_living_room", "rect": Rect2(175, 40, 150, 650)},
+	{"name": "bathroom", "node": "Door_bathroom", "rect": Rect2(356, 180, 108, 375)},
+	{"name": "attic", "node": "StairsButton", "rect": Rect2(690, 178, 300, 392)},
+	{"name": "bedroom", "node": "Door_bedroom", "rect": Rect2(1018, 40, 162, 650)},
+	{"name": "house_plan", "node": "HousePlanButton", "rect": Rect2(1195, 70, 181, 290)},
+]
+# ui_fuse_box.webp: the four cables (left to right) and the sockets.
+const WIRE_RECTS := {
+	"blue": Rect2(553, 425, 87, 295), "yellow": Rect2(642, 425, 56, 295),
+	"white": Rect2(698, 425, 43, 295), "black": Rect2(741, 425, 64, 295),
+}
+const SOCKET_CENTRES := {"red": Vector2(575, 275), "green": Vector2(688, 275), "gold": Vector2(800, 275)}
+# ui_house_plan.webp: the rooms by fuse index (living room, bathroom, bedroom) and the
+# inner part of the empty legend box.
+const PLAN_ROOMS := [Rect2(349, 317, 266, 231), Rect2(424, 140, 190, 164), Rect2(765, 262, 236, 205)]
+const LEGEND_BOX := Rect2(892, 530, 298, 111)
+
 
 # -1 means: a new random puzzle at every start. Tests set a fixed seed.
 @export var seed_value := -1
@@ -24,11 +60,28 @@ var net: Node = null  # set by main.gd for online play
 
 var puzzle: Dictionary
 var current_player := 0
-var chosen: Array = []
+var chosen: Array = []  # the cables clicked so far, in order
 var penalty_total := 0
+var _spot_index := 0  # highlighted spot in the hall (keys)
+var _wire_index := 0  # highlighted cable in the fuse box (keys)
 
 # Nodes we change later (built in _build_ui)
-var _legend_label: Label
+var _spot_buttons: Array[Button] = []
+var _spot_by_name := {}
+var _doors := {}             # place -> door spot (spec 07)
+var _stairs: Button
+var _fuse_panel: Control     # fuse box close-up
+var _fuse_area: Control      # the fuse box picture's area
+var _house_plan_panel: Control
+var _sockets := {}           # fuse colour -> fuse picture in its socket
+var _wire_buttons := {}
+var _fuse_title: Label
+var _hint_label: RichTextLabel  # rich text: the fuse's name in its colour
+var _label_symbols: Array[TextureRect] = []
+var _chosen_label: Label
+var _chosen_wires: Array[Panel] = []  # the order so far as colour bars
+var _legend_entries := {}    # symbol -> "star = white"
+var _average_colours := {}   # picture file -> its average colour (worked out once)
 var _lamps: Array[Label] = []
 var _tiles: Array[PanelContainer] = []
 var _lit_before: Array[bool] = [false, false, false]
@@ -38,11 +91,6 @@ var _flicker_rng := RandomNumberGenerator.new()
 var _flicker_steps: Array = []  # what is left of the current flicker cycle
 var _player_buttons: Array[Button] = []
 var _penalty_label: Label
-var _fuse_panel: PanelContainer
-var _fuse_title: Label
-var _hint_label: Label
-var _wire_buttons := {}
-var _chosen_label: Label
 var _message: Label
 
 
@@ -87,8 +135,19 @@ func _on_game_changed() -> void:
 # ---------- reacting to clicks ----------
 
 func _on_fuse_box_pressed() -> void:
+	_house_plan_panel.visible = false
 	_fuse_panel.visible = true
 	_refresh()
+
+
+func _on_house_plan_pressed() -> void:
+	_fuse_panel.visible = false
+	_house_plan_panel.visible = true
+
+
+func _close_close_ups() -> void:
+	_fuse_panel.visible = false
+	_house_plan_panel.visible = false
 
 
 func _on_player_pressed(player: int) -> void:
@@ -98,11 +157,22 @@ func _on_player_pressed(player: int) -> void:
 	_refresh()
 
 
+# A click on a cable (or Enter on it): it is next in the order. With all four, try it.
 func _on_wire_pressed(colour: String) -> void:
+	if puzzle["fuses"][current_player]["solved"] or colour in chosen:
+		return
 	chosen.append(colour)
 	if chosen.size() == Settings.WIRE_COLOURS.size():
 		_submit_attempt()
 	_refresh()
+
+
+# Walking (spec 07): the whole team goes; the host checks the door is lit.
+func _on_place_pressed(place: String) -> void:
+	if _online():
+		net.send_action("go_to", {"place": place})
+	else:
+		_message.text = "Walking through the house needs the full game: start main.tscn."
 
 
 func _on_reset_pressed() -> void:
@@ -110,15 +180,15 @@ func _on_reset_pressed() -> void:
 	_refresh()
 
 
-# 4 wires chosen: ask the rules, then show the result.
+# Four cables chosen: ask the rules, then show the result. The order starts again.
 func _submit_attempt() -> void:
+	var wires := chosen.duplicate()
+	chosen.clear()
 	if _online():
-		net.send_action("try_fuse", {"wires": chosen.duplicate()})  # the host decides
-		chosen.clear()
+		net.send_action("try_fuse", {"wires": wires})  # the host decides
 		return
 	var fuse: Dictionary = puzzle["fuses"][current_player]
-	var result := Rules.try_fuse(puzzle, current_player, chosen)
-	chosen.clear()
+	var result := Rules.try_fuse(puzzle, current_player, wires)
 	if result["error"] != "":
 		_message.text = result["error"]
 	elif result["correct"]:
@@ -128,47 +198,186 @@ func _submit_attempt() -> void:
 		_message.text = "Wrong order: -%d s" % result["penalty_seconds"]
 
 
+# ---------- coloured symbols (spec 08b) ----------
+
+# Shows Gloria's symbol picture in the symbol's colour. The pictures are dark
+# brown, and Godot tints by multiplying: shown = picture colour x self_modulate.
+# So the factor is wanted colour / the picture's average colour (above 1 is fine).
+func _show_symbol(picture: TextureRect, symbol: String) -> void:
+	var file := IMAGES + "sym_%s.png" % symbol
+	picture.texture = load(file)
+	var average := _average_colour(file)
+	var wanted: Color = SYMBOL_COLOURS[symbol]
+	picture.self_modulate = Color(wanted.r / average.r, wanted.g / average.g, wanted.b / average.b)
+
+
+# The average colour of a picture's visible pixels (every second pixel is enough).
+func _average_colour(file: String) -> Color:
+	if not _average_colours.has(file):
+		var image: Image = load(file).get_image()
+		if image.is_compressed():
+			image.decompress()
+		var sum := Color(0, 0, 0, 0)
+		var count := 0
+		for y in range(0, image.get_height(), 2):
+			for x in range(0, image.get_width(), 2):
+				var pixel := image.get_pixel(x, y)
+				if pixel.a > 0.5:
+					sum += pixel
+					count += 1
+		count = maxi(count, 1)
+		_average_colours[file] = Color(maxf(sum.r / count, 0.01), maxf(sum.g / count, 0.01), maxf(sum.b / count, 0.01))
+	return _average_colours[file]
+
+
+# ---------- keys (like the bathroom, spec 10) ----------
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _fuse_panel.visible:
+		if event.is_action_pressed("ui_cancel"):
+			_close_close_ups()
+		elif event.is_action_pressed("ui_left"):
+			_move_wire(-1)
+		elif event.is_action_pressed("ui_right"):
+			_move_wire(1)
+		elif event.is_action_pressed("ui_accept"):
+			if not _wire_buttons[highlighted_wire()].disabled:
+				_on_wire_pressed(highlighted_wire())
+		else:
+			return
+	elif _house_plan_panel.visible:
+		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept"):
+			_close_close_ups()
+		else:
+			return
+	else:
+		if event.is_action_pressed("ui_left"):
+			_move_spot(-1)
+		elif event.is_action_pressed("ui_right"):
+			_move_spot(1)
+		elif event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_up"):
+			_use_spot(highlighted_spot())
+		else:
+			return
+	if is_inside_tree():
+		get_viewport().set_input_as_handled()
+
+
+func highlighted_spot() -> String:
+	return SPOTS[_spot_index]["name"]
+
+
+func highlighted_wire() -> String:
+	return Settings.WIRE_COLOURS[_wire_index]
+
+
+func _move_spot(step: int) -> void:
+	_spot_index = clampi(_spot_index + step, 0, SPOTS.size() - 1)
+	_refresh()
+
+
+func _move_wire(step: int) -> void:
+	_wire_index = clampi(_wire_index + step, 0, Settings.WIRE_COLOURS.size() - 1)
+	_refresh()
+
+
+func _on_spot_pressed(index: int) -> void:
+	_spot_index = index
+	_use_spot(highlighted_spot())
+
+
+# A spot used by click or key. A dark door says which fuse it needs.
+func _use_spot(spot: String) -> void:
+	match spot:
+		"fuse_box":
+			_on_fuse_box_pressed()
+		"house_plan":
+			_on_house_plan_pressed()
+		_:
+			if _spot_by_name[spot].disabled:
+				_message.text = _why_dark(spot)
+			else:
+				_on_place_pressed(spot)
+	_refresh()
+
+
+func _why_dark(place: String) -> String:
+	if place == "attic":
+		return "The stairs are pitch dark. Turn on all three fuses first."
+	for fuse in Settings.FUSES:
+		if fuse["place"] == place:
+			return "The %s is still dark. Turn on the %s fuse first." % [fuse["room"], fuse["colour"]]
+	return ""
+
+
 # ---------- showing the current state ----------
 
 func _refresh() -> void:
-	var legend_lines := []
-	for symbol in Settings.SYMBOLS:
-		legend_lines.append("%s = %s" % [symbol, puzzle["legend"][symbol]])
-	_legend_label.text = "\n".join(legend_lines)
-
 	var lit := Rules.lit_rooms(puzzle)
+
+	# House plan close-up: legend and the rooms (darkened, or their own colour with a warm edge).
+	for symbol in Settings.SYMBOLS:
+		_legend_entries[symbol].text = "%s = %s" % [symbol, puzzle["legend"][symbol]]
 	for i in _lamps.size():
-		var room: String = puzzle["fuses"][i]["room"]
-		var is_lit := room in lit
-		_lamps[i].text = "%s: %s" % [room, "lit" if is_lit else "dark"]
+		var fuse_info: Dictionary = Settings.FUSES[i]
+		var is_lit: bool = puzzle["fuses"][i]["room"] in lit
+		_lamps[i].text = "%s\n%s" % [_door_label(fuse_info["place"]), "lit" if is_lit else "dark"]
 		_lamps[i].add_theme_color_override("font_color", ROOM_TEXT_ON_LIT if is_lit else LAMP_OFF)
-		_tiles[i].add_theme_stylebox_override("panel", _box(ROOM_LIT if is_lit else ROOM_DARK, Color("3b2a26"), 8))
+		_tiles[i].add_theme_stylebox_override("panel", _tile_style(is_lit))
 		if is_lit and not _lit_before[i]:
 			_glow(_tiles[i])
 		_lit_before[i] = is_lit
 	_update_flicker(lit.size())
 
+	# Spots: the highlighted one has a golden frame.
+	for i in _spot_buttons.size():
+		var border := HIGHLIGHT if i == _spot_index else Color(1, 1, 1, 0.12)
+		_spot_buttons[i].add_theme_stylebox_override("normal", _spot_style(border))
+		_spot_buttons[i].add_theme_stylebox_override("disabled", _spot_style(border if i == _spot_index else Color(1, 1, 1, 0.05)))
+	# Doors open with their fuse; the stairs with all three (spec 07).
+	for fuse in Settings.FUSES:
+		var door: Button = _doors[fuse["place"]]
+		var is_open: bool = fuse["room"] in lit
+		door.disabled = not is_open
+		door.text = _door_label(fuse["place"]) + ("" if is_open else " (dark)")
+	_stairs.disabled = lit.size() < Settings.FUSES.size()
+	_stairs.text = "Attic stairs" + ("" if not _stairs.disabled else " (dark)")
+
 	for i in _player_buttons.size():
 		_player_buttons[i].button_pressed = (i == current_player)
 	_penalty_label.text = "Penalty: %d s" % penalty_total
 
+	# Fuse box close-up.
 	var fuse: Dictionary = puzzle["fuses"][current_player]
 	_fuse_title.text = "Player %d, your fuse: %s" % [current_player + 1, fuse["colour"].to_upper()]
 	_fuse_title.add_theme_color_override("font_color", UI_COLOURS[fuse["colour"]])
-
 	var seen := _fuse_seen_by(current_player)
 	var seen_colour: String = puzzle["fuses"][seen]["colour"]
-	_hint_label.text = "Torn label you can see (%s fuse): %s\nRead it out to its owner!" % [
-		seen_colour, ", ".join(Rules.label_for(puzzle, seen))]
-
-	for colour in _wire_buttons:
-		_wire_buttons[colour].disabled = fuse["solved"] or colour in chosen
+	var label := Rules.label_for(puzzle, seen)
+	var coloured_name := "[color=#%s]%s[/color]" % [UI_COLOURS[seen_colour].to_html(false), seen_colour]
+	_hint_label.text = "Torn label of the %s fuse. Read it out to its owner!" % coloured_name
+	for i in _label_symbols.size():
+		_show_symbol(_label_symbols[i], label[i])
+	for i in Settings.FUSES.size():
+		var colour: String = puzzle["fuses"][i]["colour"]
+		_sockets[colour].visible = puzzle["fuses"][i]["solved"]
+	for i in Settings.WIRE_COLOURS.size():
+		var colour: String = Settings.WIRE_COLOURS[i]
+		var wire: Button = _wire_buttons[colour]
+		wire.disabled = fuse["solved"] or colour in chosen
+		var border := HIGHLIGHT if i == _wire_index else Color(1, 1, 1, 0.15)
+		wire.add_theme_stylebox_override("normal", _spot_style(border))
+		wire.add_theme_stylebox_override("disabled", _spot_style(Color(0, 0, 0, 0.4)))
 	if fuse["solved"]:
 		_chosen_label.text = "This fuse is already on."
 	elif chosen.is_empty():
 		_chosen_label.text = "Your order: click the wires"
 	else:
 		_chosen_label.text = "Your order: " + ", ".join(chosen)
+	for i in _chosen_wires.size():
+		_chosen_wires[i].visible = i < chosen.size()
+		if i < chosen.size():
+			_chosen_wires[i].add_theme_stylebox_override("panel", _box(UI_COLOURS[chosen[i]], Color(0, 0, 0, 0.7), 0))
 
 
 # The fuse whose torn label this player can see.
@@ -177,6 +386,10 @@ func _fuse_seen_by(player: int) -> int:
 		if Rules.label_viewer(i) == player:
 			return i
 	return -1
+
+
+func _door_label(place: String) -> String:
+	return {"living_room": "Living room", "bathroom": "Bathroom", "bedroom": "Bedroom"}.get(place, place)
 
 
 # ---------- atmosphere (spec 05) ----------
@@ -219,7 +432,7 @@ func _on_flicker_tick() -> void:
 	_flicker_timer.start(step[1])
 
 
-# A room tile flashes bright for a moment when its light comes on.
+# A room on the plan flashes bright for a moment when its light comes on.
 func _glow(tile: Control) -> void:
 	tile.modulate = Color(1.8, 1.8, 1.8)
 	create_tween().tween_property(tile, "modulate", Color.WHITE, 0.8)
@@ -232,111 +445,72 @@ func _build_ui() -> void:
 	ui_theme.default_font_size = 20
 	theme = ui_theme
 
-	var background := ColorRect.new()
-	background.color = Color("1b1012")
-	background.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(background)
+	var backdrop := ColorRect.new()
+	backdrop.color = Color.BLACK
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(backdrop)
+	var hall_area := _picture_area(self, "Background", "room_hall.webp")
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 24)
-	add_child(margin)
+	# The spots: see-through buttons over the picture, with a name.
+	for i in SPOTS.size():
+		var spot: Dictionary = SPOTS[i]
+		var button := Button.new()
+		_style_spot(button, spot["node"], 16)
+		_place(button, spot["rect"])
+		button.pressed.connect(_on_spot_pressed.bind(i))
+		hall_area.add_child(button)
+		_spot_buttons.append(button)
+		_spot_by_name[spot["name"]] = button
+		if spot["name"] == "attic":
+			_stairs = button
+		elif spot["name"] in ["living_room", "bathroom", "bedroom"]:
+			_doors[spot["name"]] = button
+	_spot_by_name["fuse_box"].text = "Fuse box"
+	_spot_by_name["house_plan"].text = "House plan"
 
-	var page := VBoxContainer.new()
-	page.add_theme_constant_override("separation", 16)
-	margin.add_child(page)
+	_build_fuse_box()
+	_build_house_plan()
 
-	# Top bar: title, player switch, penalty
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 12)
-	page.add_child(top)
-	var title := _label(top, "The Hall", 34)
+	# On top of everything: title, player switch and penalty, the message line.
+	var title := _label(self, "The Hall", 34)
+	title.position = Vector2(24, 12)
 	title.add_theme_color_override("font_color", Color("e8d9c0"))
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(spacer)
+	_outline(title)
+	var hud := HBoxContainer.new()
+	hud.name = "Hud"
+	hud.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	hud.offset_left = -452
+	hud.offset_right = -24
+	hud.offset_top = 12
+	hud.offset_bottom = 56
+	hud.alignment = BoxContainer.ALIGNMENT_END
+	hud.add_theme_constant_override("separation", 8)
+	add_child(hud)
 	for i in Settings.FUSES.size():
 		var button := Button.new()
 		button.name = "PlayerButton%d" % i
 		button.text = "Player %d" % (i + 1)
 		button.toggle_mode = true
+		button.focus_mode = Control.FOCUS_NONE
 		button.pressed.connect(_on_player_pressed.bind(i))
-		top.add_child(button)
+		hud.add_child(button)
 		_player_buttons.append(button)
-	_penalty_label = _label(top, "", 20)
+	_penalty_label = _label(hud, "", 20)
 	_penalty_label.name = "PenaltyLabel"
 	_penalty_label.add_theme_color_override("font_color", Color("ff8a80"))
-
-	# Middle: house plan on the left, fuse box on the right
-	var middle := HBoxContainer.new()
-	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	middle.add_theme_constant_override("separation", 24)
-	page.add_child(middle)
-
-	var plan := _card(middle, "House plan")
-	plan.get_parent().custom_minimum_size = Vector2(320, 0)
-	_label(plan, "Legend", 18).add_theme_color_override("font_color", Color("c9b8a0"))
-	_legend_label = _label(plan, "", 20)
-	_legend_label.name = "LegendLabel"
-	_label(plan, "Rooms", 18).add_theme_color_override("font_color", Color("c9b8a0"))
-	for i in Settings.FUSES.size():
-		var tile := PanelContainer.new()
-		tile.name = "RoomTile%d" % i
-		plan.add_child(tile)
-		_tiles.append(tile)
-		var lamp := _label(tile, "", 20)
-		lamp.name = "RoomLamp%d" % i
-		_lamps.append(lamp)
-
-	var right := VBoxContainer.new()
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.add_theme_constant_override("separation", 16)
-	middle.add_child(right)
-
-	var fuse_box := Button.new()
-	fuse_box.name = "FuseBoxButton"
-	fuse_box.text = "Open the fuse box"
-	fuse_box.custom_minimum_size = Vector2(0, 64)
-	fuse_box.add_theme_stylebox_override("normal", _box(Color("2b2b2b"), Color("d4af37")))
-	fuse_box.add_theme_stylebox_override("hover", _box(Color("3a3a3a"), Color("ffd76a")))
-	fuse_box.add_theme_stylebox_override("pressed", _box(Color("222222"), Color("d4af37")))
-	fuse_box.pressed.connect(_on_fuse_box_pressed)
-	right.add_child(fuse_box)
-
-	var fuse_area := _card(right, "")
-	_fuse_panel = fuse_area.get_parent()
-	_fuse_panel.name = "FusePanel"
-	_fuse_panel.visible = false
-	_fuse_title = _label(fuse_area, "", 26)
-	_fuse_title.name = "FuseTitle"
-	_hint_label = _label(fuse_area, "", 20, true)
-	_hint_label.name = "LabelHint"
-	_hint_label.add_theme_color_override("font_color", Color("c9b8a0"))
-
-	var wires := HBoxContainer.new()
-	wires.add_theme_constant_override("separation", 12)
-	fuse_area.add_child(wires)
-	for colour in Settings.WIRE_COLOURS:
-		var wire := _wire_button(colour)
-		wires.add_child(wire)
-		_wire_buttons[colour] = wire
-
-	var order_row := HBoxContainer.new()
-	order_row.add_theme_constant_override("separation", 12)
-	fuse_area.add_child(order_row)
-	_chosen_label = _label(order_row, "", 20)
-	_chosen_label.name = "ChosenLabel"
-	_chosen_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var reset := Button.new()
-	reset.name = "ResetButton"
-	reset.text = "Reset"
-	reset.pressed.connect(_on_reset_pressed)
-	order_row.add_child(reset)
-
-	_message = _label(page, "", 24, true)
+	_outline(_penalty_label)
+	_message = _label(self, "", 22, true)
 	_message.name = "Message"
+	_message.anchor_top = 1.0
+	_message.anchor_bottom = 1.0
+	_message.offset_left = 24
+	_message.offset_right = 584
+	_message.offset_top = -52
+	_message.offset_bottom = -12
+	_message.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_message.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_message.add_theme_color_override("font_color", Color("ffd76a"))
+	_outline(_message)
 
 	# Flickering light (spec 05): a dark layer over everything that lets clicks through.
 	_flicker = ColorRect.new()
@@ -353,6 +527,257 @@ func _build_ui() -> void:
 	add_child(_flicker_timer)
 
 
+# Fuse box close-up: the box picture, cables to click, fuses in their sockets, and a
+# side panel with the player's fuse, the torn label and the order so far.
+func _build_fuse_box() -> void:
+	_fuse_panel = _close_up("FusePanel")
+	_fuse_area = _picture_area(_fuse_panel, "FuseBoxPicture", "ui_fuse_box.webp")
+	for colour in SOCKET_CENTRES:
+		var socket := _image("FuseSocket_" + colour, "item_fuse_%s.png" % colour)
+		_place(socket, Rect2(SOCKET_CENTRES[colour] - Vector2(33, 62), Vector2(66, 124)))
+		socket.visible = false
+		_fuse_area.add_child(socket)
+		_sockets[colour] = socket
+	for i in Settings.WIRE_COLOURS.size():
+		var colour: String = Settings.WIRE_COLOURS[i]
+		var rect: Rect2 = WIRE_RECTS[colour]
+		var wire := Button.new()
+		_style_spot(wire, "Wire_" + colour, 13)
+		_place(wire, rect)
+		wire.pressed.connect(_on_wire_pressed.bind(colour))
+		_fuse_area.add_child(wire)
+		_wire_buttons[colour] = wire
+		# The cable's name above it, in two rows so neighbouring names don't touch.
+		var name_label := _label(_fuse_area, colour, 13)
+		name_label.name = "WireName_" + colour
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_place(name_label, Rect2(rect.get_center().x - 40, 376 + (i % 2) * 24, 80, 24))
+		_outline(name_label)
+
+	var side := PanelContainer.new()
+	side.name = "FuseInfo"
+	side.position = Vector2(20, 64)
+	side.size = Vector2(360, 470)
+	side.add_theme_stylebox_override("panel", _box(Color(0.1, 0.06, 0.06, 0.88), Color("5c2a22"), 14))
+	_fuse_panel.add_child(side)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	side.add_child(box)
+	_fuse_title = _label(box, "", 24, true)
+	_fuse_title.name = "FuseTitle"
+	var space := Control.new()  # a bit more room under the title (manual test 4)
+	space.custom_minimum_size = Vector2(0, 4)
+	box.add_child(space)
+	_hint_label = RichTextLabel.new()
+	_hint_label.name = "LabelHint"
+	_hint_label.bbcode_enabled = true
+	_hint_label.fit_content = true
+	_hint_label.scroll_active = false
+	_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_label.add_theme_font_size_override("normal_font_size", 17)
+	_hint_label.add_theme_color_override("default_color", Color("c9b8a0"))
+	box.add_child(_hint_label)
+	var symbols := HBoxContainer.new()
+	symbols.name = "LabelSymbols"
+	symbols.add_theme_constant_override("separation", 8)
+	box.add_child(symbols)
+	for i in 4:
+		var symbol := _image("LabelSymbol%d" % i, "")
+		symbol.custom_minimum_size = Vector2(64, 64)
+		symbols.add_child(symbol)
+		_label_symbols.append(symbol)
+	_chosen_label = _label(box, "", 18, true)
+	_chosen_label.name = "ChosenLabel"
+	var wires_row := HBoxContainer.new()
+	wires_row.name = "ChosenWires"
+	wires_row.custom_minimum_size = Vector2(0, 24)
+	wires_row.add_theme_constant_override("separation", 8)
+	box.add_child(wires_row)
+	for i in 4:
+		var bar := Panel.new()
+		bar.name = "ChosenWire%d" % i
+		bar.custom_minimum_size = Vector2(60, 18)
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		wires_row.add_child(bar)
+		_chosen_wires.append(bar)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 12)
+	box.add_child(buttons)
+	buttons.add_child(_plain_button("ResetButton", "Reset", _on_reset_pressed))
+	buttons.add_child(_plain_button("BackFromFuseBox", "Back to the hall", _close_close_ups))
+	var keys := _label(box, "Click the cables in the right order. Keys: left/right choose, Enter takes the cable, Esc goes back.", 14, true)
+	keys.add_theme_color_override("font_color", Color("9c8d7a"))
+
+
+# House plan close-up: each room darkened or in its own colour, and the legend in the
+# plan's empty box.
+func _build_house_plan() -> void:
+	_house_plan_panel = _close_up("HousePlanPanel")
+	var plan_area := _picture_area(_house_plan_panel, "HousePlanPicture", "ui_house_plan.webp")
+	for i in Settings.FUSES.size():
+		var tile := PanelContainer.new()
+		tile.name = "RoomTile%d" % i
+		tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_place(tile, PLAN_ROOMS[i])
+		plan_area.add_child(tile)
+		_tiles.append(tile)
+		var lamp := _label(tile, "", 16, true)
+		lamp.name = "RoomLamp%d" % i
+		lamp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lamp.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_outline(lamp)
+		_lamps.append(lamp)
+	var legend_place := CenterContainer.new()
+	legend_place.name = "Legend"
+	legend_place.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_place(legend_place, LEGEND_BOX)
+	plan_area.add_child(legend_place)
+	var legend := VBoxContainer.new()
+	legend.add_theme_constant_override("separation", 1)
+	legend_place.add_child(legend)
+	for symbol in Settings.SYMBOLS:
+		var entry := HBoxContainer.new()
+		entry.add_theme_constant_override("separation", 6)
+		legend.add_child(entry)
+		# A small dark chip behind the symbol, so its colour stands out on the paper.
+		var chip := PanelContainer.new()
+		chip.name = "LegendChip_" + symbol
+		var chip_style := StyleBoxFlat.new()
+		chip_style.bg_color = Color("3b2a1a")
+		chip_style.set_corner_radius_all(4)
+		chip_style.set_content_margin_all(1)
+		chip.add_theme_stylebox_override("panel", chip_style)
+		entry.add_child(chip)
+		var icon := _image("LegendSymbol_" + symbol, "")
+		_show_symbol(icon, symbol)
+		icon.custom_minimum_size = Vector2(20, 20)
+		chip.add_child(icon)
+		var text := _label(entry, "", 14)
+		text.name = "LegendEntry_" + symbol
+		text.add_theme_color_override("font_color", Color("3b2a1a"))
+		_legend_entries[symbol] = text
+	var back := _plain_button("BackFromPlan", "Back to the hall", _close_close_ups)
+	back.position = Vector2(24, 64)
+	_house_plan_panel.add_child(back)
+
+
+# ---------- small helpers ----------
+
+# A full-screen layer that catches clicks, so the hall behind stays still.
+func _close_up(node_name: String) -> Control:
+	var layer := Control.new()
+	layer.name = node_name
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.visible = false
+	add_child(layer)
+	var backdrop := ColorRect.new()
+	backdrop.color = Color.BLACK
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(backdrop)
+	return layer
+
+
+# A picture that keeps its shape (fit, centred) in any window. Returns the area exactly
+# on top of the picture: children placed with _place() stay on their part of the picture.
+func _picture_area(parent: Control, picture_name: String, file: String) -> Control:
+	var fit := AspectRatioContainer.new()
+	fit.name = picture_name + "Fit"
+	fit.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fit.ratio = PICTURE_SIZE.x / PICTURE_SIZE.y
+	fit.stretch_mode = AspectRatioContainer.STRETCH_FIT
+	fit.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(fit)
+	var area := Control.new()
+	area.name = picture_name + "Area"
+	area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fit.add_child(area)
+	var picture := TextureRect.new()
+	picture.name = picture_name
+	picture.texture = load(IMAGES + file)
+	picture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_SCALE
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	area.add_child(picture)
+	return area
+
+
+# Put a node on a rect given in picture pixels (it then moves and scales with the picture).
+func _place(node: Control, rect: Rect2) -> void:
+	node.anchor_left = rect.position.x / PICTURE_SIZE.x
+	node.anchor_top = rect.position.y / PICTURE_SIZE.y
+	node.anchor_right = rect.end.x / PICTURE_SIZE.x
+	node.anchor_bottom = rect.end.y / PICTURE_SIZE.y
+	node.offset_left = 0
+	node.offset_top = 0
+	node.offset_right = 0
+	node.offset_bottom = 0
+
+
+# A picture that scales into whatever size it gets.
+func _image(node_name: String, file: String) -> TextureRect:
+	var image := TextureRect.new()
+	image.name = node_name
+	if file != "":
+		image.texture = load(IMAGES + file)
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return image
+
+
+# A see-through button over a part of a picture, its name written on it.
+# No keyboard focus: the hall handles the keys itself (bug from manual test 2).
+func _style_spot(button: Button, node_name: String, font_size: int) -> void:
+	button.name = node_name
+	button.focus_mode = Control.FOCUS_NONE
+	button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	button.add_theme_font_size_override("font_size", font_size)
+	for state in ["font_color", "font_focus_color", "font_pressed_color"]:
+		button.add_theme_color_override(state, Color.WHITE)
+	button.add_theme_color_override("font_hover_color", HIGHLIGHT)
+	button.add_theme_color_override("font_disabled_color", Color(0.8, 0.75, 0.7))
+	button.add_theme_color_override("font_outline_color", Color.BLACK)
+	button.add_theme_constant_override("outline_size", 5)
+	button.add_theme_stylebox_override("hover", _spot_style(HIGHLIGHT))
+	button.add_theme_stylebox_override("pressed", _spot_style(HIGHLIGHT))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+
+func _plain_button(node_name: String, text: String, action: Callable) -> Button:
+	var button := Button.new()
+	button.name = node_name
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(action)
+	return button
+
+
+func _spot_style(border: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0, 0, 0, 0)
+	style.border_color = border
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(10)
+	return style
+
+
+# A room on the house plan: square, exactly over the room.
+func _tile_style(is_lit: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = ROOM_LIT if is_lit else ROOM_DARK
+	style.border_color = ROOM_LIT_EDGE
+	style.set_border_width_all(3 if is_lit else 0)
+	return style
+
+
+func _outline(label: Label) -> void:
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 6)
+
+
 # wrap = true only for labels with a fixed width (inside a panel or the page).
 # In a row (HBoxContainer) a wrapping label gets squeezed to 1 pixel width
 # and breaks after every letter (bug from manual test 1).
@@ -360,23 +785,11 @@ func _label(parent: Node, text: String, size: int, wrap := false) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", size)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if wrap:
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(label)
 	return label
-
-
-# A dark panel with a border. Returns the box inside it where content goes.
-func _card(parent: Node, heading: String) -> VBoxContainer:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _box(Color("2a1a17"), Color("5c2a22")))
-	parent.add_child(panel)
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation", 10)
-	panel.add_child(content)
-	if heading != "":
-		_label(content, heading, 24).add_theme_color_override("font_color", Color("e8d9c0"))
-	return content
 
 
 func _box(fill: Color, border: Color, margin := 16) -> StyleBoxFlat:
@@ -387,20 +800,3 @@ func _box(fill: Color, border: Color, margin := 16) -> StyleBoxFlat:
 	style.set_corner_radius_all(10)
 	style.set_content_margin_all(margin)
 	return style
-
-
-func _wire_button(colour: String) -> Button:
-	var button := Button.new()
-	button.name = "Wire_" + colour
-	button.text = colour
-	button.custom_minimum_size = Vector2(110, 56)
-	var fill: Color = UI_COLOURS[colour]
-	for state in ["normal", "hover", "pressed", "focus"]:
-		button.add_theme_stylebox_override(state, _box(fill, Color("3b1f1f")))
-	button.add_theme_stylebox_override("disabled", _box(fill.darkened(0.75), Color("3b1f1f")))
-	var text_colour := Color.WHITE if colour in ["blue", "black"] else Color.BLACK
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
-		button.add_theme_color_override(state, text_colour)
-	button.pressed.connect(_on_wire_pressed.bind(colour))
-	return button
-
