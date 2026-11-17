@@ -53,15 +53,17 @@ decide.
   three symbols from `mirror_symbols`, each flipped left-right (pictures `sym_*.png`).
 - Bathtub: before solving, dark water; after, the empty tub with present 2
   (`item_gift_2.png`) and the digit. Using `bathtub` then takes the present once.
-- Message line at the bottom of the screen:
+- Message line at the bottom of the screen. Results of actions come from the shared
+  game (`last_event`), so all players see them; the others are only on this screen:
 
   | When | Text |
   | --- | --- |
-  | Right order | The pipes rattle. The water drains away. |
-  | Wrong order | The pipes rattle angrily. -20 s |
-  | A tap after solving | The taps are dry. |
-  | Mirror before solving | Too much dust to see anything. |
-  | Taking the present | You found the second present! |
+  | Right order | Player 1: the pipes rattle and the water drains away. |
+  | Wrong order | Player 1: the pipes rattle angrily, -20 s |
+  | Taps while the bathroom is dark | Player 1: the bathroom is too dark |
+  | Taking the present | Player 1 found the second present! |
+  | A tap after solving (this screen only) | The taps are dry. |
+  | Mirror before solving (this screen only) | Too much dust to see anything. |
 
 - Online (main.gd hands in `net` with a game): turns go to the host as action
   `turn_taps` with `{"taps": [4 turns]}`, the present as `take_gift` with

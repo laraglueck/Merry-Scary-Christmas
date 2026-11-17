@@ -1,0 +1,231 @@
+# Tests for spec 10: the bathroom screen. They press keys and click spots like a player.
+extends "res://tests/base_test.gd"
+
+const BathroomScene = preload("res://scenes/bathroom.tscn")
+
+
+# Stands in for network.gd in the online test: records what the screen sends.
+class FakeNet extends Node:
+	signal game_changed
+	var game: Dictionary = {}
+	var my_index := 1
+	var sent: Array = []
+
+	func send_action(action: String, data: Dictionary) -> void:
+		sent.append([action, data])
+
+
+# Opens the bathroom like starting the scene (this runs _ready).
+func open_bathroom(green_fuse_on := true) -> Node:
+	var bathroom = BathroomScene.instantiate()
+	bathroom.seed_value = 42
+	bathroom.green_fuse_on = green_fuse_on
+	tree.root.add_child(bathroom)
+	return bathroom
+
+
+func key(bathroom: Node, action: String) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	bathroom._unhandled_input(event)
+
+
+func right_taps(bathroom: Node) -> Array:
+	return bathroom.game["bathroom"]["tap_order"].duplicate()
+
+
+func wrong_taps(bathroom: Node) -> Array:
+	var taps := right_taps(bathroom)
+	taps[0] = "cold" if taps[0] == "hot" else "hot"
+	return taps
+
+
+func click_taps(bathroom: Node, taps: Array) -> void:
+	for tap in taps:
+		press(bathroom, "Spot_%s_tap" % tap)
+
+
+func background_file(bathroom: Node) -> String:
+	var background: TextureRect = find(bathroom, "Background")
+	if background == null or background.texture == null:
+		return ""
+	return background.texture.resource_path.get_file()
+
+
+func is_shown(bathroom: Node, node_name: String) -> bool:
+	var node := find(bathroom, node_name)
+	return node != null and node.is_visible_in_tree()
+
+
+# ---------- picture ----------
+
+func test_lit_picture_when_the_green_fuse_is_on() -> void:
+	assert_eq(background_file(open_bathroom()), "room_bathroom_lit.webp", "background")
+
+
+func test_dark_picture_while_the_green_fuse_is_off() -> void:
+	assert_eq(background_file(open_bathroom(false)), "room_bathroom_dark.webp", "background")
+
+
+func test_all_five_spots_are_there() -> void:
+	var bathroom := open_bathroom()
+	for spot in ["door_hall", "mirror", "hot_tap", "cold_tap", "bathtub"]:
+		find(bathroom, "Spot_" + spot)
+
+
+# ---------- keys ----------
+
+func test_arrows_move_the_highlight_from_spot_to_spot() -> void:
+	var bathroom := open_bathroom()
+	assert_eq(bathroom.highlighted_spot(), "door_hall", "start at the door")
+	key(bathroom, "ui_right")
+	assert_eq(bathroom.highlighted_spot(), "mirror", "one right")
+	for i in 5:
+		key(bathroom, "ui_right")
+	assert_eq(bathroom.highlighted_spot(), "bathtub", "stops at the last spot")
+	key(bathroom, "ui_left")
+	assert_eq(bathroom.highlighted_spot(), "cold_tap", "one left")
+
+
+func test_enter_uses_the_highlighted_spot() -> void:
+	var bathroom := open_bathroom()
+	key(bathroom, "ui_right")
+	key(bathroom, "ui_right")  # hot tap
+	key(bathroom, "ui_accept")
+	assert_eq(bathroom.turns, ["hot"], "one hot turn")
+
+
+func test_keyboard_only_solves_the_taps() -> void:
+	var bathroom := open_bathroom()
+	key(bathroom, "ui_right")
+	key(bathroom, "ui_right")  # hot tap
+	for tap in right_taps(bathroom):
+		var spot := "%s_tap" % tap
+		while bathroom.highlighted_spot() != spot:
+			key(bathroom, "ui_right" if spot == "cold_tap" else "ui_left")
+		key(bathroom, "ui_accept")
+	assert_eq(bathroom.game["bathroom"]["solved"], true, "solved with keys only")
+
+
+# ---------- taps ----------
+
+func test_each_turn_shows_a_mark() -> void:
+	var bathroom := open_bathroom()
+	press(bathroom, "Spot_hot_tap")
+	press(bathroom, "Spot_cold_tap")
+	assert_eq(text_of(bathroom, "TurnsLabel"), "hot  cold", "marks")
+
+
+func test_four_right_turns_solve_the_bathroom() -> void:
+	var bathroom := open_bathroom()
+	click_taps(bathroom, right_taps(bathroom))
+	assert_eq(bathroom.game["bathroom"]["solved"], true, "solved")
+	assert_contains(text_of(bathroom, "Message"), "drains away", "message")
+	assert_eq(text_of(bathroom, "TurnsLabel"), "", "marks cleared")
+
+
+func test_wrong_order_clears_the_marks_and_costs_20_seconds() -> void:
+	var bathroom := open_bathroom()
+	click_taps(bathroom, wrong_taps(bathroom))
+	assert_eq(bathroom.game["bathroom"]["solved"], false, "not solved")
+	assert_eq(bathroom.game["penalty_seconds"], 20, "penalty")
+	assert_contains(text_of(bathroom, "Message"), "-20 s", "message")
+	assert_eq(text_of(bathroom, "TurnsLabel"), "", "marks cleared")
+
+
+func test_walking_away_clears_unfinished_turns() -> void:
+	var bathroom := open_bathroom()
+	press(bathroom, "Spot_hot_tap")
+	press(bathroom, "Spot_cold_tap")
+	press(bathroom, "Spot_mirror")
+	assert_eq(bathroom.turns, [], "turns cleared")
+
+
+func test_taps_are_dry_after_solving() -> void:
+	var bathroom := open_bathroom()
+	click_taps(bathroom, right_taps(bathroom))
+	press(bathroom, "Spot_hot_tap")
+	assert_eq(bathroom.turns, [], "no new turn")
+	assert_contains(text_of(bathroom, "Message"), "dry", "message")
+
+
+# ---------- mirror ----------
+
+func test_mirror_shows_only_dust_before_solving() -> void:
+	var bathroom := open_bathroom()
+	press(bathroom, "Spot_mirror")
+	assert_eq(is_shown(bathroom, "MirrorPanel"), true, "close-up open")
+	assert_eq(is_shown(bathroom, "MirrorSymbols"), false, "no symbols")
+	assert_contains(text_of(bathroom, "Message"), "dust", "message")
+
+
+func test_mirror_shows_the_symbols_reversed_and_flipped_after_solving() -> void:
+	var bathroom := open_bathroom()
+	click_taps(bathroom, right_taps(bathroom))
+	press(bathroom, "Spot_mirror")
+	assert_eq(is_shown(bathroom, "MirrorSymbols"), true, "symbols shown")
+	var names := []
+	for i in 3:
+		var symbol: TextureRect = find(bathroom, "MirrorSymbol%d" % i)
+		if symbol != null:
+			names.append(symbol.texture.resource_path.get_file())
+			assert_eq(symbol.flip_h, true, "symbol %d flipped" % i)
+	# example bedroom wheels bell, star, tree -> mirror shows tree, star, bell
+	assert_eq(names, ["sym_tree.png", "sym_star.png", "sym_bell.png"], "reversed")
+
+
+func test_escape_closes_the_mirror() -> void:
+	var bathroom := open_bathroom()
+	press(bathroom, "Spot_mirror")
+	key(bathroom, "ui_cancel")
+	assert_eq(is_shown(bathroom, "MirrorPanel"), false, "closed")
+
+
+# ---------- bathtub and present ----------
+
+func test_present_and_digit_appear_only_after_solving() -> void:
+	var bathroom := open_bathroom()
+	assert_eq(is_shown(bathroom, "Gift"), false, "no present before")
+	assert_eq(background_file(bathroom), "room_bathroom_lit.webp", "full tub before")
+	click_taps(bathroom, right_taps(bathroom))
+	assert_eq(is_shown(bathroom, "Gift"), true, "present after")
+	assert_eq(background_file(bathroom), "room_bathroom_drained.webp", "tub drained after")
+	assert_eq(text_of(bathroom, "DigitLabel"), str(bathroom.game["bathroom"]["digit"]), "digit")
+
+
+func test_present_is_refused_before_solving() -> void:
+	var bathroom := open_bathroom()
+	press(bathroom, "Spot_bathtub")
+	assert_eq(bathroom.game["bathroom"]["gift_taken"], false, "not taken")
+	assert_contains(text_of(bathroom, "Message"), "not solved", "message")
+
+
+func test_present_can_be_taken_once() -> void:
+	var bathroom := open_bathroom()
+	click_taps(bathroom, right_taps(bathroom))
+	press(bathroom, "Spot_bathtub")
+	assert_eq(bathroom.game["bathroom"]["gift_taken"], true, "taken")
+	assert_eq(is_shown(bathroom, "Gift"), false, "gone from the tub")
+	assert_contains(text_of(bathroom, "Message"), "second present", "message")
+	press(bathroom, "Spot_bathtub")
+	assert_contains(text_of(bathroom, "Message"), "already taken", "second time")
+
+
+# ---------- online ----------
+
+func test_online_turns_and_present_go_to_the_host() -> void:
+	var offline := open_bathroom()
+	var net := FakeNet.new()
+	net.game = offline.game.duplicate(true)
+	tree.root.add_child(net)
+	var bathroom = BathroomScene.instantiate()
+	bathroom.net = net
+	tree.root.add_child(bathroom)
+	click_taps(bathroom, ["hot", "hot", "cold", "cold"])
+	press(bathroom, "Spot_bathtub")
+	assert_eq(net.sent, [
+		["turn_taps", {"taps": ["hot", "hot", "cold", "cold"]}],
+		["take_gift", {"room": "bathroom"}],
+	], "sent to the host")
+	assert_eq(net.game["bathroom"]["solved"], false, "only the host changes the game")
