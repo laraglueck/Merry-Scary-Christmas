@@ -79,7 +79,12 @@ One screen for the three phases that end the game:
 
 - Under the line: the presents found (from the inventory) and, for the two wins, the time
   that was left.
-- A "Back to the lobby" button, where the host can start a new game.
+- A line at the top with the last event (what happened).
+- The node names follow the old placeholder (`PlaceTitle`, `Message`, `BackButton`), so the
+  midnight test in `test_main.gd` keeps working.
+- "Back to the lobby" needs a small function in `network.gd` (the host clears the finished
+  game for everyone), which is Mathies's file. Until it exists, the button is there but
+  hidden.
 
 ### Main screen (one line each, announce to Mathies)
 - `main.gd`: `"attic"` → `attic.tscn`; `"merry"`, `"scary"`, `"midnight"` → `ending.tscn`.

@@ -17,6 +17,10 @@ const SCREENS := {
 	"lobby": preload("res://scenes/lobby.tscn"),
 	"hall": preload("res://scenes/hall.tscn"),
 	"bathroom": preload("res://scenes/bathroom.tscn"),
+	"attic": preload("res://scenes/attic.tscn"),       # spec 16
+	"merry": preload("res://scenes/ending.tscn"),      # the three ways a game ends (spec 16)
+	"scary": preload("res://scenes/ending.tscn"),
+	"midnight": preload("res://scenes/ending.tscn"),
 }
 const PLACEHOLDER = preload("res://scenes/placeholder_room.tscn")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
