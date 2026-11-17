@@ -37,8 +37,11 @@ func press(screen: Node, node_name: String) -> void:
 		button.pressed.emit()
 
 
+# The text a player reads (a RichTextLabel without its [color] tags).
 func text_of(screen: Node, node_name: String) -> String:
 	var node := find(screen, node_name)
+	if node is RichTextLabel:
+		return node.get_parsed_text()
 	return node.text if node != null else ""
 
 
