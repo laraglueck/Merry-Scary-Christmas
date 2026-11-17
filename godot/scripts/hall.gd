@@ -7,6 +7,7 @@ extends Control
 
 const Rules = preload("res://scripts/rules/fuse_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
+const HouseRules = preload("res://scripts/rules/house_rules.gd")
 
 const UI_COLOURS := {
 	"blue": Color("2f6fd6"), "yellow": Color("e8c62e"), "white": Color("f2f2f2"), "black": Color("1e1e1e"),
@@ -44,6 +45,8 @@ var _hint_label: Label
 var _wire_buttons := {}
 var _chosen_label: Label
 var _message: Label
+var _doors := {}             # place -> door button (spec 07)
+var _stairs: Button
 
 
 func _ready() -> void:
@@ -105,6 +108,14 @@ func _on_wire_pressed(colour: String) -> void:
 	_refresh()
 
 
+# Walking (spec 07): the whole team goes; the host checks the door is lit.
+func _on_place_pressed(place: String) -> void:
+	if _online():
+		net.send_action("go_to", {"place": place})
+	else:
+		_message.text = "Walking through the house needs the full game: start main.tscn."
+
+
 func _on_reset_pressed() -> void:
 	chosen.clear()
 	_refresh()
@@ -148,6 +159,15 @@ func _refresh() -> void:
 		_lit_before[i] = is_lit
 	_update_flicker(lit.size())
 
+	# Doors open with their fuse; the stairs with all three (spec 07).
+	for fuse in Settings.FUSES:
+		var door: Button = _doors[fuse["place"]]
+		var is_open: bool = fuse["room"] in lit
+		door.disabled = not is_open
+		door.text = _door_label(fuse["place"]) + ("" if is_open else " (dark)")
+	_stairs.disabled = lit.size() < Settings.FUSES.size()
+	_stairs.text = "Attic stairs" + ("" if not _stairs.disabled else " (dark)")
+
 	for i in _player_buttons.size():
 		_player_buttons[i].button_pressed = (i == current_player)
 	_penalty_label.text = "Penalty: %d s" % penalty_total
@@ -177,6 +197,10 @@ func _fuse_seen_by(player: int) -> int:
 		if Rules.label_viewer(i) == player:
 			return i
 	return -1
+
+
+func _door_label(place: String) -> String:
+	return {"living_room": "Living room", "bathroom": "Bathroom", "bedroom": "Bedroom"}.get(place, place)
 
 
 # ---------- atmosphere (spec 05) ----------
@@ -303,6 +327,26 @@ func _build_ui() -> void:
 	fuse_box.add_theme_stylebox_override("pressed", _box(Color("222222"), Color("d4af37")))
 	fuse_box.pressed.connect(_on_fuse_box_pressed)
 	right.add_child(fuse_box)
+
+	# Doors and stairs (spec 07): one row under the fuse box.
+	var doors_row := HBoxContainer.new()
+	doors_row.name = "DoorsRow"
+	doors_row.add_theme_constant_override("separation", 8)
+	right.add_child(doors_row)
+	for fuse in Settings.FUSES:
+		var door := Button.new()
+		door.name = "Door_" + fuse["place"]
+		door.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		door.add_theme_font_size_override("font_size", 17)
+		door.pressed.connect(_on_place_pressed.bind(fuse["place"]))
+		doors_row.add_child(door)
+		_doors[fuse["place"]] = door
+	_stairs = Button.new()
+	_stairs.name = "StairsButton"
+	_stairs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_stairs.add_theme_font_size_override("font_size", 17)
+	_stairs.pressed.connect(_on_place_pressed.bind("attic"))
+	doors_row.add_child(_stairs)
 
 	var fuse_area := _card(right, "")
 	_fuse_panel = fuse_area.get_parent()

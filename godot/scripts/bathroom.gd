@@ -162,7 +162,7 @@ func _use_spot(spot: String) -> void:
 		"bathtub":
 			_send("take_gift", {"room": "bathroom"})
 		"door_hall":
-			_message.text = "The way back to the hall opens once walking between rooms is built."
+			_send("go_to", {"place": "hall"})  # the whole team walks back (spec 07)
 
 
 # Every turn goes to the shared game, so the whole team builds one order.

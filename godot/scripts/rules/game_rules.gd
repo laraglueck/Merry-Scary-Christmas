@@ -7,11 +7,13 @@ extends RefCounted
 
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
+const HouseRules = preload("res://scripts/rules/house_rules.gd")
 
 
 static func new_game(rng: RandomNumberGenerator) -> Dictionary:
 	return {
-		"phase": "hall",                            # which screen everyone sees
+		"phase": "hall",                            # "hall" = the game runs inside the house
+		"location": "hall",                         # where the whole team is (spec 07)
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
 		"penalty_seconds": 0,                       # all penalties so far
@@ -29,6 +31,8 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 		"take_gift":
 			if data.get("room") == "bathroom":
 				_take_bathroom_gift(game, player)
+		"go_to":
+			_go_to(game, player, data)
 
 
 # Player i always works on fuse i (Player 1 = red, Player 2 = green, Player 3 = gold).
@@ -75,3 +79,18 @@ static func _take_bathroom_gift(game: Dictionary, player: int) -> void:
 		game["last_event"] = "%s found the second present!" % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
+
+
+# Walking (spec 07): the whole team moves; a refused move only explains why.
+static func _go_to(game: Dictionary, player: int, data: Dictionary) -> void:
+	var who := "Player %d" % (player + 1)
+	var place := str(data.get("place", ""))
+	var error := HouseRules.go_to(game, place)
+	if error != "":
+		game["last_event"] = "%s: %s" % [who, error]
+	elif place == "hall":
+		game["last_event"] = "%s led the team back to the hall." % who
+	elif place == "attic":
+		game["last_event"] = "%s climbed the stairs to the attic." % who
+	else:
+		game["last_event"] = "%s opened the %s door." % [who, HouseRules.place_name(place)]
