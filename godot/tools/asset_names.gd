@@ -31,6 +31,7 @@ static func images() -> Dictionary:
 	for room in FUSE_ROOMS:
 		list["room_%s_dark.webp" % room] = SIZE_SCREEN
 		list["room_%s_lit.webp" % room] = SIZE_SCREEN
+	list["room_bathroom_drained.webp"] = SIZE_SCREEN  # lit, the tub empty after the taps are solved
 
 	# Characters
 	for character in ["santa", "snowman", "nutcracker", "jingles_asleep", "jingles_awake"]:  # three heroes, then the villain Scary Jingles
