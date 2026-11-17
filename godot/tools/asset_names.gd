@@ -63,6 +63,7 @@ static func images() -> Dictionary:
 	list["ui_title.webp"] = SIZE_SCREEN
 	list["ui_win.webp"] = SIZE_SCREEN
 	list["ui_lose.webp"] = SIZE_SCREEN
+	list["ui_fuse_box.webp"] = SIZE_SCREEN  # close-up shown when the fuse box is opened
 	list["ui_clock.png"] = SIZE_BOARD
 	list["ui_inventory.png"] = SIZE_BAR
 	list["ui_noise_meter.png"] = SIZE_BAR

@@ -20,7 +20,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
 | room_garden.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| room_hall.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| room_hall.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, model to confirm) | 1376 x 768 |
 | room_attic.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
@@ -66,6 +66,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | ui_title.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_win.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_lose.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| ui_fuse_box.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, model to confirm) | close-up of the open fuse box, 1376 x 768 |
 | ui_clock.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_inventory.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_noise_meter.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
