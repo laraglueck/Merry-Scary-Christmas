@@ -35,6 +35,12 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | char_santa_asleep.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_santa_awake.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
 | char_nutcracker.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
+| char_santa_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, white background removed with add_image.gd |
+| char_santa_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, white background removed with add_image.gd |
+| char_snowman_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, white background removed with add_image.gd |
+| char_snowman_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, white background removed with add_image.gd |
+| char_nutcracker_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, white background removed with add_image.gd |
+| char_nutcracker_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, white background removed with add_image.gd |
 | item_fuse_red.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_green.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_gold.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |

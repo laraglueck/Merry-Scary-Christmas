@@ -36,6 +36,10 @@ static func images() -> Dictionary:
 	# Characters
 	for character in ["elf", "snowman", "gingerbread", "santa_asleep", "santa_awake", "nutcracker"]:
 		list["char_%s.png" % character] = SIZE_CHARACTER
+	# The same figures with a green or yellow scarf / jacket (the first ones wear red).
+	for character in ["santa", "snowman", "nutcracker"]:
+		for colour in ["green", "yellow"]:
+			list["char_%s_%s.png" % [character, colour]] = SIZE_CHARACTER
 
 	# Items
 	for colour in ["red", "green", "gold"]:
