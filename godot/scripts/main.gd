@@ -3,6 +3,7 @@
 # "Start"); the lobby before the game starts, then the place where the team is (hall, a
 # room, the attic). If the host leaves, everyone is back in the lobby.
 # The music plays here, so it goes on from screen to screen until the game starts.
+# The clock (spec 13) is shown here too, on top of every screen while the game runs.
 #
 # TEAM: your room's scene = a new entry in SCREENS (key = its place, e.g. "bedroom").
 # Until then the place shows PLACEHOLDER with its name and "Back to the hall".
@@ -17,6 +18,10 @@ const SCREENS := {
 	"bathroom": preload("res://scenes/bathroom.tscn"),
 }
 const PLACEHOLDER = preload("res://scenes/placeholder_room.tscn")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
+const Settings = preload("res://scripts/settings.gd")
+const CLOCK_COLOUR := Color("f3e6cf")
+const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
 
 var net: Node
 var screen: Node
@@ -24,6 +29,7 @@ var screen_name := ""
 var intro_done := false  # story finished or skipped, or a game already started here
 var title_done := false  # "Start" pressed, or a game already started on this device
 var music: AudioStreamPlayer
+var clock_label: Label
 
 
 func _ready() -> void:
@@ -31,6 +37,7 @@ func _ready() -> void:
 	net.name = "Network"
 	add_child(net)
 	_start_music()
+	_build_clock()
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
@@ -60,6 +67,7 @@ func _on_title_start_pressed() -> void:
 
 
 func _update_screen() -> void:
+	_update_clock()
 	if not net.game.is_empty():
 		intro_done = true  # once a game ran here, game over leads back to the lobby
 		title_done = true
@@ -92,3 +100,37 @@ func _start_music() -> void:
 	# the end shows up as a leak warning.
 	music.autoplay = DisplayServer.get_name() != "headless"
 	add_child(music)
+
+
+# "Midnight in 09:58" at the top centre, above every screen (its own canvas layer).
+func _build_clock() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "ClockLayer"
+	layer.layer = 5
+	add_child(layer)
+	clock_label = Label.new()
+	clock_label.name = "ClockLabel"
+	clock_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	clock_label.offset_left = -160
+	clock_label.offset_right = 160
+	clock_label.offset_top = 12
+	clock_label.offset_bottom = 52
+	clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	clock_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clock_label.add_theme_font_size_override("font_size", 26)
+	clock_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	clock_label.add_theme_constant_override("outline_size", 6)
+	clock_label.visible = false
+	layer.add_child(clock_label)
+
+
+# Shown only while the game runs; red in the last minute.
+func _update_clock() -> void:
+	var running: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
+	clock_label.visible = running
+	if running:
+		var left := ClockRules.time_left(net.game)
+		clock_label.text = "Midnight in " + ClockRules.as_text(left)
+		var colour := CLOCK_WARNING_COLOUR if left < Settings.CLOCK_WARNING_SECONDS else CLOCK_COLOUR
+		clock_label.add_theme_color_override("font_color", colour)
+

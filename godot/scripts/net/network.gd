@@ -7,6 +7,7 @@ extends Node
 const Settings = preload("res://scripts/settings.gd")
 const RoomCode = preload("res://scripts/net/room_code.gd")
 const GameRules = preload("res://scripts/rules/game_rules.gd")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 
 signal changed       # status, players or counter changed: the screen should update
 signal game_changed  # the shared game changed (spec 04)
@@ -17,6 +18,7 @@ var my_index := -1          # 0 = Player 1 (host), 1 = Player 2, 2 = Player 3
 var players: Array = []     # player indexes in the room, e.g. [0, 1, 2]
 var counter := 0
 var room_code := ""         # host: the code others type in, e.g. "KRTW"
+var _clock_rest := 0.0      # host: time since the last whole second (spec 13)
 var game := {}              # the shared game (spec 04): only the host changes it, everyone gets a copy
 
 var _peer_to_index := {}    # host only: network id -> player index (the host has id 1)
@@ -58,6 +60,7 @@ func _process(delta: float) -> void:
 			_announce()
 	if _search_socket != null:
 		_listen_for_room(delta)
+	advance_clock(delta)
 
 
 # ---------- pure helpers ----------
@@ -204,6 +207,21 @@ func _host_add_one(sender: int) -> void:
 
 # ---------- the shared game (spec 04) ----------
 
+# The clock (spec 13), host only: collects the frame times; every whole second the
+# game ticks and everyone gets it. Called every frame by _process (tests call it directly).
+func advance_clock(delta: float) -> void:
+	if game.is_empty() or not multiplayer.is_server():
+		return
+	_clock_rest += delta
+	var seconds := int(_clock_rest)
+	if seconds < 1:
+		return
+	_clock_rest -= seconds
+	if ClockRules.tick(game, seconds) == "":
+		_send_game()
+		game_changed.emit()
+
+
 func can_start() -> bool:
 	return connected and my_index == 0 and players.size() == Settings.MAX_PLAYERS and game.is_empty()
 
@@ -213,6 +231,7 @@ func start_game() -> void:
 	if not can_start():
 		return
 	game = GameRules.new_game(_rng)
+	_clock_rest = 0.0
 	_send_game()
 	game_changed.emit()
 

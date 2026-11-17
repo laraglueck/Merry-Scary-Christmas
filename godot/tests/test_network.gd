@@ -4,6 +4,7 @@ extends "res://tests/base_test.gd"
 
 const RoomCode = preload("res://scripts/net/room_code.gd")
 const Settings = preload("res://scripts/settings.gd")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 
 
 # ---------- pure helpers ----------
@@ -252,3 +253,24 @@ func test_game_ends_for_others_when_host_leaves() -> void:
 	room[0].get_parent().free()
 	assert_true(await wait_until(func(): return a.game.is_empty()), "A's game is gone")
 	assert_contains(a.status, "host left", "status")
+
+
+# ---------- the clock (spec 13) ----------
+
+func test_only_the_host_counts_the_time_and_everyone_sees_it() -> void:
+	var room: Array = await make_started_room(47571)
+	var before: int = room[1].game.get("seconds_played", -1)
+	room[1].advance_clock(30.0)  # a player's clock does not count
+	assert_eq(room[1].game.get("seconds_played", -1), before, "Player 2 does not count")
+	room[0].advance_clock(61.0)
+	var left: int = ClockRules.time_left(room[0].game)
+	assert_true(left >= 536 and left <= 539, "host: 61 s gone, %d s left" % left)
+	var same := func(): return room.all(func(net): return ClockRules.time_left(net.game) == ClockRules.time_left(room[0].game))
+	assert_true(await wait_until(same), "everyone has the host's time")
+
+
+func test_midnight_ends_the_game_for_everyone() -> void:
+	var room: Array = await make_started_room(47572)
+	room[0].advance_clock(600.0)
+	var all_midnight := func(): return room.all(func(net): return net.game.get("phase") == "midnight")
+	assert_true(await wait_until(all_midnight), "everyone at midnight")
