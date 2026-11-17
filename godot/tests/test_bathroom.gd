@@ -79,31 +79,31 @@ func test_all_five_spots_are_there() -> void:
 func test_arrows_move_the_highlight_from_spot_to_spot() -> void:
 	var bathroom := open_bathroom()
 	assert_eq(bathroom.highlighted_spot(), "door_hall", "start at the door")
-	key(bathroom, "ui_right")
-	assert_eq(bathroom.highlighted_spot(), "mirror", "one right")
-	for i in 5:
-		key(bathroom, "ui_right")
-	assert_eq(bathroom.highlighted_spot(), "bathtub", "stops at the last spot")
 	key(bathroom, "ui_left")
-	assert_eq(bathroom.highlighted_spot(), "cold_tap", "one left")
+	assert_eq(bathroom.highlighted_spot(), "mirror", "one left")
+	for i in 5:
+		key(bathroom, "ui_left")
+	assert_eq(bathroom.highlighted_spot(), "bathtub", "stops at the first spot")
+	key(bathroom, "ui_right")
+	assert_eq(bathroom.highlighted_spot(), "cold_tap", "one right")
 
 
 func test_enter_uses_the_highlighted_spot() -> void:
 	var bathroom := open_bathroom()
-	key(bathroom, "ui_right")
-	key(bathroom, "ui_right")  # hot tap
+	key(bathroom, "ui_left")
+	key(bathroom, "ui_left")  # hot tap
 	key(bathroom, "ui_accept")
 	assert_eq(bathroom.game["bathroom"]["turns"], ["hot"], "one hot turn")
 
 
 func test_keyboard_only_solves_the_taps() -> void:
 	var bathroom := open_bathroom()
-	key(bathroom, "ui_right")
-	key(bathroom, "ui_right")  # hot tap
+	key(bathroom, "ui_left")
+	key(bathroom, "ui_left")  # hot tap
 	for tap in right_taps(bathroom):
 		var spot := "%s_tap" % tap
 		while bathroom.highlighted_spot() != spot:
-			key(bathroom, "ui_right" if spot == "cold_tap" else "ui_left")
+			key(bathroom, "ui_left" if spot == "cold_tap" else "ui_right")
 		key(bathroom, "ui_accept")
 	assert_eq(bathroom.game["bathroom"]["solved"], true, "solved with keys only")
 
