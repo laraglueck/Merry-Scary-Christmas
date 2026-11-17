@@ -24,6 +24,10 @@ const STORY_LINES := [
 ]
 const LINE_START_SECONDS := [0.0, 5.0, 9.0, 15.0, 19.0, 23.0, 27.0, 31.0]
 
+# Only these keys skip the story. Not "any key": a Mac's volume keys arrive as key
+# presses too, and turning the sound up must not skip what you want to hear.
+const SKIP_KEYS := [KEY_SPACE, KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE]
+
 const FADE_SECONDS := 0.35        # a subtitle fades in and out this fast
 const EXTRA_WAIT_SECONDS := 1.5   # without sound, go on this long after the voice's length
 const SUBTITLE_WIDTH := 1060.0    # fixed width, so the label can wrap (see TEAM-GUIDE pitfalls)
@@ -74,7 +78,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed:
+	if event is InputEventKey and event.pressed and SKIP_KEYS.has(event.keycode):
 		_finish()
 
 

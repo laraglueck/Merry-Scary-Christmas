@@ -16,7 +16,8 @@ ElevenLabs) and the music (`music_lobby.mp3`) already exist.
   - each line appears at the second it starts in the recording (`LINE_START_SECONDS`,
     taken from the audio by hand);
   - the voice (`Voice`) plays once; when it ends the screen sends `finished`;
-  - a click or a key skips: `finished` at once. A small hint says "Click to skip".
+  - a click, Space, Enter or Esc skips: `finished` at once (volume keys do not). A small
+    hint says "Click to skip".
 - The music moves to `main.gd` (`Music`, looping): it starts with the game, keeps playing
   through loading screen, title and lobby without a break, and stops when the game starts.
 - The title keeps only its quiet wind; it has no music or voice of its own any more.

@@ -67,6 +67,31 @@ func test_click_skips() -> void:
 	assert_eq(done[0], 1, "finished only once")
 
 
+func press_key(intro: Node, keycode: Key) -> void:
+	var key := InputEventKey.new()
+	key.keycode = keycode
+	key.pressed = true
+	intro._unhandled_input(key)
+
+
+func test_volume_and_media_keys_do_not_skip() -> void:
+	var intro := open_intro()
+	var done := [false]
+	intro.finished.connect(func(): done[0] = true)
+	for keycode in [KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_VOLUMEMUTE, KEY_MEDIAPLAY, KEY_SHIFT, KEY_META]:
+		press_key(intro, keycode)
+	assert_true(not done[0], "volume, media and modifier keys keep the story going")
+
+
+func test_space_enter_and_escape_skip() -> void:
+	for keycode in [KEY_SPACE, KEY_ENTER, KEY_ESCAPE]:
+		var intro := open_intro()
+		var done := [false]
+		intro.finished.connect(func(): done[0] = true)
+		press_key(intro, keycode)
+		assert_true(done[0], "%s skips" % OS.get_keycode_string(keycode))
+
+
 func test_end_of_the_voice_finishes() -> void:
 	var intro := open_intro()
 	var done := [false]
