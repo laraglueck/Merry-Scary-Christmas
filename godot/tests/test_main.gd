@@ -32,20 +32,32 @@ func make_started_mains(port: int) -> Array:
 	return [host, a, b]
 
 
-func test_main_starts_with_the_title() -> void:
+func test_main_starts_with_the_loading_screen() -> void:
 	var main := make_main_device("Solo")
-	assert_eq(main.screen_name, "title", "title first (spec 11)")
-	assert_true(main.find_child("StartButton", true, false) != null, "start button shown")
-	assert_true(main.find_child("CreateButton", true, false) == null, "no lobby yet")
+	assert_eq(main.screen_name, "intro", "loading screen first (spec 12)")
+	assert_true(main.find_child("SubtitleLabel", true, false) != null, "story shown")
 
 
-func test_main_start_on_the_title_opens_the_lobby() -> void:
+func test_main_loading_screen_then_title_then_lobby() -> void:
 	var main := make_main_device("Solo2")
+	main.screen.finished.emit()
+	assert_eq(main.screen_name, "title", "title after the story")
 	press(main, "StartButton")
 	assert_eq(main.screen_name, "lobby", "lobby after Start")
-	await wait_frames(2)  # the old title is removed at the end of a frame
+	await wait_frames(2)  # the old screens are removed at the end of a frame
 	assert_true(main.find_child("CreateButton", true, false) != null, "lobby shown")
 	assert_true(main.find_child("TitleLabel", true, false) == null, "title gone")
+	assert_true(main.find_child("SubtitleLabel", true, false) == null, "story gone")
+
+
+func test_main_music_loops_through_the_screens() -> void:
+	var main := make_main_device("Solo3")
+	var music: AudioStreamPlayer = main.get_node_or_null("Music")
+	assert_true(music != null and music.stream != null, "music in main")
+	assert_true(music != null and music.stream.loop, "music loops")
+	main.screen.finished.emit()
+	await wait_frames(2)
+	assert_true(main.get_node_or_null("Music") == music, "same music on the title")
 
 
 func test_main_switches_everyone_to_the_hall_when_the_game_starts() -> void:

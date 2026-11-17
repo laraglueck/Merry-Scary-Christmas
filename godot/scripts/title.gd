@@ -1,6 +1,7 @@
 # The title screen (spec 11): the house in the snow with Santa, the snowman and the
-# nutcracker in front of it, a flickering light in the window, falling snow, the game
-# name, music, the spoken intro and "Start".
+# nutcracker in front of it, a flickering light in the window, falling snow, quiet
+# wind, the game name and "Start". The music comes from main.gd, the story from the
+# loading screen before (spec 12).
 # Shown on every device on its own before the lobby; nothing here goes over the network.
 # main.gd listens to start_pressed and then shows the lobby. Started alone (⌘ R),
 # "Start" does nothing.
@@ -47,8 +48,6 @@ var _flicker_timer: Timer
 
 func _ready() -> void:
 	_build_ui()
-	_add_sound("Music", "music_lobby.mp3", true, 0.0)
-	_add_sound("Voice", "voice_title.mp3", false, 0.0)
 	_add_sound("Wind", "sfx_wind.mp3", true, -14.0)
 	resized.connect(_fit_stage)
 	_fit_stage()
@@ -120,7 +119,7 @@ func _build_ui() -> void:
 
 	_window_glow = TextureRect.new()
 	_window_glow.name = "WindowGlow"
-	_window_glow.texture = _radial(GLOW_COLOUR, Color(GLOW_COLOUR, 0.0))
+	_window_glow.texture = radial(GLOW_COLOUR, Color(GLOW_COLOUR, 0.0))
 	_window_glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_window_glow.size = Vector2(GLOW_RADIUS, GLOW_RADIUS) * 2.0
 	_window_glow.position = GLOW_CENTRE - Vector2(GLOW_RADIUS, GLOW_RADIUS)
@@ -129,14 +128,14 @@ func _build_ui() -> void:
 	_window_glow.material = add_light
 	_stage.add_child(_window_glow)
 
-	_stage.add_child(_snow())
+	_stage.add_child(make_snow(STAGE_SIZE.x))
 
 	for figure: Dictionary in FIGURES:
 		_stage.add_child(_figure(figure))
 
 	var vignette := TextureRect.new()  # dark edges: spooky, and the eye goes to the window
 	vignette.name = "Vignette"
-	vignette.texture = _radial(Color(NIGHT, 0.0), Color(NIGHT, 0.85), 0.45)
+	vignette.texture = radial(Color(NIGHT, 0.0), Color(NIGHT, 0.85), 0.45)
 	vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -202,16 +201,16 @@ func _figure(figure: Dictionary) -> TextureRect:
 	return picture
 
 
-# Slowly falling snow over the whole stage.
-func _snow() -> CPUParticles2D:
+# Slowly falling snow over the given width (also used by the loading screen).
+static func make_snow(width: float) -> CPUParticles2D:
 	var snow := CPUParticles2D.new()
 	snow.name = "Snow"
 	snow.amount = 160
 	snow.lifetime = 9.0
 	snow.preprocess = 9.0  # already snowing when the screen opens
-	snow.position = Vector2(STAGE_SIZE.x / 2.0, -10)
+	snow.position = Vector2(width / 2.0, -10)
 	snow.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	snow.emission_rect_extents = Vector2(STAGE_SIZE.x / 2.0 + 80, 1)
+	snow.emission_rect_extents = Vector2(width / 2.0 + 80, 1)
 	snow.direction = Vector2(0.25, 1)
 	snow.spread = 12.0
 	snow.gravity = Vector2(0, 6)
@@ -223,8 +222,8 @@ func _snow() -> CPUParticles2D:
 	return snow
 
 
-# A round gradient from the centre colour to the edge colour.
-func _radial(centre: Color, edge: Color, inner := 0.0) -> GradientTexture2D:
+# A round gradient from the centre colour to the edge colour (also used by the loading screen).
+static func radial(centre: Color, edge: Color, inner := 0.0) -> GradientTexture2D:
 	var gradient := Gradient.new()
 	gradient.set_color(0, centre)
 	gradient.set_color(1, edge)
