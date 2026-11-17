@@ -104,6 +104,7 @@ func test_right_code_with_keys_only_shows_jingles_and_the_choices() -> void:
 	key(attic, "ui_accept")
 	assert_true(not find(attic, "LockPanel").visible, "lock gone")
 	assert_true(find(attic, "Jingles").visible, "Jingles asleep")
+	assert_true(find(attic, "Key").visible, "the key beside him")
 	assert_true(find(attic, "ChoiceLockIn").visible, "lock-in choice")
 	assert_true(find(attic, "ChoiceReconcile").visible, "photo choice")
 
@@ -124,6 +125,7 @@ func test_lock_in_ends_the_game_as_scary_christmas() -> void:
 	open_the_lock(attic)
 	press(attic, "ChoiceLockIn")
 	assert_eq(attic.game["phase"], "scary", "phase")
+	assert_true(not find(attic, "Key").visible, "the team took the key")
 	assert_contains(text_of(attic, "Message"), "locked Scary Jingles in", "message")
 
 

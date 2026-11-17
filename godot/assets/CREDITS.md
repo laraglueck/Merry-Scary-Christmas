@@ -46,7 +46,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | item_gift_1.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | red ribbon, white background removed with add_image |
 | item_gift_2.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | green ribbon, white background removed with add_image |
 | item_gift_3.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | gold ribbon, white background removed with add_image |
-| item_key.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| item_key.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background and the holes in the bow removed |
 | item_house_plan.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | item_photo.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | Santa and the elf as friends; white background removed |
 | item_cookies.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed |
@@ -83,7 +83,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | ui_win.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_win_merry.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | Merry Christmas ending |
 | ui_win_scary.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | Scary Christmas ending |
-| ui_lose.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| ui_lose.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | midnight ending; edit of ui_win_scary |
 | ui_fuse_box.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | close-up of the open fuse box, 1376 x 768 |
 | ui_house_plan.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | close-up of the house plan, 1376 x 768 |
 | ui_clock.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |

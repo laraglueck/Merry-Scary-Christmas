@@ -50,7 +50,7 @@ func _run(args: PackedStringArray) -> int:
 	# A character, item or prop on a white background (e.g. a JPG): the white around it
 	# becomes see-through. White inside it (beard, snow, a clock face) stays, see _cut_out_white.
 	elif _is_cut_out(file_name) and image.detect_alpha() == Image.ALPHA_NONE:
-		_cut_out_white(image, file_name.begins_with("char_") or file_name.begins_with("prop_clock_hand") or file_name == "prop_doll.png")
+		_cut_out_white(image, file_name.begins_with("char_") or file_name.begins_with("prop_clock_hand") or file_name in ["prop_doll.png", "item_key.png"])
 
 	# A cut-out picture (see-through background) loses its empty margins first,
 	# so the object itself fills the file, however much space was around it.

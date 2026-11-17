@@ -18,6 +18,7 @@ const DIAL_COLOURS := [Color("b03a3a"), Color("3f8a4f"), Color("c9a227")]
 # Scary Jingles in his armchair, on the left of the floor, facing into the room.
 # Rect2(x, y, width, height) on the 1152 x 648 screen, measured on room_attic.webp.
 const JINGLES_RECT := Rect2(560, 200, 240, 292)
+const KEY_RECT := Rect2(812, 440, 72, 66)  # the key on the floor beside his armchair
 const CHOICES := [
 	{"node": "ChoiceLockIn", "choice": "lock_in", "label": "Lock him in"},
 	{"node": "ChoiceReconcile", "choice": "reconcile", "label": "Leave the photo and cookies"},
@@ -40,6 +41,7 @@ var _background: TextureRect
 var _lock_panel: PanelContainer
 var _dial_buttons: Array[Button] = []
 var _jingles: TextureRect
+var _key: TextureRect
 var _choice_buttons: Array[Button] = []
 var _message: Label
 
@@ -174,6 +176,7 @@ func _refresh() -> void:
 		button.add_theme_stylebox_override("normal", _dial_style(DIAL_COLOURS[i], border))
 
 	_jingles.visible = not locked
+	_key.visible = not locked and not InventoryRules.has(game, "key")
 	var photo := InventoryRules.has(game, "photo")
 	for i in _choice_buttons.size():
 		var button := _choice_buttons[i]
@@ -214,6 +217,17 @@ func _build_ui() -> void:
 	_jingles.size = JINGLES_RECT.size
 	_jingles.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_jingles)
+
+	# The key to the attic door, on the floor beside him.
+	_key = TextureRect.new()
+	_key.name = "Key"
+	_key.texture = load(IMAGES + "item_key.png")
+	_key.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_key.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_key.position = KEY_RECT.position
+	_key.size = KEY_RECT.size
+	_key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_key)
 
 	# The two choices, bottom right.
 	var choices := HBoxContainer.new()
