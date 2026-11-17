@@ -21,8 +21,8 @@ already in `godot/assets/`.
   - falling snow, and dark edges (vignette);
   - the game name "Merry Scary Christmas" (`TitleLabel`);
   - a `StartButton` "Start"; pressing it emits the signal `start_pressed`;
-  - `music_lobby.mp3` plays in a loop (`Music`), `voice_title.mp3` plays once (`Voice`),
-    quiet wind `sfx_wind.mp3` in a loop (`Wind`).
+  - quiet wind `sfx_wind.mp3` in a loop (`Wind`). Music and the spoken story moved to
+    `main.gd` and the loading screen (spec 12).
 - `tools/add_image.gd` removes the white background of a character picture without
   transparency (only white connected to the border, so white inside the figure stays).
 - `main.gd` shows the title first, on every device on its own (not shared over the

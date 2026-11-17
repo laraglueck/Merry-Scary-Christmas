@@ -18,15 +18,12 @@ func test_title_shows_name_picture_and_start() -> void:
 	assert_eq(is_disabled(title, "StartButton"), false, "start enabled")
 
 
-func test_title_plays_looping_music_and_the_voice_once() -> void:
+func test_title_has_only_the_wind() -> void:
 	var title := open_title()
-	var music: AudioStreamPlayer = find(title, "Music")
-	var voice: AudioStreamPlayer = find(title, "Voice")
-	assert_true(music != null and music.stream != null, "music loaded")
-	assert_true(music != null and music.stream.loop, "music loops")
-	assert_true(voice != null and voice.stream != null, "voice loaded")
-	assert_true(voice != null and not voice.stream.loop, "voice once")
-	# Starting by itself (autoplay) is switched off in this headless run; check it by hand.
+	var wind: AudioStreamPlayer = find(title, "Wind")
+	assert_true(wind != null and wind.stream != null and wind.stream.loop, "wind loops")
+	assert_true(title.find_child("Music", true, false) == null, "music lives in main.gd (spec 12)")
+	assert_true(title.find_child("Voice", true, false) == null, "voice only on the loading screen")
 
 
 func test_start_button_sends_start_pressed() -> void:
