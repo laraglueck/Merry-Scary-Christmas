@@ -33,7 +33,7 @@ static func images() -> Dictionary:
 		list["room_%s_lit.webp" % room] = SIZE_SCREEN
 
 	# Characters
-	for character in ["elf", "snowman", "gingerbread", "santa_asleep", "santa_awake"]:
+	for character in ["elf", "snowman", "nutcracker", "santa_asleep", "santa_awake"]:
 		list["char_%s.png" % character] = SIZE_CHARACTER
 
 	# Items
