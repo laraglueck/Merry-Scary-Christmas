@@ -1,4 +1,5 @@
 extends RefCounted
+const Settings = preload("res://scripts/settings.gd")
 
 
 static func try_clock(
@@ -12,7 +13,12 @@ static func try_clock(
 			"penalty_seconds": 0,
 			"error": "Clock positions must be between 1 and 12.",
 		}
-
+	if hour == minute:
+		return {
+			"correct": false,
+			"penalty_seconds": 0,
+			"error": "Clock hands must point to different positions.",
+		}
 	if room["solved"]:
 		return {
 			"correct": false,
@@ -30,7 +36,8 @@ static func try_clock(
 
 	return {
 		"correct": correct,
-		"penalty_seconds": 0 if correct else 20,
+				"penalty_seconds": 0 if correct else Settings.LIVING_ROOM_PENALTY_SECONDS,
+				
 		"error": "",
 	}
 
@@ -70,4 +77,38 @@ static func take_gift(room: Dictionary) -> Dictionary:
 		"taken": true,
 		"error": "",
 	}
+	
+static func rhyme_for(tap_order: Array) -> Array[String]:
+	if tap_order.size() != 4:
+		return []
+
+	var warm_lines: Array[String] = [
+		"First, warm as fire burning bright,",
+		"Then, warm as hearths on Christmas night.",
+		"Again, warm as a candle's glow,",
+		"Last, warm as embers burning low.",
+	]
+
+	var cold_lines: Array[String] = [
+		"First, cold as stars in winter light,",
+		"Then, cold as snow on Christmas night.",
+		"Again, cold as the winds that blow,",
+		"Last, cold as ice beneath the snow.",
+	]
+
+	var lines: Array[String] = []
+
+	for i in range(4):
+		if typeof(tap_order[i]) != TYPE_STRING:
+			return []
+			
+
+		if tap_order[i] == "hot":
+			lines.append(warm_lines[i])
+		elif tap_order[i] == "cold":
+			lines.append(cold_lines[i])
+		else:
+			return []
+
+	return lines
 	
