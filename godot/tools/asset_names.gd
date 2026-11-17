@@ -75,8 +75,11 @@ static func images() -> Dictionary:
 # Every sound file.
 static func sounds() -> Array:
 	var list := []
-	for effect in ["fuse_click", "spark", "creak", "snore", "wind", "bells", "gift", "scare", "win", "lose"]:
+	for effect in ["fuse_click", "spark", "creak", "snore", "wind", "bells", "gift", "scare", "win", "lose",
+			"faucet", "clock_tick", "clock_wrong", "clock_chime", "door_unlock", "key_lock",
+			"easter_egg", "rain", "storm"]:
 		list.append("sfx_%s.mp3" % effect)
 	list.append("music_lobby.mp3")
 	list.append("music_house.mp3")
+	list.append("voice_title.mp3")  # spoken intro on the title screen
 	return list
