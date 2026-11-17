@@ -10,6 +10,7 @@ const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
+const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 
 
 static func new_game(rng: RandomNumberGenerator) -> Dictionary:
@@ -18,6 +19,7 @@ static func new_game(rng: RandomNumberGenerator) -> Dictionary:
 		"location": "hall",                         # where the whole team is (spec 07)
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
+		"living_room": LivingRoomRules.create_room(rng),  # clock lock (Lara)
 		"penalty_seconds": 0,                       # all penalties so far
 		"inventory": [],                            # what the team carries (spec 14), e.g. ["gift_2"]
 		"seconds_played": 0,                        # the clock (spec 13): time left = 600 - this - penalties

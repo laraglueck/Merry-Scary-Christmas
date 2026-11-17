@@ -27,7 +27,7 @@ const GLOW_COLOUR := Color(1.0, 0.78, 0.35, 0.35)
 # Figures: picture, where its feet stand (centre bottom), height on the stage.
 const FIGURES := [
 	{"name": "Nutcracker", "file": "char_nutcracker.png", "feet": Vector2(985, 745), "height": 320.0},
-	{"name": "Santa", "file": "char_santa_awake.png", "feet": Vector2(330, 760), "height": 420.0},
+	{"name": "Santa", "file": "char_santa.png", "feet": Vector2(330, 760), "height": 420.0},
 	{"name": "Snowman", "file": "char_snowman.png", "feet": Vector2(1140, 758), "height": 350.0},
 ]
 const NIGHT_TINT := Color(0.78, 0.8, 0.92)  # figures a little bluer and darker, like the night

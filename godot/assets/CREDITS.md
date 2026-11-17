@@ -19,7 +19,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
-| room_garden.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| room_garden.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_hall.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_attic.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
@@ -29,11 +29,10 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | room_bathroom_drained.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | edit of room_bathroom_lit, tub drained, 1376 x 768 |
 | room_bedroom_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_bedroom_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_elf.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_snowman.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
-| char_gingerbread.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_santa_asleep.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_santa_awake.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
+| char_santa.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
+| char_jingles_asleep.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| char_jingles_awake.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_nutcracker.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
 | char_santa_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, white background removed with add_image.gd |
 | char_santa_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, white background removed with add_image.gd |

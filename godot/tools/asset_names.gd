@@ -34,7 +34,7 @@ static func images() -> Dictionary:
 	list["room_bathroom_drained.webp"] = SIZE_SCREEN  # lit, the tub empty after the taps are solved
 
 	# Characters
-	for character in ["elf", "snowman", "gingerbread", "santa_asleep", "santa_awake", "nutcracker"]:
+	for character in ["santa", "snowman", "nutcracker", "jingles_asleep", "jingles_awake"]:  # three heroes, then the villain Scary Jingles
 		list["char_%s.png" % character] = SIZE_CHARACTER
 	# The same figures with a green or yellow scarf / jacket (the first ones wear red).
 	for character in ["santa", "snowman", "nutcracker"]:
