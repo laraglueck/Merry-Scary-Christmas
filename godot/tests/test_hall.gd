@@ -156,7 +156,7 @@ func test_everything_fits_in_the_window() -> void:
 	await tree.process_frame  # let Godot arrange the boxes
 	await tree.process_frame
 	var window := Rect2(Vector2.ZERO, Vector2(1152, 648))
-	for node_name in ["PenaltyLabel", "FusePanel", "RoomLamp2", "RoomTile2", "Message"]:
+	for node_name in ["PenaltyLabel", "FusePanel", "RoomLamp2", "RoomTile2", "StairsButton", "Message"]:
 		var node := find(hall, node_name)
 		if node != null:
 			assert_true(window.encloses(node.get_global_rect()), "%s inside the window, is %s" % [node_name, node.get_global_rect()])
@@ -281,3 +281,48 @@ func test_flicker_comes_in_short_bursts_with_calm_pauses() -> void:
 		for dip in dips:
 			assert_true(dip[1] <= 0.1, "dip is short, is %s s" % dip[1])
 			assert_true(dip[0] <= 0.3, "dip not darker than the strength, is %s" % dip[0])
+
+
+# ---------- doors and stairs (spec 07) ----------
+
+func test_doors_are_dark_until_their_fuse_is_on() -> void:
+	var hall := open_hall()
+	for place in ["living_room", "bathroom", "bedroom"]:
+		assert_eq(is_disabled(hall, "Door_" + place), true, place + " door disabled")
+		assert_contains(text_of(hall, "Door_" + place), "dark", place + " door text")
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(is_disabled(hall, "Door_living_room"), false, "living room door open")
+	assert_eq(is_disabled(hall, "Door_bathroom"), true, "bathroom still dark")
+
+
+func test_stairs_need_all_three_fuses() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	press(hall, "PlayerButton1")
+	click_wires(hall, GREEN_RIGHT)
+	assert_eq(is_disabled(hall, "StairsButton"), true, "2 fuses: stairs dark")
+	press(hall, "PlayerButton2")
+	click_wires(hall, GOLD_RIGHT)
+	assert_eq(is_disabled(hall, "StairsButton"), false, "3 fuses: stairs open")
+
+
+func test_door_alone_explains_that_walking_needs_the_full_game() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	press(hall, "Door_living_room")
+	assert_contains(text_of(hall, "Message"), "full game", "explanation")
+
+
+func test_online_door_walks_the_team() -> void:
+	var room: Array = await make_started_room(47561)
+	var a = room[1]
+	var hall := open_online_hall(a)
+	press(hall, "FuseBoxButton")
+	if not a.game.is_empty():
+		click_wires(hall, a.game["puzzle"]["fuses"][1]["order"])
+	await wait_until(func(): return not is_disabled(hall, "Door_bathroom"))
+	press(hall, "Door_bathroom")
+	assert_true(await wait_until(func(): return room[0].game.get("location") == "bathroom"), "host: team in the bathroom")

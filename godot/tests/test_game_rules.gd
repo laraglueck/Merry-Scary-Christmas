@@ -66,3 +66,22 @@ func test_unknown_action_changes_nothing() -> void:
 	var before := game.duplicate(true)
 	GameRules.apply(game, 0, "open_portal", {})
 	assert_eq(game, before, "unchanged")
+
+
+# ---------- walking (spec 07) ----------
+
+func test_go_to_action_moves_the_team_and_names_the_player() -> void:
+	var game := new_game()
+	GameRules.apply(game, 1, "try_fuse", {"wires": right_order(game, 1)})
+	GameRules.apply(game, 1, "go_to", {"place": "bathroom"})
+	assert_eq(game.get("location"), "bathroom", "location")
+	assert_eq(game["last_event"], "Player 2 opened the bathroom door.", "event")
+
+
+func test_refused_go_to_shows_the_reason_and_changes_nothing() -> void:
+	var game := new_game()
+	GameRules.apply(game, 0, "go_to", {"place": "bedroom"})
+	assert_eq(game.get("location"), "hall", "still in the hall")
+	assert_contains(game["last_event"], "Player 1", "who")
+	assert_contains(game["last_event"], "still dark", "reason")
+	assert_eq(game["penalty_seconds"], 0, "no penalty for walking")

@@ -8,9 +8,9 @@ const WIRE_COLOURS := ["blue", "yellow", "white", "black"]
 const SYMBOLS := ["star", "bell", "tree", "snowflake"]
 # Fuse i belongs to player i and lights one room.
 const FUSES := [
-	{"colour": "red", "room": "living/dining room"},
-	{"colour": "green", "room": "bathroom"},
-	{"colour": "gold", "room": "bedroom"},
+	{"colour": "red", "room": "living/dining room", "place": "living_room"},
+	{"colour": "green", "room": "bathroom", "place": "bathroom"},
+	{"colour": "gold", "room": "bedroom", "place": "bedroom"},
 ]
 
 # Bathroom (spec 10): four turns of the taps, each hot or cold.
@@ -32,3 +32,6 @@ const ROOM_CODE_LETTERS := "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I and O: easy to rea
 const FLICKER_MAX_DARKNESS := 0.25      # 0 = no flicker, 1 = completely dark
 const FLICKER_PAUSE_MIN_SECONDS := 0.6   # calm time between two bursts
 const FLICKER_PAUSE_MAX_SECONDS := 1.8
+
+# Walking through the house (spec 07): where the team can be.
+const PLACES := ["hall", "living_room", "bathroom", "bedroom", "attic"]

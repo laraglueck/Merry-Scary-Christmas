@@ -55,3 +55,39 @@ func test_main_back_to_lobby_when_host_leaves() -> void:
 	assert_true(await wait_until(func(): return a.screen_name == "lobby"), "Player 2 back in the lobby")
 	await wait_frames(2)
 	assert_contains(text_of(a, "StatusLabel"), "host left", "status")
+
+
+# ---------- walking together (spec 07) ----------
+
+func light_fuse(net: Node, fuse_index: int) -> void:
+	net.send_action("try_fuse", {"wires": net.game["puzzle"]["fuses"][fuse_index]["order"].duplicate()})
+
+
+func screens_are(mains: Array, wanted: String) -> Callable:
+	return func(): return mains.all(func(m): return m.screen_name == wanted)
+
+
+func test_everyone_walks_into_the_bathroom_and_back() -> void:
+	var mains: Array = await make_started_mains(47562)
+	await wait_until(screens_are(mains, "hall"))
+	var a = mains[1]
+	light_fuse(a.net, 1)
+	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"][1]["solved"])
+	a.net.send_action("go_to", {"place": "bathroom"})
+	assert_true(await wait_until(screens_are(mains, "bathroom")), "all three in the bathroom")
+	assert_eq(mains[2].screen.scene_file_path, "res://scenes/bathroom.tscn", "Gloria's bathroom screen")
+	mains[2].net.send_action("go_to", {"place": "hall"})
+	assert_true(await wait_until(screens_are(mains, "hall")), "all three back in the hall")
+
+
+func test_unbuilt_room_shows_a_placeholder_with_a_way_back() -> void:
+	var mains: Array = await make_started_mains(47563)
+	await wait_until(screens_are(mains, "hall"))
+	light_fuse(mains[0].net, 0)
+	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"][0]["solved"])
+	mains[0].net.send_action("go_to", {"place": "living_room"})
+	assert_true(await wait_until(screens_are(mains, "living_room")), "all three in the living room")
+	await wait_frames(2)
+	assert_contains(text_of(mains[1], "PlaceTitle"), "living/dining room", "placeholder title")
+	press(mains[1], "BackButton")
+	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
