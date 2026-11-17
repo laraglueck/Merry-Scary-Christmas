@@ -207,3 +207,60 @@ func test_join_button_has_its_own_colour() -> void:
 			assert_true(colour.g > colour.r + 0.1 and colour.g > colour.b + 0.1, "green: %s" % colour)
 			assert_true(not (create_style is StyleBoxFlat and create_style.bg_color == colour), "not the same as Create room")
 
+
+# ---------- after the manual test (spec 03c) ----------
+
+func test_players_2_and_3_wait_for_player_1() -> void:
+	var lone := open_lobby()
+	assert_eq(is_shown(lone, "WaitLabel"), false, "not before joining")
+	var room: Array = await make_full_room(47591)
+	var player_lobby := open_lobby_with(room[2])
+	assert_eq(is_shown(player_lobby, "WaitLabel"), true, "Player 3 waits")
+	assert_contains(text_of(player_lobby, "WaitLabel"), "Waiting for Player 1 to start the game", "says for whom")
+	var host_lobby := open_lobby_with(room[0])
+	assert_eq(is_shown(host_lobby, "WaitLabel"), false, "the host does not wait")
+
+
+func test_start_button_green_and_not_the_whole_width() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var host := make_device("Host")
+	host.host_room(47592)
+	var lobby := open_lobby_with(host)
+	await wait_frames(2)
+	var start: Button = lobby.find_child("StartButton", true, false)
+	if start != null:
+		var width := start.get_global_rect().size.x
+		assert_true(width <= 576, "not the whole width: %d" % width)
+		var style = start.get_theme_stylebox("normal")
+		assert_true(style is StyleBoxFlat and style.bg_color.g > style.bg_color.r + 0.1, "green")
+
+
+func test_everything_in_the_middle_with_more_room() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var host := make_device("Host")
+	host.host_room(47593)
+	var lobby := open_lobby_with(host)
+	await wait_frames(2)
+	var middle := Vector2(576, 324)
+	for node_name in ["LobbyTitle", "CreateButton", "RoomCodeLabel", "PlayersLabel", "StartButton"]:
+		var node: Control = lobby.find_child(node_name, true, false)
+		assert_true(node != null, node_name + " exists")
+		if node != null:
+			assert_true(absf(node.get_global_rect().get_center().x - middle.x) < 20, "%s in the middle: %s" % [node_name, node.get_global_rect()])
+			if node is Label:
+				assert_eq(node.horizontal_alignment, HORIZONTAL_ALIGNMENT_CENTER, node_name + " text centred")
+	var field: Control = lobby.find_child("AddressField", true, false)
+	var join: Control = lobby.find_child("JoinButton", true, false)
+	var create: Control = lobby.find_child("CreateButton", true, false)
+	var title: Control = lobby.find_child("LobbyTitle", true, false)
+	var start: Control = lobby.find_child("StartButton", true, false)
+	if field != null and join != null:
+		var row_middle := (field.get_global_rect().position.x + join.get_global_rect().end.x) / 2
+		assert_true(absf(row_middle - middle.x) < 20, "code field and Join in the middle")
+	if title != null and start != null:
+		var block_middle := (title.get_global_rect().position.y + start.get_global_rect().end.y) / 2
+		assert_true(absf(block_middle - middle.y) < 40, "the block in the middle from top to bottom: %d" % block_middle)
+	if create != null and field != null:
+		var gap := field.get_global_rect().position.y - create.get_global_rect().end.y
+		assert_true(gap >= 24, "more room between the lines: %d" % gap)
+
