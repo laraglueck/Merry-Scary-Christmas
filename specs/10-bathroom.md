@@ -17,16 +17,21 @@ nothing and comes back as an error text.
 
 - `create(rng)` returns the bathroom part of the shared game:
 
-      {"tap_order": ["hot", "cold", "cold", "hot"], "digit": 7,
+      {"tap_order": ["hot", "cold", "cold", "hot"], "turns": [], "digit": 7,
        "solved": false, "gift_taken": false}
 
-  `tap_order` is four random turns, each `"hot"` or `"cold"`; `digit` is 1 to 9.
+  `tap_order` is four random turns, each `"hot"` or `"cold"`; `turns` are the turns the
+  team has made so far (shared: the whole team is in the room together); `digit` is 1 to 9.
   Same rng seed, same bathroom.
 - `try_taps(room, taps)` returns `{correct, penalty_seconds, error}`:
   - right order: `solved` becomes true, `{correct: true, penalty_seconds: 0, error: ""}`
   - wrong order: nothing changes, `{correct: false, penalty_seconds: 20, error: ""}`
   - refused, nothing changes, an error text: not exactly four turns; a turn that is not
     `"hot"` or `"cold"`; already solved.
+- `add_turn(room, tap)` adds one turn by any player and returns
+  `{tried, correct, penalty_seconds, error}`. After the fourth turn the order is tried with
+  `try_taps` and `turns` is cleared (right: solved; wrong: 20 s). Refused, nothing changes:
+  an unknown turn, or already solved.
 - `take_gift(room)` returns `{ok, error}`: refused before solving and the second time;
   otherwise `gift_taken` becomes true.
 - `mirror_symbols(wheels)` returns the bedroom's three symbols in reverse order
@@ -46,9 +51,9 @@ decide.
   highlight from spot to spot; `↑` or Enter uses the highlighted spot; `Esc` or `↓`
   closes a close-up. A mouse click on a spot does the same. The highlight stands in for
   the walking hero until spec 07 exists.
-- Taps: each use of `hot_tap` or `cold_tap` adds that turn; four small marks under the
-  sink show the turns so far (red = hot, blue = cold). After the fourth turn the order is
-  tried. Moving the highlight away from the taps clears unfinished turns.
+- Taps: each use of `hot_tap` or `cold_tap` sends that one turn to the shared game, so
+  any player can turn a tap and everyone sees the same turns under the sink. The fourth
+  turn tries the order. Moving the highlight does not clear the team's turns.
 - Mirror close-up: before solving, dust; after solving, steam over the glass and the
   three symbols from `mirror_symbols`, each flipped left-right (pictures `sym_*.png`).
 - Bathtub: before solving, dark water; after, the empty tub with present 2
@@ -58,6 +63,7 @@ decide.
 
   | When | Text |
   | --- | --- |
+  | A turn (not the fourth) | Player 1 turned the hot tap. |
   | Right order | Player 1: the pipes rattle and the water drains away. |
   | Wrong order | Player 1: the pipes rattle angrily, -20 s |
   | Taps while the bathroom is dark | Player 1: the bathroom is too dark |
@@ -65,8 +71,8 @@ decide.
   | A tap after solving (this screen only) | The taps are dry. |
   | Mirror before solving (this screen only) | Too much dust to see anything. |
 
-- Online (main.gd hands in `net` with a game): turns go to the host as action
-  `turn_taps` with `{"taps": [4 turns]}`, the present as `take_gift` with
+- Online (main.gd hands in `net` with a game): each turn goes to the host as action
+  `turn_tap` with `{"tap": "hot"}` or `"cold"`, the present as `take_gift` with
   `{"room": "bathroom"}`; everything shown comes from `net.game`.
   Offline (no network, open with Cmd R): the screen keeps its own bathroom from
   `bathroom_rules.create`, with the green fuse on, and calls the rules directly.
@@ -74,7 +80,7 @@ decide.
 
 ### Shared game (small change, announce in the chat first)
 - `game_rules.gd`: `"bathroom": BathroomRules.create(rng)` in `new_game()`; actions
-  `turn_taps` and `take_gift` (room `"bathroom"`) in `apply()`, with events in
+  `turn_tap` and `take_gift` (room `"bathroom"`) in `apply()`, with events in
   `last_event` and the penalty added to `penalty_seconds`.
 
 ## Out of scope
@@ -90,8 +96,9 @@ easter eggs, the clock.
     three or five turns, an unknown turn, or trying when solved are refused and change
     nothing; the present is refused before solving and the second time;
     `mirror_symbols` reverses the three symbols.
+  - Rules: `add_turn` adds one turn, tries the order on the fourth and starts over.
   - Screen: the arrows move the highlight; four right turns solve it; a wrong order clears
-    the marks and shows the message; the mirror shows nothing before solving and the
+    the marks and shows the message; turns made by teammates are shown; the mirror shows nothing before solving and the
     symbols after; the present can be taken only after solving and only once; the dark
     picture shows while the green fuse is off.
   - Game: `turn_taps` and `take_gift` work through `GameRules.apply`.

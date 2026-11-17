@@ -15,13 +15,34 @@ static func create(rng: RandomNumberGenerator) -> Dictionary:
 		tap_order.append(Settings.TAPS[rng.randi_range(0, Settings.TAPS.size() - 1)])
 	return {
 		"tap_order": tap_order,
+		"turns": [],  # the turns the team has made so far, shared by all players
 		"digit": rng.randi_range(1, 9),
 		"solved": false,
 		"gift_taken": false,
 	}
 
 
-# Four turns at once, tried after the fourth turn on the screen.
+# One turn of a tap by any player. The whole team builds one order together;
+# after the fourth turn it is tried, and the turns start over.
+# Returns {tried, correct, penalty_seconds, error}.
+static func add_turn(room: Dictionary, tap) -> Dictionary:
+	# 1. Check first ...
+	if room["solved"]:
+		return {"tried": false, "correct": false, "penalty_seconds": 0, "error": "The taps are already solved"}
+	if tap not in Settings.TAPS:
+		return {"tried": false, "correct": false, "penalty_seconds": 0, "error": "Unknown turn: %s" % tap}
+
+	# 2. ... then change.
+	room["turns"].append(tap)
+	if room["turns"].size() < Settings.TAP_TURNS:
+		return {"tried": false, "correct": false, "penalty_seconds": 0, "error": ""}
+	var result := try_taps(room, room["turns"].duplicate())
+	room["turns"].clear()
+	result["tried"] = true
+	return result
+
+
+# Four turns at once: checks the order. add_turn calls this after the fourth turn.
 static func try_taps(room: Dictionary, taps: Array) -> Dictionary:
 	# 1. Check everything first ...
 	var error := _check_taps(room, taps)

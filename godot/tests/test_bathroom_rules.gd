@@ -9,7 +9,7 @@ const RIGHT_TAPS := ["hot", "cold", "cold", "hot"]
 
 # A hand-made bathroom with fixed values, so we know every answer.
 func example_room() -> Dictionary:
-	return {"tap_order": RIGHT_TAPS.duplicate(), "digit": 7, "solved": false, "gift_taken": false}
+	return {"tap_order": RIGHT_TAPS.duplicate(), "turns": [], "digit": 7, "solved": false, "gift_taken": false}
 
 
 func make_rng(seed_value: int) -> RandomNumberGenerator:
@@ -39,12 +39,13 @@ func test_new_bathroom_has_four_turns_a_digit_and_is_unsolved() -> void:
 	assert_true(digit >= 1 and digit <= 9, "digit %d is 1 to 9" % digit)
 	assert_eq(room.get("solved"), false, "not solved")
 	assert_eq(room.get("gift_taken"), false, "present not taken")
+	assert_eq(room.get("turns"), [], "no turns yet")
 
 
 func test_bathroom_has_only_the_agreed_keys() -> void:
 	var keys := Rules.create(make_rng(1)).keys()
 	keys.sort()
-	assert_eq(keys, ["digit", "gift_taken", "solved", "tap_order"], "keys")
+	assert_eq(keys, ["digit", "gift_taken", "solved", "tap_order", "turns"], "keys")
 
 
 func test_same_seed_gives_same_bathroom() -> void:
@@ -96,6 +97,56 @@ func test_rejects_taps_when_already_solved() -> void:
 	var room := example_room()
 	room["solved"] = true
 	assert_rejected(room, RIGHT_TAPS, "already solved")
+
+
+# ---------- add_turn: one turn at a time, shared by the whole team ----------
+
+func add_turns(room: Dictionary, taps: Array) -> Dictionary:
+	var result := {}
+	for tap in taps:
+		result = Rules.add_turn(room, tap)
+	return result
+
+
+func test_a_turn_is_added_and_nothing_is_tried_yet() -> void:
+	var room := example_room()
+	var result := Rules.add_turn(room, "hot")
+	assert_eq(result, {"tried": false, "correct": false, "penalty_seconds": 0, "error": ""}, "result")
+	assert_eq(room["turns"], ["hot"], "turns")
+
+
+func test_four_right_turns_solve_the_taps_and_clear_the_turns() -> void:
+	var room := example_room()
+	var result := add_turns(room, RIGHT_TAPS)
+	assert_eq(result, {"tried": true, "correct": true, "penalty_seconds": 0, "error": ""}, "result")
+	assert_eq(room["solved"], true, "solved")
+	assert_eq(room["turns"], [], "turns cleared")
+
+
+func test_four_wrong_turns_cost_20_seconds_and_start_over() -> void:
+	var room := example_room()
+	var result := add_turns(room, ["cold", "cold", "cold", "hot"])
+	assert_eq(result, {"tried": true, "correct": false, "penalty_seconds": 20, "error": ""}, "result")
+	assert_eq(room["solved"], false, "not solved")
+	assert_eq(room["turns"], [], "turns cleared, start over")
+
+
+func test_an_unknown_turn_is_refused_and_changes_nothing() -> void:
+	var room := example_room()
+	Rules.add_turn(room, "hot")
+	var before := room.duplicate(true)
+	var result := Rules.add_turn(room, "warm")
+	assert_contains(result.get("error", ""), "unknown turn", "error text")
+	assert_eq(room, before, "room unchanged")
+
+
+func test_a_turn_after_solving_is_refused() -> void:
+	var room := example_room()
+	add_turns(room, RIGHT_TAPS)
+	var before := room.duplicate(true)
+	var result := Rules.add_turn(room, "hot")
+	assert_contains(result.get("error", ""), "already solved", "error text")
+	assert_eq(room, before, "room unchanged")
 
 
 # ---------- take_gift ----------

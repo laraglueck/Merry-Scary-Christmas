@@ -38,42 +38,64 @@ func test_new_game_has_an_unsolved_bathroom() -> void:
 	assert_eq(bathroom.get("gift_taken"), false, "present not taken")
 
 
+func turn(game: Dictionary, player: int, taps: Array) -> void:
+	for tap in taps:
+		GameRules.apply(game, player, "turn_tap", {"tap": tap})
+
+
+func test_each_turn_is_shared_and_reported() -> void:
+	var game := game_with_bathroom_lit()
+	GameRules.apply(game, 0, "turn_tap", {"tap": "hot"})
+	GameRules.apply(game, 2, "turn_tap", {"tap": "cold"})
+	assert_eq(game["bathroom"]["turns"], ["hot", "cold"], "turns from two players")
+	assert_eq(game["last_event"], "Player 3 turned the cold tap.", "event")
+
+
 func test_right_taps_solve_the_bathroom() -> void:
 	var game := game_with_bathroom_lit()
-	GameRules.apply(game, 0, "turn_taps", {"taps": right_taps(game)})
+	turn(game, 0, right_taps(game))
 	assert_eq(game["bathroom"]["solved"], true, "solved")
 	assert_eq(game["penalty_seconds"], 0, "no penalty")
 	assert_eq(game["last_event"], "Player 1: the pipes rattle and the water drains away.", "event")
 
 
+func test_the_team_can_share_the_four_turns() -> void:
+	var game := game_with_bathroom_lit()
+	var taps := right_taps(game)
+	for i in 4:
+		GameRules.apply(game, i % 3, "turn_tap", {"tap": taps[i]})
+	assert_eq(game["bathroom"]["solved"], true, "solved by three players together")
+
+
 func test_wrong_taps_cost_20_seconds() -> void:
 	var game := game_with_bathroom_lit()
-	GameRules.apply(game, 2, "turn_taps", {"taps": wrong_taps(game)})
+	turn(game, 2, wrong_taps(game))
 	assert_eq(game["bathroom"]["solved"], false, "not solved")
 	assert_eq(game["penalty_seconds"], 20, "penalty")
+	assert_eq(game["bathroom"]["turns"], [], "start over")
 	assert_eq(game["last_event"], "Player 3: the pipes rattle angrily, -20 s", "event")
 
 
-func test_invalid_taps_give_the_reason_without_penalty() -> void:
+func test_an_invalid_turn_gives_the_reason_without_penalty() -> void:
 	var game := game_with_bathroom_lit()
 	var before: Dictionary = game["bathroom"].duplicate(true)
-	GameRules.apply(game, 1, "turn_taps", {"taps": ["hot", "warm"]})
+	GameRules.apply(game, 1, "turn_tap", {"tap": "warm"})
 	assert_eq(game["penalty_seconds"], 0, "no penalty")
 	assert_contains(game["last_event"], "Player 2", "who")
-	assert_contains(game["last_event"], "expected 4 turns", "reason")
+	assert_contains(game["last_event"], "unknown turn", "reason")
 	assert_eq(game["bathroom"], before, "bathroom unchanged")
 
 
-func test_missing_taps_are_invalid_not_a_crash() -> void:
+func test_a_missing_turn_is_invalid_not_a_crash() -> void:
 	var game := game_with_bathroom_lit()
-	GameRules.apply(game, 0, "turn_taps", {})
-	assert_contains(game.get("last_event", ""), "expected 4 turns", "reason")
+	GameRules.apply(game, 0, "turn_tap", {})
+	assert_contains(game.get("last_event", ""), "unknown turn", "reason")
 
 
 func test_taps_are_refused_while_the_bathroom_is_dark() -> void:
 	var game := new_game()  # green fuse still off
 	var before: Dictionary = game["bathroom"].duplicate(true)
-	GameRules.apply(game, 0, "turn_taps", {"taps": right_taps(game)})
+	GameRules.apply(game, 0, "turn_tap", {"tap": "hot"})
 	assert_eq(game["bathroom"], before, "bathroom unchanged")
 	assert_eq(game["penalty_seconds"], 0, "no penalty")
 	assert_contains(game["last_event"], "too dark", "reason")
@@ -81,7 +103,7 @@ func test_taps_are_refused_while_the_bathroom_is_dark() -> void:
 
 func test_present_can_be_taken_once_after_solving() -> void:
 	var game := game_with_bathroom_lit()
-	GameRules.apply(game, 0, "turn_taps", {"taps": right_taps(game)})
+	turn(game, 0, right_taps(game))
 	GameRules.apply(game, 1, "take_gift", {"room": "bathroom"})
 	assert_eq(game["bathroom"]["gift_taken"], true, "taken")
 	assert_eq(game["last_event"], "Player 2 found the second present!", "event")

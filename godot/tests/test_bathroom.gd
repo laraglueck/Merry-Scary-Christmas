@@ -93,7 +93,7 @@ func test_enter_uses_the_highlighted_spot() -> void:
 	key(bathroom, "ui_right")
 	key(bathroom, "ui_right")  # hot tap
 	key(bathroom, "ui_accept")
-	assert_eq(bathroom.turns, ["hot"], "one hot turn")
+	assert_eq(bathroom.game["bathroom"]["turns"], ["hot"], "one hot turn")
 
 
 func test_keyboard_only_solves_the_taps() -> void:
@@ -134,19 +134,18 @@ func test_wrong_order_clears_the_marks_and_costs_20_seconds() -> void:
 	assert_eq(text_of(bathroom, "TurnsLabel"), "", "marks cleared")
 
 
-func test_walking_away_clears_unfinished_turns() -> void:
+func test_moving_the_highlight_keeps_the_teams_turns() -> void:
 	var bathroom := open_bathroom()
 	press(bathroom, "Spot_hot_tap")
-	press(bathroom, "Spot_cold_tap")
 	press(bathroom, "Spot_mirror")
-	assert_eq(bathroom.turns, [], "turns cleared")
+	assert_eq(bathroom.game["bathroom"]["turns"], ["hot"], "turn kept for the team")
 
 
 func test_taps_are_dry_after_solving() -> void:
 	var bathroom := open_bathroom()
 	click_taps(bathroom, right_taps(bathroom))
 	press(bathroom, "Spot_hot_tap")
-	assert_eq(bathroom.turns, [], "no new turn")
+	assert_eq(bathroom.game["bathroom"]["turns"], [], "no new turn")
 	assert_contains(text_of(bathroom, "Message"), "dry", "message")
 
 
@@ -214,6 +213,18 @@ func test_present_can_be_taken_once() -> void:
 
 # ---------- online ----------
 
+func test_online_marks_show_the_turns_of_the_whole_team() -> void:
+	var offline := open_bathroom()
+	var net := FakeNet.new()
+	net.game = offline.game.duplicate(true)
+	net.game["bathroom"]["turns"] = ["cold", "hot"]  # turned by teammates
+	tree.root.add_child(net)
+	var bathroom = BathroomScene.instantiate()
+	bathroom.net = net
+	tree.root.add_child(bathroom)
+	assert_eq(text_of(bathroom, "TurnsLabel"), "cold  hot", "teammates' turns shown")
+
+
 func test_online_turns_and_present_go_to_the_host() -> void:
 	var offline := open_bathroom()
 	var net := FakeNet.new()
@@ -225,7 +236,10 @@ func test_online_turns_and_present_go_to_the_host() -> void:
 	click_taps(bathroom, ["hot", "hot", "cold", "cold"])
 	press(bathroom, "Spot_bathtub")
 	assert_eq(net.sent, [
-		["turn_taps", {"taps": ["hot", "hot", "cold", "cold"]}],
+		["turn_tap", {"tap": "hot"}],
+		["turn_tap", {"tap": "hot"}],
+		["turn_tap", {"tap": "cold"}],
+		["turn_tap", {"tap": "cold"}],
 		["take_gift", {"room": "bathroom"}],
 	], "sent to the host")
 	assert_eq(net.game["bathroom"]["solved"], false, "only the host changes the game")

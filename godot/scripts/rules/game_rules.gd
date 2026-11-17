@@ -24,8 +24,8 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 	match action:
 		"try_fuse":
 			_try_fuse(game, player, data)
-		"turn_taps":
-			_turn_taps(game, player, data)
+		"turn_tap":
+			_turn_tap(game, player, data)
 		"take_gift":
 			if data.get("room") == "bathroom":
 				_take_bathroom_gift(game, player)
@@ -48,18 +48,19 @@ static func _try_fuse(game: Dictionary, player: int, data: Dictionary) -> void:
 		game["last_event"] = "%s: wrong order, -%d s" % [who, result["penalty_seconds"]]
 
 
-# Bathroom (spec 10): four turns of the taps, only once the green fuse is on.
-static func _turn_taps(game: Dictionary, player: int, data: Dictionary) -> void:
+# Bathroom (spec 10): one turn of a tap by any player, only once the green
+# fuse is on. The team shares the turns; the fourth one tries the order.
+static func _turn_tap(game: Dictionary, player: int, data: Dictionary) -> void:
 	var who := "Player %d" % (player + 1)
 	if "bathroom" not in FuseRules.lit_rooms(game["puzzle"]):
 		game["last_event"] = "%s: the bathroom is too dark" % who
 		return
-	var taps = data.get("taps", [])
-	if typeof(taps) != TYPE_ARRAY:
-		taps = []
-	var result := BathroomRules.try_taps(game["bathroom"], taps)
+	var tap = data.get("tap", "")
+	var result := BathroomRules.add_turn(game["bathroom"], tap)
 	if result["error"] != "":
 		game["last_event"] = "%s: %s" % [who, result["error"]]
+	elif not result["tried"]:
+		game["last_event"] = "%s turned the %s tap." % [who, tap]
 	elif result["correct"]:
 		game["last_event"] = "%s: the pipes rattle and the water drains away." % who
 	else:

@@ -37,7 +37,6 @@ const HIGHLIGHT := Color("ffd76a")
 var net: Node = null  # set by main.gd for online play
 
 var game: Dictionary          # offline: our own game; online: the shared game
-var turns: Array = []         # tap turns so far, before the fourth one is tried
 var _highlight := 0           # index in SPOTS
 
 # Nodes we change later (built in _build_ui)
@@ -142,8 +141,6 @@ func _move_highlight(step: int) -> void:
 
 func _set_highlight(index: int) -> void:
 	_highlight = index
-	if not highlighted_spot().ends_with("_tap"):
-		turns.clear()  # walking away from the taps forgets unfinished turns
 	_refresh()
 
 
@@ -168,16 +165,12 @@ func _use_spot(spot: String) -> void:
 			_message.text = "The way back to the hall opens once walking between rooms is built."
 
 
+# Every turn goes to the shared game, so the whole team builds one order.
 func _turn_tap(tap: String) -> void:
 	if _bathroom()["solved"]:
 		_message.text = "The taps are dry."
 		return
-	turns.append(tap)
-	if turns.size() == Settings.TAP_TURNS:
-		var tried := turns.duplicate()
-		turns.clear()
-		_send("turn_taps", {"taps": tried})
-	_refresh()
+	_send("turn_tap", {"tap": tap})
 
 
 func _open_mirror() -> void:
@@ -200,7 +193,7 @@ func _refresh() -> void:
 		var border := HIGHLIGHT if i == _highlight else Color(1, 1, 1, 0.12)
 		_spot_buttons[i].add_theme_stylebox_override("normal", _spot_style(border))
 
-	_turns_label.text = "  ".join(turns)
+	_turns_label.text = "  ".join(_bathroom()["turns"])
 
 	var solved: bool = _bathroom()["solved"]
 	_gift.visible = solved and not _bathroom()["gift_taken"]
