@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b2042e0n6trtb"
-path="res://.godot/imported/char_gingerbread.png-3f6dcbcb42c1399804cd00169ecdeccb.ctex"
+uid="uid://b75ailp7vsinn"
+path="res://.godot/imported/char_nutcracker.png-d8b084f291f2f2410cf5f4b8ce6869f9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/images/char_gingerbread.png"
-dest_files=["res://.godot/imported/char_gingerbread.png-3f6dcbcb42c1399804cd00169ecdeccb.ctex"]
+source_file="res://assets/images/char_nutcracker.png"
+dest_files=["res://.godot/imported/char_nutcracker.png-d8b084f291f2f2410cf5f4b8ce6869f9.ctex"]
 
 [params]
 

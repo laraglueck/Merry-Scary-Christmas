@@ -19,7 +19,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
-| room_garden.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| room_garden.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_hall.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_attic.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
@@ -28,9 +28,9 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | room_bathroom_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_bedroom_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_bedroom_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_elf.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_snowman.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| char_gingerbread.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| char_elf.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | background removed with macOS Remove Background |
+| char_snowman.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | background removed with macOS Remove Background |
+| char_nutcracker.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | background removed with macOS Remove Background |
 | char_santa_asleep.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_santa_awake.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | item_fuse_red.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
