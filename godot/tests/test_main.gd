@@ -161,3 +161,57 @@ func test_midnight_shows_the_loss_without_a_way_back() -> void:
 	assert_true(back != null and not back.visible, "no way back to the hall")
 	var clock: Node = mains[1].find_child("ClockLabel", true, false)
 	assert_true(clock != null and not clock.visible, "clock hidden after the game")
+
+
+# ---------- the inventory (spec 14) ----------
+
+func slot_shows(main: Node, item: String) -> bool:
+	var picture: Node = main.find_child("InventoryPicture_" + item, true, false)
+	return picture != null and picture.visible and text_of(main, "InventoryName_" + item) != ""
+
+
+func test_inventory_bar_on_every_screen_while_the_game_runs() -> void:
+	var solo := make_main_device("Solo5")
+	var before: Node = solo.find_child("InventoryBar", true, false)
+	assert_true(before != null and not before.visible, "no bar before the game")
+	var mains: Array = await make_started_mains(47576)
+	await wait_until(screens_are(mains, "hall"))
+	var bar: Control = mains[1].find_child("InventoryBar", true, false)
+	assert_true(bar != null and bar.is_visible_in_tree(), "bar shown in the game")
+	for item in ["gift_1", "gift_2", "gift_3", "photo", "key"]:
+		assert_true(mains[1].find_child("InventorySlot_" + item, true, false) != null, "slot for " + item)
+		assert_eq(slot_shows(mains[1], item), false, item + " not found yet")
+	if bar != null:
+		await wait_frames(2)
+		var r := bar.get_global_rect()
+		var screen: Rect2 = bar.get_viewport().get_visible_rect()
+		assert_true(screen.encloses(r), "bar fully on screen: %s" % r)
+		assert_true(r.position.x > screen.size.x / 2 and r.position.y > screen.size.y / 2, "bottom right: %s" % r)
+		var parts: Array = [bar]
+		parts.append_array(bar.find_children("*", "Control", true, false))
+		for part in parts:
+			assert_eq(part.mouse_filter, Control.MOUSE_FILTER_IGNORE, "%s lets clicks through" % part.name)
+
+
+func test_a_found_present_shows_on_all_three_screens() -> void:
+	var mains: Array = await make_started_mains(47577)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.game["bathroom"]["solved"] = true  # the host's game: taps solved
+	mains[2].net.send_action("take_gift", {"room": "bathroom"})
+	var everyone_sees := func(): return mains.all(func(m): return slot_shows(m, "gift_2"))
+	assert_true(await wait_until(everyone_sees), "Present 2 in the bar on all three")
+	assert_eq(text_of(mains[1], "InventoryName_gift_2"), "Present 2", "its name")
+	var picture: Node = mains[1].find_child("InventoryPicture_gift_2", true, false)
+	var file: String = picture.texture.resource_path.get_file() if picture != null and picture.texture != null else ""
+	assert_eq(file, "item_gift_2.png", "its picture")
+	assert_eq(slot_shows(mains[1], "gift_1"), false, "Present 1 still missing")
+
+
+func test_inventory_bar_hidden_after_midnight() -> void:
+	var mains: Array = await make_started_mains(47578)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.advance_clock(600.0)
+	await wait_until(screens_are(mains, "midnight"))
+	var bar: Node = mains[1].find_child("InventoryBar", true, false)
+	assert_true(bar != null and not bar.visible, "bar hidden after the game")
+

@@ -9,6 +9,7 @@ const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
+const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 
 
 static func new_game(rng: RandomNumberGenerator) -> Dictionary:
@@ -18,6 +19,7 @@ static func new_game(rng: RandomNumberGenerator) -> Dictionary:
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
 		"penalty_seconds": 0,                       # all penalties so far
+		"inventory": [],                            # what the team carries (spec 14), e.g. ["gift_2"]
 		"seconds_played": 0,                        # the clock (spec 13): time left = 600 - this - penalties
 		"last_event": "",                           # shown to everyone, e.g. "Player 1: wrong order, -10 s"
 	}
@@ -82,6 +84,7 @@ static func _take_bathroom_gift(game: Dictionary, player: int) -> void:
 	var who := "Player %d" % (player + 1)
 	var result := BathroomRules.take_gift(game["bathroom"])
 	if result["ok"]:
+		InventoryRules.add(game, "gift_2")
 		game["last_event"] = "%s found the second present!" % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
