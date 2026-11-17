@@ -2,6 +2,7 @@
 extends "res://tests/base_test.gd"
 
 const MainScene = preload("res://scenes/main.tscn")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 
 
 # One device running the whole game (main scene), with its own multiplayer.
@@ -113,3 +114,50 @@ func test_unbuilt_room_shows_a_placeholder_with_a_way_back() -> void:
 	assert_contains(text_of(mains[1], "PlaceTitle"), "living/dining room", "placeholder title")
 	press(mains[1], "BackButton")
 	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
+
+
+# ---------- the clock (spec 13) ----------
+
+func test_every_screen_shows_the_clock() -> void:
+	var solo := make_main_device("Solo4")
+	var before := solo.find_child("ClockLabel", true, false)
+	assert_true(before == null or not before.visible, "no clock before the game")
+	var mains: Array = await make_started_mains(47573)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.advance_clock(61.0)
+	var shows_its_time := func(m): return text_of(m, "ClockLabel") == "Midnight in " + ClockRules.as_text(ClockRules.time_left(m.net.game))
+	var all_show := func(): return mains.all(func(m): return ClockRules.time_left(m.net.game) <= 539 and shows_its_time.call(m))
+	assert_true(await wait_until(all_show), "all three show the time left")
+	assert_contains(text_of(mains[2], "ClockLabel"), "Midnight in 08:5", "about 8:59 left")
+	var clock: Node = mains[2].find_child("ClockLabel", true, false)
+	assert_true(clock != null and clock.is_visible_in_tree(), "clock visible on Player 3")
+
+
+func test_last_minute_in_red() -> void:
+	var mains: Array = await make_started_mains(47574)
+	await wait_until(screens_are(mains, "hall"))
+	var clock: Node = mains[1].find_child("ClockLabel", true, false)
+	var colour: Color = clock.get_theme_color("font_color") if clock != null else Color.RED
+	assert_true(colour.g > 0.6, "not red with 10 minutes left: %s" % colour)
+	mains[0].net.advance_clock(545.0)
+	await wait_until(func(): return ClockRules.time_left(mains[1].net.game) <= 55)
+	colour = clock.get_theme_color("font_color") if clock != null else Color.WHITE
+	assert_true(colour.r > 0.8 and colour.g < 0.4, "red in the last minute: %s" % colour)
+
+
+func test_midnight_shows_the_loss_without_a_way_back() -> void:
+	var mains: Array = await make_started_mains(47575)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.advance_clock(600.0)
+	assert_true(await wait_until(screens_are(mains, "midnight")), "all three at midnight")
+	await wait_frames(2)
+	assert_eq(text_of(mains[1], "PlaceTitle"), "Midnight", "title")
+	var title: Control = mains[1].find_child("PlaceTitle", true, false)
+	if title != null:
+		var middle: float = title.get_viewport().get_visible_rect().size.x / 2
+		assert_true(absf(title.get_global_rect().get_center().x - middle) < 40, "title in the middle of the screen")
+	assert_contains(text_of(mains[1], "Message"), "Midnight", "what happened")
+	var back: Node = mains[1].find_child("BackButton", true, false)
+	assert_true(back != null and not back.visible, "no way back to the hall")
+	var clock: Node = mains[1].find_child("ClockLabel", true, false)
+	assert_true(clock != null and not clock.visible, "clock hidden after the game")

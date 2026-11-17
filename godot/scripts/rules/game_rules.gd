@@ -8,6 +8,7 @@ extends RefCounted
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 
 
 static func new_game(rng: RandomNumberGenerator) -> Dictionary:
@@ -17,12 +18,16 @@ static func new_game(rng: RandomNumberGenerator) -> Dictionary:
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
 		"penalty_seconds": 0,                       # all penalties so far
+		"seconds_played": 0,                        # the clock (spec 13): time left = 600 - this - penalties
 		"last_event": "",                           # shown to everyone, e.g. "Player 1: wrong order, -10 s"
 	}
 
 
 # Host only: one player's action changes the game. Unknown actions change nothing.
+# After midnight (or another end) nothing changes any more (spec 13).
 static func apply(game: Dictionary, player: int, action: String, data: Dictionary) -> void:
+	if game.get("phase") != "hall":
+		return
 	match action:
 		"try_fuse":
 			_try_fuse(game, player, data)
@@ -33,6 +38,7 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 				_take_bathroom_gift(game, player)
 		"go_to":
 			_go_to(game, player, data)
+	ClockRules.check_midnight(game)  # a penalty can use up the last seconds
 
 
 # Player i always works on fuse i (Player 1 = red, Player 2 = green, Player 3 = gold).
