@@ -24,8 +24,9 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | room_attic.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| room_bathroom_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| room_bathroom_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| room_bathroom_dark.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | edit of room_bathroom_lit, lamp off; tub shows empty, to redo with water, 1376 x 768 |
+| room_bathroom_lit.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
+| room_bathroom_drained.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | edit of room_bathroom_lit, tub drained, 1376 x 768 |
 | room_bedroom_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_bedroom_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | char_elf.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
