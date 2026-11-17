@@ -19,7 +19,7 @@ const EXAMPLE_WHEELS := ["bell", "star", "tree"]
 # Rect2(x, y, width, height) on the 1152 x 648 screen, measured on room_bathroom_lit.webp.
 # If a new picture moves things, change these numbers.
 const SPOTS := [
-	{"name": "door_hall", "label": "Hall", "rect": Rect2(48, 70, 150, 540)},
+	{"name": "door_hall", "label": "Hall", "rect": Rect2(48, 70, 150, 515)},
 	{"name": "mirror", "label": "Mirror", "rect": Rect2(306, 128, 230, 176)},
 	{"name": "hot_tap", "label": "Hot", "rect": Rect2(366, 300, 52, 52)},
 	{"name": "cold_tap", "label": "Cold", "rect": Rect2(422, 300, 52, 52)},
