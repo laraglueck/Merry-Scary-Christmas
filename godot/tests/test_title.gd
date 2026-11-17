@@ -35,3 +35,23 @@ func test_start_button_sends_start_pressed() -> void:
 	title.start_pressed.connect(func(): pressed[0] = true)
 	press(title, "StartButton")
 	assert_true(pressed[0], "start_pressed sent")
+
+
+func test_title_shows_the_three_figures() -> void:
+	var title := open_title()
+	for figure in ["Santa", "Snowman", "Nutcracker"]:
+		var picture: TextureRect = find(title, figure)
+		assert_true(picture != null and picture.texture != null, figure + " shown")
+
+
+func test_window_light_flickers() -> void:
+	var title := open_title()
+	var dark: ColorRect = find(title, "WindowDark")
+	assert_true(dark != null, "window overlay")
+	if dark == null:
+		return
+	var seen := {}
+	for i in 40:  # a whole flicker cycle, step by step
+		title.flicker_step()
+		seen[snappedf(dark.color.a, 0.01)] = true
+	assert_true(seen.size() > 1, "the window goes dark and light again")
