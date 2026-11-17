@@ -19,7 +19,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
-| room_garden.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| room_garden.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_hall.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_attic.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
