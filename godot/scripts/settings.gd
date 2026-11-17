@@ -22,6 +22,15 @@ const TAP_PENALTY_SECONDS := 20
 const GAME_SECONDS := 600            # 10 minutes until midnight
 const CLOCK_WARNING_SECONDS := 60    # the last minute: the clock turns red
 
+# The inventory (spec 14): everything the team can find, in the order the bar shows it.
+const ITEMS := [
+	{"id": "gift_1", "name": "Present 1", "picture": "item_gift_1.png"},  # living room (Gloria)
+	{"id": "gift_2", "name": "Present 2", "picture": "item_gift_2.png"},  # bathroom
+	{"id": "gift_3", "name": "Present 3", "picture": "item_gift_3.png"},  # bedroom (Leon)
+	{"id": "photo", "name": "Photo", "picture": "egg_young_santa.png"},   # bedroom calendar (Leon)
+	{"id": "key", "name": "Key", "picture": "item_key.png"},              # attic (Lara)
+]
+
 # Network
 const NETWORK_PORT := 47411
 const MAX_PLAYERS := 3
