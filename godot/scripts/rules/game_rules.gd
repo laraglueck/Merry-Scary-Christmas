@@ -6,12 +6,13 @@
 extends RefCounted
 
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
-
+const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 
 static func new_game(rng: RandomNumberGenerator) -> Dictionary:
 	return {
 		"phase": "hall",                            # which screen everyone sees
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
+		"living_room": LivingRoomRules.create_room(rng),
 		"penalty_seconds": 0,                       # all penalties so far
 		"last_event": "",                           # shown to everyone, e.g. "Player 1: wrong order, -10 s"
 	}
@@ -39,3 +40,4 @@ static func _try_fuse(game: Dictionary, player: int, data: Dictionary) -> void:
 	else:
 		game["penalty_seconds"] += result["penalty_seconds"]
 		game["last_event"] = "%s: wrong order, -%d s" % [who, result["penalty_seconds"]]
+		
