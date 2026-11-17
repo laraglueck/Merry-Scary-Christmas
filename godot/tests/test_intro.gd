@@ -27,13 +27,21 @@ func test_intro_shows_every_line_in_order() -> void:
 	assert_eq(seen, Intro.STORY_LINES, "all lines, in order")
 
 
-func test_line_times_go_up_and_end_before_the_voice() -> void:
-	var times: Array = Intro.line_times(Intro.STORY_LINES, 33.6)
-	assert_eq(times.size(), Intro.STORY_LINES.size(), "one time per line")
+func test_start_times_go_up_and_end_before_the_voice() -> void:
+	var times: Array = Intro.LINE_START_SECONDS
+	assert_eq(times.size(), Intro.STORY_LINES.size(), "one start time per line")
 	for i in range(1, times.size()):
 		assert_true(times[i] > times[i - 1], "line %d after line %d" % [i + 1, i])
-	assert_true(times[0] >= 0.0, "first line at the start")
+	assert_eq(times[0], 0.0, "first line at the start")
 	assert_true(times[-1] < 33.6, "last line starts before the voice ends")
+
+
+func test_line_follows_the_recording() -> void:
+	var intro := open_intro()
+	intro.advance(9.5)
+	assert_contains(text_of(intro, "SubtitleLabel"), "Then the storm came.", "third line at 0:09")
+	intro.advance(6.0)
+	assert_contains(text_of(intro, "SubtitleLabel"), "Santa Claus fired me", "fourth line at 0:15")
 
 
 func test_voice_plays_once() -> void:

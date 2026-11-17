@@ -13,8 +13,8 @@ ElevenLabs) and the music (`music_lobby.mp3`) already exist.
   - a dark night with falling snow and dark edges (snow and gradient from `title.gd`);
   - the story as subtitles (`SubtitleLabel`), one line after the other, fading in and
     out; the lines are `STORY_LINES` in `intro.gd`;
-  - each line gets a share of the voice's length that fits its number of letters
-    (`line_times`); `LINE_SHIFT_SECONDS` can move single lines if they run early or late;
+  - each line appears at the second it starts in the recording (`LINE_START_SECONDS`,
+    taken from the audio by hand);
   - the voice (`Voice`) plays once; when it ends the screen sends `finished`;
   - a click or a key skips: `finished` at once. A small hint says "Click to skip".
 - The music moves to `main.gd` (`Music`, looping): it starts with the game, keeps playing
@@ -24,7 +24,7 @@ ElevenLabs) and the music (`music_lobby.mp3`) already exist.
   game over leads back to the lobby, not to the loading screen or the title.
 
 ## Out of scope
-Exact timing marks from the audio, other languages, a volume setting, a real loading
+Timing marks read from the audio file itself, other languages, a volume setting, a real loading
 bar (nothing needs to load yet).
 
 ## Done when

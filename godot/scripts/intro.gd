@@ -10,23 +10,20 @@ const Title = preload("res://scripts/title.gd")
 
 const SOUNDS := "res://assets/sounds/"
 
-# The story, exactly as the voice reads it, one subtitle per entry.
+# The story, exactly as the voice reads it, one subtitle per entry, and the second
+# in voice_title.mp3 where each line starts. Change both lists together.
 const STORY_LINES := [
-	"I was Santa's most loyal helper.",
+	"Once I was Santa's most loyal helper.",
 	"I had one job: deliver the presents on Christmas Eve.",
-	"Then the storm came. I was stuck in the snow, and nothing got delivered.",
-	"The children woke up to empty stockings, and I was fired.",
+	"Then the storm came. I was stuck in the snow, and couldn't deliver the presents.",
+	"The children woke up to empty stockings, and Santa Claus fired me.",
 	"Now I live alone in this old house, and I hate Christmas.",
 	"Every Christmas Eve, I take my revenge.",
 	"Three presents, stolen and hidden somewhere in these walls.",
 	"Think you can find them before the time runs out?",
 ]
-# Moves single lines earlier (minus) or later (plus), in seconds, if the automatic
-# timing doesn't match the voice. One number per line; leave 0.0 where it fits.
-const LINE_SHIFT_SECONDS := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+const LINE_START_SECONDS := [0.0, 5.0, 9.0, 15.0, 19.0, 23.0, 27.0, 31.0]
 
-const LEAD_IN_SECONDS := 0.4      # silence before the voice starts speaking
-const PAUSE_LETTERS := 14         # the pause after a line counts like this many letters
 const FADE_SECONDS := 0.35        # a subtitle fades in and out this fast
 const EXTRA_WAIT_SECONDS := 1.5   # without sound, go on this long after the voice's length
 const SUBTITLE_WIDTH := 1060.0    # fixed width, so the label can wrap (see TEAM-GUIDE pitfalls)
@@ -36,27 +33,8 @@ var elapsed := 0.0
 
 var _voice: AudioStreamPlayer
 var _subtitle: Label
-var _times: Array = []
 var _length := 0.0
 var _done := false
-
-
-# When each line starts (seconds), shared out by the number of letters of each line:
-# a long line is read longer. `total` is the voice's length.
-static func line_times(lines: Array, total: float) -> Array:
-	var weights := []
-	var sum := 0.0
-	for line: String in lines:
-		weights.append(float(line.length() + PAUSE_LETTERS))
-		sum += weights[-1]
-	var usable := total - LEAD_IN_SECONDS
-	var times := []
-	var start := LEAD_IN_SECONDS
-	for i in lines.size():
-		var shift: float = LINE_SHIFT_SECONDS[i] if i < LINE_SHIFT_SECONDS.size() else 0.0
-		times.append(start + shift)
-		start += usable * weights[i] / sum
-	return times
 
 
 func _ready() -> void:
@@ -73,7 +51,6 @@ func _ready() -> void:
 	_voice.finished.connect(_finish)
 	add_child(_voice)
 	_length = stream.get_length()
-	_times = line_times(STORY_LINES, _length)
 	_show_subtitle()
 
 
@@ -111,12 +88,12 @@ func _finish() -> void:
 # The line for the current time, fading in after it starts and out before the next.
 func _show_subtitle() -> void:
 	var index := 0
-	for i in _times.size():
-		if elapsed >= _times[i]:
+	for i in LINE_START_SECONDS.size():
+		if elapsed >= LINE_START_SECONDS[i]:
 			index = i
 	_subtitle.text = STORY_LINES[index]
-	var start: float = _times[index]
-	var end: float = _times[index + 1] if index + 1 < _times.size() else _length + EXTRA_WAIT_SECONDS
+	var start: float = LINE_START_SECONDS[index]
+	var end: float = LINE_START_SECONDS[index + 1] if index + 1 < LINE_START_SECONDS.size() else _length + EXTRA_WAIT_SECONDS
 	var fade_in := clampf((elapsed - start) / FADE_SECONDS, 0.0, 1.0)
 	var fade_out := clampf((end - elapsed) / FADE_SECONDS, 0.0, 1.0)
 	_subtitle.modulate.a = minf(fade_in, fade_out)
