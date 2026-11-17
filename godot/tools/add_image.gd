@@ -42,6 +42,10 @@ func _run(args: PackedStringArray) -> int:
 	if factor < 1.0:
 		image.resize(roundi(image.get_width() * factor), roundi(image.get_height() * factor), Image.INTERPOLATE_LANCZOS)
 
+	# Symbols are a dark shape on white: the white becomes see-through.
+	if file_name.begins_with("sym_"):
+		_white_to_transparent(image)
+
 	var path: String = Names.IMAGE_DIR + file_name
 	var error: Error
 	if file_name.ends_with(".webp"):
@@ -57,3 +61,16 @@ func _run(args: PackedStringArray) -> int:
 	if kilobytes > MAX_KILOBYTES:
 		print("WARNING: larger than %d KB, the limit for one image." % MAX_KILOBYTES)
 	return 0
+
+
+# The brighter a pixel, the more see-through it gets: pure white disappears,
+# the dark shape stays solid, and the soft edge between them stays smooth.
+# Only right for a dark shape on a white background.
+func _white_to_transparent(image: Image) -> void:
+	image.convert(Image.FORMAT_RGBA8)
+	for y in image.get_height():
+		for x in image.get_width():
+			var colour := image.get_pixel(x, y)
+			var brightness := minf(colour.r, minf(colour.g, colour.b))
+			colour.a = 1.0 - brightness
+			image.set_pixel(x, y, colour)

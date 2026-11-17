@@ -20,7 +20,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
 | room_garden.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| room_hall.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, model to confirm) | 1376 x 768 |
+| room_hall.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_attic.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_dark.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | room_living_room_lit.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
@@ -55,10 +55,10 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | prop_calendar_open.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | prop_calendar_closed.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | prop_board.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sym_star.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sym_bell.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sym_tree.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| sym_snowflake.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| sym_star.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background made transparent by `add_image.gd` |
+| sym_bell.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background made transparent by `add_image.gd` |
+| sym_tree.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background made transparent by `add_image.gd` |
+| sym_snowflake.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background made transparent by `add_image.gd` |
 | wire_blue.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | wire_yellow.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | wire_white.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
@@ -66,7 +66,8 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | ui_title.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_win.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_lose.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| ui_fuse_box.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, model to confirm) | close-up of the open fuse box, 1376 x 768 |
+| ui_fuse_box.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | close-up of the open fuse box, 1376 x 768 |
+| ui_house_plan.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | close-up of the house plan, 1376 x 768 |
 | ui_clock.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_inventory.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_noise_meter.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
