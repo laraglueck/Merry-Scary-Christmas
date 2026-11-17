@@ -17,6 +17,9 @@ const FUSES := [
 const TAPS := ["hot", "cold"]
 const TAP_TURNS := 4
 const TAP_PENALTY_SECONDS := 20
+# Living room: a wrong clock setting costs time.
+const LIVING_ROOM_PENALTY_SECONDS := 20
+
 
 # The clock (spec 13)
 const GAME_SECONDS := 600            # 10 minutes until midnight
