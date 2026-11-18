@@ -1,0 +1,684 @@
+# Tests for spec 02: the hall scene. They click buttons like a player would.
+# Seed 42 gives: legend star = white, bell = blue, tree = black, snowflake = yellow
+#   red fuse   (Player 1): white, blue, yellow, black  label: star, bell, snowflake, tree
+#   green fuse (Player 2): blue, black, yellow, white  label: bell, tree, snowflake, star
+#   gold fuse  (Player 3): blue, yellow, white, black  label: bell, snowflake, star, tree
+extends "res://tests/base_test.gd"
+
+const HallScene = preload("res://scenes/hall.tscn")
+const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
+const HallScript = preload("res://scripts/hall.gd")
+const Settings = preload("res://scripts/settings.gd")
+
+const RED_RIGHT := ["white", "blue", "yellow", "black"]
+const GREEN_RIGHT := ["blue", "black", "yellow", "white"]
+const GOLD_RIGHT := ["blue", "yellow", "white", "black"]
+const RED_WRONG := ["blue", "white", "yellow", "black"]
+
+
+# Opens the hall like starting the scene (this runs _ready).
+func open_hall() -> Node:
+	tree.root.size = Vector2i(1152, 648)
+	var hall = HallScene.instantiate()
+	hall.seed_value = 42
+	tree.root.add_child(hall)
+	return hall
+
+
+# The torn label's symbols, read from its four pictures.
+func label_pictures(hall: Node) -> Array:
+	var symbols := []
+	for i in 4:
+		symbols.append(texture_file(hall, "LabelSymbol%d" % i).trim_prefix("sym_").trim_suffix(".png"))
+	return symbols
+
+
+# Change after manual test 3: the pictures speak for themselves, no list of names.
+func assert_no_symbol_names(text: String) -> void:
+	for symbol in Settings.SYMBOLS:
+		assert_true(not text.contains(symbol), "no symbol names in the text: %s" % text)
+
+
+func click_wires(hall: Node, colours: Array) -> void:
+	for colour in colours:
+		press(hall, "Wire_" + colour)
+
+
+# ---------- house plan ----------
+
+func test_house_plan_shows_legend() -> void:
+	var hall := open_hall()
+	for pair in [["star", "white"], ["bell", "blue"], ["tree", "black"], ["snowflake", "yellow"]]:
+		assert_eq(text_of(hall, "LegendEntry_" + pair[0]), "%s = %s" % pair, "legend " + pair[0])
+		assert_eq(texture_file(hall, "LegendSymbol_" + pair[0]), "sym_%s.png" % pair[0], "symbol picture " + pair[0])
+
+
+func test_all_rooms_dark_at_start() -> void:
+	var hall := open_hall()
+	for i in 3:
+		assert_contains(text_of(hall, "RoomLamp%d" % i), "dark", "lamp %d" % i)
+	assert_eq(text_of(hall, "PenaltyLabel"), "Penalty: 0 s", "penalty")
+
+
+# ---------- fuse panel ----------
+
+func test_fuse_box_opens_fuse_panel() -> void:
+	var hall := open_hall()
+	var panel := find(hall, "FusePanel")
+	assert_eq(panel != null and panel.visible, false, "panel hidden at start")
+	press(hall, "FuseBoxButton")
+	assert_eq(panel != null and panel.visible, true, "panel visible after click")
+
+
+func test_player_1_has_red_fuse_and_sees_gold_label() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	assert_contains(text_of(hall, "FuseTitle"), "red", "own fuse")
+	var hint := text_of(hall, "LabelHint")
+	assert_contains(hint, "gold", "label of which fuse")
+	assert_eq(label_pictures(hall), ["bell", "snowflake", "star", "tree"], "label symbols as pictures")
+	assert_no_symbol_names(hint)
+
+
+func test_player_2_has_green_fuse_and_sees_red_label() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	press(hall, "PlayerButton1")
+	assert_contains(text_of(hall, "FuseTitle"), "green", "own fuse")
+	var hint := text_of(hall, "LabelHint")
+	assert_contains(hint, "red", "label of which fuse")
+	assert_eq(label_pictures(hall), ["star", "bell", "snowflake", "tree"], "label symbols as pictures")
+	assert_no_symbol_names(hint)
+
+
+# ---------- clicking wires ----------
+
+func test_clicked_wire_is_disabled_and_shown_in_order() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, ["white"])
+	assert_eq(is_disabled(hall, "Wire_white"), true, "white disabled")
+	assert_eq(is_disabled(hall, "Wire_blue"), false, "blue still enabled")
+	assert_contains(text_of(hall, "ChosenLabel"), "white", "order so far")
+
+
+func test_reset_clears_order() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, ["white", "blue"])
+	press(hall, "ResetButton")
+	assert_contains(text_of(hall, "ChosenLabel"), "click the wires", "order cleared")
+	assert_eq(is_disabled(hall, "Wire_white"), false, "white enabled again")
+
+
+func test_right_order_lights_the_room() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_contains(text_of(hall, "RoomLamp0"), "lit", "living/dining room lamp")
+	assert_contains(text_of(hall, "RoomLamp1"), "dark", "bathroom lamp")
+	assert_contains(text_of(hall, "Message"), "on", "message")
+	assert_eq(text_of(hall, "PenaltyLabel"), "Penalty: 0 s", "no penalty")
+	assert_eq(hall.puzzle["fuses"][0]["solved"], true, "rule state")
+
+
+func test_wrong_order_costs_ten_seconds_each_time() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_WRONG)
+	assert_eq(text_of(hall, "PenaltyLabel"), "Penalty: 10 s", "after 1 wrong try")
+	assert_contains(text_of(hall, "Message"), "10 s", "message")
+	assert_contains(text_of(hall, "RoomLamp0"), "dark", "lamp stays dark")
+	assert_contains(text_of(hall, "ChosenLabel"), "click the wires", "order cleared")
+	assert_eq(is_disabled(hall, "Wire_blue"), false, "wires usable again")
+	click_wires(hall, RED_WRONG)
+	assert_eq(text_of(hall, "PenaltyLabel"), "Penalty: 20 s", "after 2 wrong tries")
+
+
+func test_solved_fuse_cannot_be_played_again() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	for colour in ["blue", "yellow", "white", "black"]:
+		assert_eq(is_disabled(hall, "Wire_" + colour), true, colour + " disabled")
+	assert_contains(text_of(hall, "ChosenLabel"), "already on", "status")
+
+
+func test_switching_player_clears_half_done_order() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, ["white"])
+	press(hall, "PlayerButton1")
+	assert_contains(text_of(hall, "ChosenLabel"), "click the wires", "order cleared")
+	assert_eq(is_disabled(hall, "Wire_white"), false, "white enabled for player 2")
+
+
+func test_three_fuses_light_three_rooms() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	press(hall, "PlayerButton1")
+	click_wires(hall, GREEN_RIGHT)
+	press(hall, "PlayerButton2")
+	click_wires(hall, GOLD_RIGHT)
+	for i in 3:
+		assert_contains(text_of(hall, "RoomLamp%d" % i), "lit", "lamp %d" % i)
+
+
+# ---------- layout (bug from manual test 1: panel opened below the window) ----------
+
+func test_everything_fits_in_the_window() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	await tree.process_frame  # let Godot arrange the boxes
+	await tree.process_frame
+	var window := Rect2(Vector2.ZERO, Vector2(1152, 648))
+	for node_name in ["PenaltyLabel", "FusePanel", "RoomLamp2", "RoomTile2", "StairsButton", "Message"]:
+		var node := find(hall, node_name)
+		if node != null:
+			assert_true(window.encloses(node.get_global_rect()), "%s inside the window, is %s" % [node_name, node.get_global_rect()])
+	var penalty := find(hall, "PenaltyLabel")
+	if penalty != null:
+		assert_true(penalty.size.y < 40, "penalty counter is one line, height is %d" % penalty.size.y)
+
+
+# ---------- online: each device shows only its own player (spec 04) ----------
+
+func open_online_hall(net: Node) -> Node:
+	var hall = HallScene.instantiate()
+	hall.net = net
+	tree.root.add_child(hall)
+	return hall
+
+
+func test_online_hall_shows_only_my_player() -> void:
+	var room: Array = await make_started_room(47541)
+	var a = room[1]
+	var hall := open_online_hall(a)
+	press(hall, "FuseBoxButton")
+	var switch := find(hall, "PlayerButton0")
+	assert_eq(switch != null and switch.is_visible_in_tree(), false, "no player switch")
+	assert_contains(text_of(hall, "FuseTitle"), "Player 2", "who")
+	assert_contains(text_of(hall, "FuseTitle"), "GREEN", "own fuse")
+	if not a.game.is_empty():
+		assert_contains(text_of(hall, "LabelHint"), "red fuse", "sees the red fuse's label")
+		assert_eq(label_pictures(hall), FuseRules.label_for(a.game["puzzle"], 0), "label symbols as pictures")
+		assert_no_symbol_names(text_of(hall, "LabelHint"))
+
+
+func test_online_right_wires_light_the_room_on_every_device() -> void:
+	var room: Array = await make_started_room(47542)
+	var host_hall := open_online_hall(room[0])
+	var a_hall := open_online_hall(room[1])
+	press(a_hall, "FuseBoxButton")
+	if not room[1].game.is_empty():
+		click_wires(a_hall, room[1].game["puzzle"]["fuses"][1]["order"])
+	var both_lit := func(): return "lit" in text_of(host_hall, "RoomLamp1") and "lit" in text_of(a_hall, "RoomLamp1")
+	assert_true(await wait_until(both_lit), "bathroom lit on host and on Player 2")
+	assert_contains(text_of(host_hall, "Message"), "Player 2 turned on the green fuse", "event on the host")
+
+
+func test_online_wrong_wires_cost_penalty_on_every_device() -> void:
+	var room: Array = await make_started_room(47543)
+	var host_hall := open_online_hall(room[0])
+	var b_hall := open_online_hall(room[2])
+	press(b_hall, "FuseBoxButton")
+	if not room[2].game.is_empty():
+		var wrong: Array = room[2].game["puzzle"]["fuses"][2]["order"].duplicate()
+		wrong.reverse()
+		click_wires(b_hall, wrong)
+	var both_10 := func(): return text_of(host_hall, "PenaltyLabel") == "Penalty: 10 s" and text_of(b_hall, "PenaltyLabel") == "Penalty: 10 s"
+	assert_true(await wait_until(both_10), "10 s on host and on Player 3")
+	assert_contains(text_of(b_hall, "Message"), "Player 3: wrong order", "event on Player 3")
+
+
+# ---------- atmosphere (spec 05) ----------
+
+func tile_colour(hall: Node, index: int) -> Color:
+	var tile := find(hall, "RoomTile%d" % index)
+	if tile == null:
+		return Color.TRANSPARENT
+	return tile.get_theme_stylebox("panel").bg_color
+
+
+func test_flicker_gets_weaker_with_each_fuse() -> void:
+	var strengths := []
+	for lit in [0, 1, 2, 3]:
+		strengths.append(HallScript.flicker_strength(lit))
+	assert_true(strengths[0] > strengths[1] and strengths[1] > strengths[2] and strengths[2] > strengths[3], "weaker each time: %s" % [strengths])
+	assert_eq(strengths[3], 0.0, "no flicker with all 3 fuses on")
+
+
+func test_hall_flickers_until_all_fuses_are_on() -> void:
+	var hall := open_hall()
+	assert_eq(hall.flicker_active(), true, "flickers at the start")
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(hall.flicker_active(), true, "still flickers with 1 fuse on")
+	press(hall, "PlayerButton1")
+	click_wires(hall, GREEN_RIGHT)
+	press(hall, "PlayerButton2")
+	click_wires(hall, GOLD_RIGHT)
+	assert_eq(hall.flicker_active(), false, "stops with all 3 fuses on")
+	var overlay := find(hall, "FlickerOverlay")
+	assert_eq(overlay != null and overlay.color.a == 0.0, true, "overlay fully clear")
+
+
+func test_flicker_overlay_lets_clicks_through() -> void:
+	var overlay := find(open_hall(), "FlickerOverlay")
+	assert_eq(overlay != null and overlay.mouse_filter == Control.MOUSE_FILTER_IGNORE, true, "ignores the mouse")
+
+
+func test_room_tiles_light_up_with_their_fuse() -> void:
+	var hall := open_hall()
+	var dark := tile_colour(hall, 0)
+	assert_eq(tile_colour(hall, 1), dark, "all tiles dark at the start")
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(tile_colour(hall, 0), HallScript.ROOM_LIT, "living/dining room tile lit")
+	assert_eq(tile_colour(hall, 1), HallScript.ROOM_DARK, "bathroom tile still dark")
+
+
+# Bug from manual test 1 (spec 05): flicker was too strong and too restless.
+
+func test_flicker_is_gentle() -> void:
+	assert_true(HallScript.flicker_strength(0) <= 0.3, "at most 30 %% dark, is %s" % HallScript.flicker_strength(0))
+
+
+func test_flicker_comes_in_short_bursts_with_calm_pauses() -> void:
+	var rng := RandomNumberGenerator.new()
+	for seed_value in [1, 2, 3, 4, 5]:
+		rng.seed = seed_value
+		var steps: Array = HallScript.flicker_cycle(rng, 0.3)
+		assert_eq(steps[0][0], 0.0, "starts calm")
+		var pause: float = steps[0][1]
+		assert_true(pause >= Settings.FLICKER_PAUSE_MIN_SECONDS and pause <= Settings.FLICKER_PAUSE_MAX_SECONDS, "calm pause, is %s s" % pause)
+		var dips := steps.filter(func(step): return step[0] > 0.0)
+		assert_true(dips.size() >= 2 and dips.size() <= 4, "2 to 4 dips, is %d" % dips.size())
+		for dip in dips:
+			assert_true(dip[1] <= 0.1, "dip is short, is %s s" % dip[1])
+			assert_true(dip[0] <= 0.3, "dip not darker than the strength, is %s" % dip[0])
+
+
+# ---------- doors and stairs (spec 07) ----------
+
+func test_doors_are_dark_until_their_fuse_is_on() -> void:
+	var hall := open_hall()
+	for place in ["living_room", "bathroom", "bedroom"]:
+		assert_eq(is_disabled(hall, "Door_" + place), true, place + " door disabled")
+		assert_contains(text_of(hall, "Door_" + place), "dark", place + " door text")
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(is_disabled(hall, "Door_living_room"), false, "living room door open")
+	assert_eq(is_disabled(hall, "Door_bathroom"), true, "bathroom still dark")
+
+
+func test_stairs_need_all_three_fuses() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	press(hall, "PlayerButton1")
+	click_wires(hall, GREEN_RIGHT)
+	assert_eq(is_disabled(hall, "StairsButton"), true, "2 fuses: stairs dark")
+	press(hall, "PlayerButton2")
+	click_wires(hall, GOLD_RIGHT)
+	assert_eq(is_disabled(hall, "StairsButton"), false, "3 fuses: stairs open")
+
+
+func test_door_alone_explains_that_walking_needs_the_full_game() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	press(hall, "Door_living_room")
+	assert_contains(text_of(hall, "Message"), "full game", "explanation")
+
+
+func test_online_door_walks_the_team() -> void:
+	var room: Array = await make_started_room(47561)
+	var a = room[1]
+	var hall := open_online_hall(a)
+	press(hall, "FuseBoxButton")
+	if not a.game.is_empty():
+		click_wires(hall, a.game["puzzle"]["fuses"][1]["order"])
+	await wait_until(func(): return not is_disabled(hall, "Door_bathroom"))
+	press(hall, "Door_bathroom")
+	assert_true(await wait_until(func(): return room[0].game.get("location") == "bathroom"), "host: team in the bathroom")
+
+
+# ---------- artwork, spots and close-ups (spec 08) ----------
+
+const SPOT_ORDER := ["fuse_box", "living_room", "bathroom", "attic", "bedroom", "house_plan"]
+const SPOT_NODES := ["FuseBoxButton", "Door_living_room", "Door_bathroom", "StairsButton", "Door_bedroom", "HousePlanButton"]
+
+
+# Like a real key press: through the viewport, so focused buttons get the chance
+# to swallow it first (bug from manual test 2).
+func key(hall: Node, action: String) -> void:
+	for down in [true, false]:  # a real key goes down and comes up again
+		var event := InputEventAction.new()
+		event.action = action
+		event.pressed = down
+		tree.root.push_input(event)
+
+
+func texture_file(hall: Node, node_name: String) -> String:
+	var node := find(hall, node_name)
+	if node == null or not "texture" in node or node.texture == null:
+		return ""
+	return node.texture.resource_path.get_file()
+
+
+# The colour you actually see: the picture's visible pixels on average,
+# times the node's tint (modulate, self_modulate).
+func shown_colour(hall: Node, node_name: String) -> Color:
+	var node := find(hall, node_name)
+	if node == null or not "texture" in node or node.texture == null:
+		return Color.BLACK
+	var image: Image = node.texture.get_image()
+	if image.is_compressed():
+		image.decompress()
+	var sum := Color(0, 0, 0, 0)
+	var count := 0
+	for y in range(0, image.get_height(), 2):
+		for x in range(0, image.get_width(), 2):
+			var pixel := image.get_pixel(x, y)
+			if pixel.a > 0.5:
+				sum += pixel
+				count += 1
+	if count == 0:
+		return Color.BLACK
+	var average := Color(sum.r / count, sum.g / count, sum.b / count)
+	var tint: Color = node.modulate * node.self_modulate
+	return Color(minf(average.r * tint.r, 1.0), minf(average.g * tint.g, 1.0), minf(average.b * tint.b, 1.0))
+
+
+func same_colour(a: Color, b: Color) -> bool:
+	return absf(a.r - b.r) < 0.06 and absf(a.g - b.g) < 0.06 and absf(a.b - b.b) < 0.06
+
+
+func is_shown(hall: Node, node_name: String) -> bool:
+	var node := find(hall, node_name)
+	return node != null and node.is_visible_in_tree()
+
+
+func test_hall_picture_is_the_background() -> void:
+	assert_eq(texture_file(open_hall(), "Background"), "room_hall.webp", "background")
+
+
+func test_six_spots_inside_the_picture() -> void:
+	var hall := open_hall()
+	var window := Rect2(Vector2.ZERO, Vector2(1152, 648))
+	for node_name in SPOT_NODES:
+		var spot := find(hall, node_name)
+		if spot != null:
+			assert_true(window.encloses(spot.get_global_rect()), node_name + " inside the window")
+
+
+func test_arrows_move_the_highlight_from_spot_to_spot() -> void:
+	var hall := open_hall()
+	var seen := [hall.highlighted_spot()]
+	for i in 5:
+		key(hall, "ui_right")
+		seen.append(hall.highlighted_spot())
+	assert_eq(seen, SPOT_ORDER, "left to right")
+	key(hall, "ui_right")
+	assert_eq(hall.highlighted_spot(), "house_plan", "stops at the last spot")
+	key(hall, "ui_left")
+	assert_eq(hall.highlighted_spot(), "bedroom", "one back")
+
+
+func test_enter_opens_the_fuse_box_and_escape_closes_it() -> void:
+	var hall := open_hall()
+	key(hall, "ui_accept")
+	assert_eq(is_shown(hall, "FusePanel"), true, "fuse box open")
+	assert_eq(texture_file(hall, "FuseBoxPicture"), "ui_fuse_box.webp", "close-up picture")
+	key(hall, "ui_cancel")
+	assert_eq(is_shown(hall, "FusePanel"), false, "fuse box closed")
+
+
+func test_house_plan_opens_and_closes() -> void:
+	var hall := open_hall()
+	press(hall, "HousePlanButton")
+	assert_eq(is_shown(hall, "HousePlanPanel"), true, "plan open")
+	assert_eq(texture_file(hall, "HousePlanPicture"), "ui_house_plan.webp", "plan picture")
+	key(hall, "ui_cancel")
+	assert_eq(is_shown(hall, "HousePlanPanel"), false, "plan closed by Esc")
+	press(hall, "HousePlanButton")
+	press(hall, "BackFromPlan")
+	assert_eq(is_shown(hall, "HousePlanPanel"), false, "plan closed by Back")
+
+
+func test_dark_door_by_key_explains_which_fuse() -> void:
+	var hall := open_hall()
+	key(hall, "ui_right")
+	key(hall, "ui_right")  # bathroom door
+	key(hall, "ui_accept")
+	assert_contains(text_of(hall, "Message"), "green fuse", "explanation")
+
+
+func test_fuse_appears_in_its_socket_once_it_is_on() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	assert_eq(is_shown(hall, "FuseSocket_red"), false, "no red fuse yet")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(is_shown(hall, "FuseSocket_red"), true, "red fuse in its socket")
+	assert_eq(texture_file(hall, "FuseSocket_red"), "item_fuse_red.png", "fuse picture")
+	# Bug from screenshot 2: the picture showed at its full 276 x 512 size over the whole box.
+	var socket := find(hall, "FuseSocket_red")
+	if socket != null:
+		assert_true(socket.size.x <= 60 and socket.size.y <= 110, "fuse fits its socket, size is %s" % socket.size)
+	assert_eq(is_shown(hall, "FuseSocket_green"), false, "green still empty")
+
+
+func test_torn_label_and_order_show_pictures() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	var expected := ["bell", "snowflake", "star", "tree"]  # gold label, seen by Player 1
+	for i in 4:
+		assert_eq(texture_file(hall, "LabelSymbol%d" % i), "sym_%s.png" % expected[i], "label symbol %d" % i)
+	click_wires(hall, ["white"])
+	var bar := find(hall, "ChosenWire0")
+	var bar_colour: Color = bar.get_theme_stylebox("panel").bg_color if bar != null else Color.TRANSPARENT
+	assert_eq(bar_colour, HallScript.UI_COLOURS["white"], "first chosen wire as a white bar")
+	assert_eq(is_shown(hall, "ChosenWire0"), true, "first bar shown")
+	assert_eq(is_shown(hall, "ChosenWire1"), false, "nothing chosen second yet")
+	for colour in ["blue", "yellow", "white", "black"]:
+		assert_eq(text_of(hall, "WireName_" + colour), colour, "name above the %s cable" % colour)
+
+
+func test_wires_sit_over_the_cables_blue_yellow_white_black() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	await wait_frames(2)
+	var xs := []
+	for colour in ["blue", "yellow", "white", "black"]:
+		var wire := find(hall, "Wire_" + colour)
+		xs.append(wire.get_global_rect().position.x if wire != null else -1.0)
+	var sorted_xs := xs.duplicate()
+	sorted_xs.sort()
+	assert_eq(xs, sorted_xs, "left to right")
+	# Over the four cables of ui_fuse_box.webp: picture pixels x 550 to 810, y 420 to 725.
+	for colour in ["blue", "yellow", "white", "black"]:
+		var wire := find(hall, "Wire_" + colour)
+		if wire != null:
+			var r := in_picture_pixels(hall, "FuseBoxPicture", wire)
+			assert_true(Rect2(550, 420, 260, 305).encloses(r), "%s over the cables, is %s" % [colour, r])
+
+
+func test_keyboard_only_solves_a_fuse() -> void:
+	var hall := open_hall()
+	key(hall, "ui_accept")  # opens the fuse box
+	for colour in RED_RIGHT:
+		var steps := 0
+		while hall.highlighted_wire() != colour and steps < 8:
+			key(hall, "ui_right" if steps < 4 else "ui_left")
+			steps += 1
+		key(hall, "ui_accept")
+	assert_contains(text_of(hall, "RoomLamp0"), "lit", "living room lit by keys only")
+
+
+# ---------- polish after manual test 2 (spec 08b) ----------
+
+const PICTURE := Vector2(1376, 768)
+
+
+# A node's rect measured in the pixels of the picture it sits on.
+func in_picture_pixels(hall: Node, picture_name: String, node: Control) -> Rect2:
+	var picture := find(hall, picture_name)
+	if picture == null:
+		return Rect2()
+	var p: Rect2 = picture.get_global_rect()
+	var scale := p.size.x / PICTURE.x
+	var r := node.get_global_rect()
+	return Rect2((r.position - p.position) / scale, r.size / scale)
+
+
+func near(a: Rect2, b: Rect2) -> bool:
+	return a.position.distance_to(b.position) < 3.0 and a.size.distance_to(b.size) < 3.0
+
+
+# Bug 1: in a window of another shape the fields slid off the picture.
+func test_spots_and_fields_stay_on_the_picture_in_any_window_shape() -> void:
+	for window in [Vector2i(1152, 648), Vector2i(1400, 900), Vector2i(1800, 700)]:
+		var hall := open_hall()
+		tree.root.size = window
+		press(hall, "HousePlanButton")
+		await wait_frames(3)
+		var spot := find(hall, "FuseBoxButton")
+		if spot != null:
+			var r := in_picture_pixels(hall, "Background", spot)
+			assert_true(near(r, HallScript.SPOTS[0]["rect"]), "fuse box spot in %s window: %s" % [window, r])
+		# The whole picture stays visible: no spot is cut off at the window's edge.
+		var visible := tree.root.get_visible_rect().grow(1)
+		for spot_info in HallScript.SPOTS:
+			var node := find(hall, spot_info["node"])
+			if node != null:
+				assert_true(visible.encloses(node.get_global_rect()), "%s fully visible in %s window" % [spot_info["node"], window])
+		var tile := find(hall, "RoomTile1")
+		if tile != null:
+			var r := in_picture_pixels(hall, "HousePlanPicture", tile)
+			assert_true(near(r, HallScript.PLAN_ROOMS[1]), "bathroom field in %s window: %s" % [window, r])
+		hall.free()
+	tree.root.size = Vector2i(1152, 648)
+
+
+func test_pictures_keep_their_shape() -> void:
+	var hall := open_hall()
+	tree.root.size = Vector2i(1400, 900)
+	await wait_frames(3)
+	var picture := find(hall, "Background")
+	if picture != null:
+		var size: Vector2 = picture.get_global_rect().size
+		assert_true(absf(size.x / size.y - PICTURE.x / PICTURE.y) < 0.01, "aspect kept, size %s" % size)
+	tree.root.size = Vector2i(1152, 648)
+
+
+# Bug 2: after a mouse click the clicked button kept the keys (arrows moved
+# Godot's own focus, Enter pressed the clicked button again).
+# A real click gives a button the focus if it can take it; click() does the same.
+func click(hall: Node, node_name: String) -> void:
+	var button := find(hall, node_name)
+	if button != null:
+		if button.focus_mode != Control.FOCUS_NONE:
+			button.grab_focus()
+		button.pressed.emit()
+
+
+func test_keys_still_work_after_a_mouse_click() -> void:
+	var hall := open_hall()
+	click(hall, "PlayerButton1")
+	key(hall, "ui_right")
+	assert_eq(hall.highlighted_spot(), "living_room", "right arrow moved the highlight after clicking Player 2")
+	click(hall, "FuseBoxButton")
+	assert_eq(is_shown(hall, "FusePanel"), true, "the click opened the fuse box")
+	click(hall, "Wire_yellow")
+	key(hall, "ui_right")
+	key(hall, "ui_right")
+	assert_eq(hall.highlighted_wire(), "white", "arrows moved the cable highlight after the click")
+	key(hall, "ui_accept")
+	assert_eq(text_of(hall, "ChosenLabel"), "Your order: yellow, white", "Enter chose the highlighted cable")
+	click(hall, "ResetButton")
+	key(hall, "ui_accept")
+	assert_eq(text_of(hall, "ChosenLabel"), "Your order: white", "Enter after clicking Reset chooses, it does not reset again")
+	key(hall, "ui_cancel")
+	assert_eq(is_shown(hall, "FusePanel"), false, "Esc closed the fuse box")
+
+
+# Clean house plan: short names, exact fields.
+func test_room_fields_name_the_room_and_its_light() -> void:
+	var hall := open_hall()
+	assert_eq(text_of(hall, "RoomLamp0"), "Living room\ndark", "living room field")
+	assert_eq(text_of(hall, "RoomLamp1"), "Bathroom\ndark", "bathroom field")
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(text_of(hall, "RoomLamp0"), "Living room\nlit", "after the red fuse")
+
+
+func test_legend_sits_inside_the_plans_box() -> void:
+	var hall := open_hall()
+	press(hall, "HousePlanButton")
+	await wait_frames(3)
+	for symbol in ["star", "bell", "tree", "snowflake"]:
+		var entry := find(hall, "LegendEntry_" + symbol)
+		if entry != null:
+			var r := in_picture_pixels(hall, "HousePlanPicture", entry)
+			assert_true(HallScript.LEGEND_BOX.encloses(r), "%s entry inside the box, is %s" % [symbol, r])
+
+
+# Change after manual test 3: no dragging, no contacts on the door, no lines.
+# The cables are clicked, and the order of the clicks is the order tried.
+func test_cables_are_only_clicked_in_order() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	var wire := find(hall, "Wire_blue")
+	var drag_data = wire.call("_get_drag_data", Vector2.ZERO) if wire != null and wire.has_method("_get_drag_data") else null
+	assert_eq(drag_data, null, "a cable can't be dragged")
+	assert_true(hall.find_child("Contact1", true, false) == null, "no contacts on the door")
+	click_wires(hall, ["white", "blue"])
+	assert_eq(text_of(hall, "ChosenLabel"), "Your order: white, blue", "the order of the clicks")
+	assert_true(hall.find_child("Connection_white", true, false) == null, "no connection lines")
+
+
+# Spec 08b, wish 4: symbols in colour, each its own fixed colour, the same on
+# the torn label and in the legend.
+func test_symbols_are_shown_in_their_own_colour() -> void:
+	var hall := open_hall()
+	var wanted := {"star": Color("f5c242"), "bell": Color("d64541"), "tree": Color("3fa34d"), "snowflake": Color("7cc6ea")}
+	for symbol in wanted:
+		var colour := shown_colour(hall, "LegendSymbol_" + symbol)
+		assert_true(same_colour(colour, wanted[symbol]), "legend %s is %s, wanted %s" % [symbol, colour.to_html(false), wanted[symbol].to_html(false)])
+	press(hall, "FuseBoxButton")
+	for i in 4:
+		var symbol := texture_file(hall, "LabelSymbol%d" % i).trim_prefix("sym_").trim_suffix(".png")
+		assert_true(wanted.has(symbol), "label symbol %d is a symbol picture: %s" % [i, symbol])
+		if wanted.has(symbol):
+			var colour := shown_colour(hall, "LabelSymbol%d" % i)
+			assert_true(same_colour(colour, wanted[symbol]), "label symbol %d (%s) is %s" % [i, symbol, colour.to_html(false)])
+
+
+# Wish after manual test 4: on the torn label, the fuse's name in that fuse's colour.
+func test_torn_label_names_its_fuse_in_the_fuse_colour() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	var seen := {0: "gold", 1: "red", 2: "green"}  # player -> the fuse whose label they see
+	for player in seen:
+		press(hall, "PlayerButton%d" % player)
+		var fuse: String = seen[player]
+		var hint := find(hall, "LabelHint")
+		var bbcode: String = hint.text if hint != null else ""
+		var tag := "[color=#%s]%s[/color]" % [HallScript.UI_COLOURS[fuse].to_html(false), fuse]
+		assert_contains(bbcode, tag, "player %d: %s in its colour" % [player + 1, fuse])
+		assert_contains(text_of(hall, "LabelHint"), "Torn label of the %s fuse" % fuse, "player %d reads it" % [player + 1])
+
+
+# Wish after manual test 4: a bit more room under the panel's title.
+func test_more_room_under_the_fuse_panel_title() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	await wait_frames(3)
+	var title := find(hall, "FuseTitle")
+	var hint := find(hall, "LabelHint")
+	if title != null and hint != null:
+		var gap: float = hint.get_global_rect().position.y - title.get_global_rect().end.y
+		assert_true(gap >= 18, "gap under the title is %d px, wanted at least 18" % gap)
