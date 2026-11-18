@@ -13,6 +13,7 @@ const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 const AtticRules = preload("res://scripts/rules/attic_rules.gd")
 const CharacterRules = preload("res://scripts/rules/character_rules.gd")
+const WalkRules = preload("res://scripts/rules/walk_rules.gd")
 
 
 static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary:
@@ -20,6 +21,7 @@ static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary
 		"phase": "hall",                            # "hall" = the game runs inside the house
 		"characters": characters,                   # who plays whom (spec 18): {player: {character, colour}}
 		"location": "hall",                         # where the whole team is (spec 07)
+		"figures": WalkRules.new_figures(),         # where each figure stands and walks to (spec 19)
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
 		"living_room": LivingRoomRules.create_room(rng),  # clock lock (Lara)
@@ -54,6 +56,11 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 				_take_living_room_gift(game, player)
 		"go_to":
 			_go_to(game, player, data)
+		"move":
+			var dx = data.get("dx", null)
+			var dy = data.get("dy", null)
+			if typeof(dx) in [TYPE_FLOAT, TYPE_INT] and typeof(dy) in [TYPE_FLOAT, TYPE_INT]:
+				WalkRules.set_direction(game, player, float(dx), float(dy))
 		"try_attic_code":
 			_try_attic_code(game, player, data)
 		"choose_ending":

@@ -11,6 +11,7 @@ extends Control
 const Rules = preload("res://scripts/rules/fuse_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
+const WalkLayer = preload("res://scripts/walk_layer.gd")
 
 const IMAGES := "res://assets/images/"
 const HIGHLIGHT := Color("ffd76a")
@@ -450,6 +451,10 @@ func _build_ui() -> void:
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	var hall_area := _picture_area(self, "Background", "room_hall.webp")
+	if _online():  # the figures walk here (spec 19); the spots are added after, so they stay on top
+		var walking := WalkLayer.new()
+		walking.net = net
+		hall_area.add_child(walking)
 
 	# The spots: see-through buttons over the picture, with a name.
 	for i in SPOTS.size():

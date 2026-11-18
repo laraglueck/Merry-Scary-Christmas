@@ -682,3 +682,63 @@ func test_more_room_under_the_fuse_panel_title() -> void:
 	if title != null and hint != null:
 		var gap: float = hint.get_global_rect().position.y - title.get_global_rect().end.y
 		assert_true(gap >= 18, "gap under the title is %d px, wanted at least 18" % gap)
+
+
+# ---------- walking figures (spec 19) ----------
+
+func key_event(keycode: Key, pressed: bool) -> InputEventKey:
+	var event := InputEventKey.new()
+	event.physical_keycode = keycode
+	event.keycode = keycode
+	event.pressed = pressed
+	return event
+
+
+func test_online_hall_shows_the_figures_and_walks_with_wasd() -> void:
+	var room: Array = await make_started_room(47623)
+	var hall := open_online_hall(room[1])
+	await wait_frames(2)
+	for player in 3:
+		var figure: TextureRect = find(hall, "Figure_%d" % player)
+		assert_true(figure != null and figure.texture != null, "figure of Player %d" % (player + 1))
+	var layer: Node = find(hall, "WalkLayer")
+	if layer == null:
+		return
+	layer._unhandled_key_input(key_event(KEY_D, true))
+	assert_true(await wait_until(func(): return room[0].game["figures"][1]["dx"] == 1.0), "D: walking right")
+	layer._unhandled_key_input(key_event(KEY_W, true))
+	assert_true(await wait_until(func(): return room[0].game["figures"][1]["dy"] < 0.0), "W: walking into the room")
+	layer._unhandled_key_input(key_event(KEY_D, false))
+	layer._unhandled_key_input(key_event(KEY_W, false))
+	assert_true(await wait_until(func(): return room[0].game["figures"][1]["dx"] == 0.0 and room[0].game["figures"][1]["dy"] == 0.0), "keys up: standing")
+
+
+func test_f3_shows_the_floor_outline() -> void:
+	var room: Array = await make_started_room(47625)
+	var hall := open_online_hall(room[0])
+	await wait_frames(2)
+	var layer: Node = find(hall, "WalkLayer")
+	var outline: Control = find(hall, "FloorOutline")
+	if layer == null or outline == null:
+		return
+	assert_eq(outline.visible, false, "hidden at first")
+	layer._unhandled_key_input(key_event(KEY_F3, true))
+	assert_eq(outline.visible, true, "F3 shows it")
+	layer._unhandled_key_input(key_event(KEY_F3, true))
+	assert_eq(outline.visible, false, "F3 hides it")
+
+
+func test_a_far_figure_is_drawn_smaller_than_a_near_one() -> void:
+	var room: Array = await make_started_room(47624)
+	var hall := open_online_hall(room[0])
+	await wait_frames(2)
+	var figure: TextureRect = find(hall, "Figure_0")
+	var near_height: float = figure.size.y
+	room[0].game["figures"][0]["y"] = room[0].game["figures"][0]["y"] - 100.0  # further back, still on the floor
+	hall.find_child("WalkLayer", true, false)._refresh()
+	assert_true(figure.size.y < near_height, "smaller further back: %s < %s" % [figure.size.y, near_height])
+
+
+func test_the_offline_hall_has_no_figures() -> void:
+	var hall := open_hall()
+	assert_true(hall.find_child("Figure_0", true, false) == null, "no network: no figures")
