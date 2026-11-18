@@ -20,6 +20,15 @@ const GAP_PURE_SHARE := 0.9     # an enclosed white gap this pure counts as back
 const MIN_GAP_PIXELS := 200     # smaller white spots inside a figure always stay
 const DARK_HAZE := 0.12         # steam: darker than this is background
 const EDGE_FADE := 0.15         # steam: fades out over this share of the width/height at each edge
+const NIGHT_BLACK := 0.1        # on black: darker than this is background
+const NIGHT_SOFTNESS := 0.25    # ... and the edge fades in over this range
+# Cut-outs whose white holes inside (between bars, in a handle) become see-through too.
+const WITH_HOLES := ["prop_clock_hand_short.png", "prop_clock_hand_long.png", "prop_doll.png",
+		"item_key.png", "prop_doll_turned.png", "ui_clock.png", "ui_clock_hand.png", "ui_noise_meter.png"]
+# Interface parts drawn on white that sit on top of the screen.
+const UI_CUT_OUTS := ["ui_inventory.png", "ui_noise_meter.png", "ui_clock.png", "ui_clock_hand.png"]
+# Light things on black that keep their colours.
+const ON_BLACK := ["prop_moon_full.png", "prop_mirror_face.png"]
 
 
 func _init() -> void:
@@ -49,8 +58,11 @@ func _run(args: PackedStringArray) -> int:
 		_black_to_transparent(image)
 	# A character, item or prop on a white background (e.g. a JPG): the white around it
 	# becomes see-through. White inside it (beard, snow, a clock face) stays, see _cut_out_white.
+	# Something light on black that keeps its own colours (the moon, a ghostly face).
+	elif file_name in ON_BLACK and image.detect_alpha() == Image.ALPHA_NONE:
+		_dark_to_transparent(image)
 	elif _is_cut_out(file_name) and image.detect_alpha() == Image.ALPHA_NONE:
-		_cut_out_white(image, file_name.begins_with("char_") or file_name.begins_with("prop_clock_hand") or file_name in ["prop_doll.png", "item_key.png"])
+		_cut_out_white(image, file_name.begins_with("char_") or file_name in WITH_HOLES)
 
 	# A cut-out picture (see-through background) loses its empty margins first,
 	# so the object itself fills the file, however much space was around it.
@@ -92,7 +104,19 @@ func _is_cut_out(file_name: String) -> bool:
 	for start in ["char_", "item_", "prop_", "egg_"]:
 		if file_name.begins_with(start):
 			return true
-	return false
+	return file_name in UI_CUT_OUTS
+
+
+# The darker a pixel, the more see-through it gets, but it keeps its colour:
+# black disappears, the light object stays as it is, with a soft edge.
+func _dark_to_transparent(image: Image) -> void:
+	image.convert(Image.FORMAT_RGBA8)
+	for y in image.get_height():
+		for x in image.get_width():
+			var colour := image.get_pixel(x, y)
+			var brightness := maxf(colour.r, maxf(colour.g, colour.b))
+			colour.a = clampf((brightness - NIGHT_BLACK) / NIGHT_SOFTNESS, 0.0, 1.0)
+			image.set_pixel(x, y, colour)
 
 
 # The darker a pixel, the more see-through it gets; what stays is white.

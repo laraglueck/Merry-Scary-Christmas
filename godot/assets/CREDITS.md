@@ -63,7 +63,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | prop_steam_9.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | prop_calendar_open.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed with add_image |
 | prop_calendar_closed.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed with add_image |
-| prop_board.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| prop_board.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white edge removed |
 | prop_steam.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | black background made see-through, soft edges |
 | prop_clock_face.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed |
 | prop_clock_hand_short.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background and holes removed |
@@ -71,6 +71,9 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | prop_note.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed |
 | prop_wheel.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed |
 | prop_doll.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed |
+| prop_doll_turned.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | edit of prop_doll, head turned; white background removed |
+| prop_mirror_face.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | black background made see-through |
+| prop_moon_full.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | black background made see-through |
 | sym_star.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background made transparent by `add_image.gd` |
 | sym_bell.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background made transparent by `add_image.gd` |
 | sym_tree.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background made transparent by `add_image.gd` |
@@ -85,10 +88,12 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | ui_win_scary.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | Scary Christmas ending |
 | ui_lose.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | midnight ending; edit of ui_win_scary |
 | ui_fuse_box.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | close-up of the open fuse box, 1376 x 768 |
-| ui_house_plan.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | close-up of the house plan, 1376 x 768 |
-| ui_clock.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| ui_inventory.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| ui_noise_meter.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| ui_house_plan.webp | images | frame and paper generated with Google Gemini from our own text prompt; the plan drawn by `godot/tools/draw_house_plan.gd` | Gloria | AI-generated, own prompt + own code | Yes (Google Gemini, Nano Banana 2.1) | old plan removed from the paper (`godot/tools/house_plan_paper.webp`), rooms match the hall |
+| ui_clock.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | pocket watch; white background removed |
+| ui_inventory.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed |
+| ui_noise_meter.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background and the holes removed |
+| ui_clock_hand.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background and the holes removed |
+| ui_scare_face.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | jumpscare face |
 
 ## Sounds
 
