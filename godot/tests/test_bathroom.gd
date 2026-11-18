@@ -170,8 +170,11 @@ func test_mirror_shows_the_symbols_reversed_and_flipped_after_solving() -> void:
 		if symbol != null:
 			names.append(symbol.texture.resource_path.get_file())
 			assert_eq(symbol.flip_h, true, "symbol %d flipped" % i)
-	# example bedroom wheels bell, star, tree -> mirror shows tree, star, bell
-	assert_eq(names, ["sym_tree.png", "sym_star.png", "sym_bell.png"], "reversed")
+	var wheels: Array = bathroom.game["bedroom"]["wheels"]
+	var expected := []
+	for i in range(wheels.size() - 1, -1, -1):
+		expected.append("sym_%s.png" % wheels[i])
+	assert_eq(names, expected, "reversed")
 
 
 func test_escape_closes_the_mirror() -> void:

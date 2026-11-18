@@ -17,6 +17,8 @@ const SCREENS := {
 	"lobby": preload("res://scenes/lobby.tscn"),
 	"hall": preload("res://scenes/hall.tscn"),
 	"bathroom": preload("res://scenes/bathroom.tscn"),
+	"bedroom": preload("res://scenes/bedroom.tscn"),
+
 }
 const PLACEHOLDER = preload("res://scenes/placeholder_room.tscn")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
@@ -220,4 +222,3 @@ func _hud_box(fill: Color, border: Color, margin: int) -> StyleBoxFlat:
 	box.set_corner_radius_all(6)
 	box.set_content_margin_all(margin)
 	return box
-

@@ -418,5 +418,3 @@ func _close() -> void:
 	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
-
-

@@ -58,5 +58,16 @@ static func take_photo(room: Dictionary) -> Dictionary:
 	if room["photo_taken"]:
 		return {"ok": false, "error": "The photo was already taken."}
 
+	if not room.get("solved", false):
+		return {"ok": false, "error": "Open the chest first."}
 	room["photo_taken"] = true
 	return {"ok": true, "error": ""}
+
+
+# Derive a stable door from existing saved state, excluding both clock clues.
+static func photo_door(room: Dictionary, clue: Dictionary) -> int:
+	var candidates: Array[int] = []
+	for door in range(1, 13):
+		if door != int(clue.get("hour", 0)) and door != int(clue.get("minute", 0)):
+			candidates.append(door)
+	return candidates[posmod(int(room.get("digit", 0)), candidates.size())]
