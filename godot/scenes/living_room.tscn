@@ -1,8 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cjox3t710mb7c"]
 
-[ext_resource type="Script" path="res://scripts/living_room.gd" id="1_living_room"]
+[ext_resource type="Script" uid="uid://4ll83xubh7yn" path="res://scripts/living_room.gd" id="1_living_room"]
 
-[node name="LivingRoom" type="Control"]
+[node name="LivingRoom" type="Control" unique_id=1933712205]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
