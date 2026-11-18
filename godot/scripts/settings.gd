@@ -20,6 +20,9 @@ const TAP_PENALTY_SECONDS := 20
 # Living room: a wrong clock setting costs time.
 const LIVING_ROOM_PENALTY_SECONDS := 20
 
+# Attic (spec 16): a wrong code on the three dials costs time.
+const ATTIC_PENALTY_SECONDS := 20
+
 
 # The clock (spec 13)
 const GAME_SECONDS := 600            # 10 minutes until midnight
@@ -30,8 +33,8 @@ const ITEMS := [
 	{"id": "gift_1", "name": "Present 1", "picture": "item_gift_1.png"},  # living room (Gloria)
 	{"id": "gift_2", "name": "Present 2", "picture": "item_gift_2.png"},  # bathroom
 	{"id": "gift_3", "name": "Present 3", "picture": "item_gift_3.png"},  # bedroom (Leon)
-	{"id": "photo", "name": "Photo", "picture": "egg_young_santa.png"},   # bedroom calendar (Leon)
-	{"id": "key", "name": "Key", "picture": "item_key.png"},              # attic (Lara)
+	{"id": "photo", "name": "Photo", "picture": "item_photo.png"},         # bedroom calendar
+	{"id": "key", "name": "Key", "picture": "item_key.png"},              # attic (spec 16)
 ]
 
 # Save and resume (spec 15): the host's save file, in Godot's data folder (not the repo).
