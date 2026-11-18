@@ -255,6 +255,24 @@ func _save_game() -> void:
 		SaveGame.remove(save_path)
 
 
+# ---------- back to the lobby (spec 17) ----------
+
+# Only the host, and only a finished game (merry, scary, midnight): a running game stays.
+func can_end_game() -> bool:
+	return connected and my_index == 0 and not game.is_empty() and game.get("phase") != "hall"
+
+
+# Host: clears the finished game for everyone. All are back in the lobby; the room stays
+# open with the same players, so "Start game" works at once.
+func end_game() -> void:
+	if not can_end_game():
+		return
+	game = {}
+	_send_game()
+	game_changed.emit()
+	changed.emit()
+
+
 func can_start() -> bool:
 	return connected and my_index == 0 and players.size() == Settings.MAX_PLAYERS and game.is_empty()
 
