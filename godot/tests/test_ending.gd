@@ -62,3 +62,11 @@ func test_a_win_shows_the_time_left() -> void:
 func test_midnight_shows_no_time_left() -> void:
 	var ending := open_ending("midnight", [], Settings.GAME_SECONDS)
 	assert_true(not text_of(ending, "Result").contains("before midnight"), "no time line")
+
+
+# ---------- sounds (spec 19) ----------
+
+func test_each_ending_plays_its_sounds() -> void:
+	assert_eq(open_ending("merry", []).sounds_played, ["sfx_win.mp3", "sfx_bells.mp3"], "merry")
+	assert_eq(open_ending("scary", []).sounds_played, ["sfx_win.mp3"], "scary")
+	assert_eq(open_ending("midnight", [], Settings.GAME_SECONDS).sounds_played, ["sfx_lose.mp3"], "midnight")

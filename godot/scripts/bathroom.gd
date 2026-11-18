@@ -30,6 +30,16 @@ const GIFT_RECT := Rect2(282, 300, 110, 110)  # the present, standing in the emp
 const DIGIT_POSITION := Vector2(232, 318)     # the digit scratched into the enamel
 const TURNS_POSITION := Vector2(650, 418)     # the turns so far, under the sink
 const HIGHLIGHT := Color("ffd76a")
+# Effects (spec 19)
+const SOUNDS := "res://assets/sounds/"
+const STEAM_RECT := Rect2(586, 92, 290, 226)  # over the mirror, a little larger
+const TAP_SOUND_SECONDS := 1.5                # a turn plays only the start of the faucet
+const DRAIN_PITCH := 0.7                      # lower and slower: the tub gurgles
+const FACE_SECONDS := 0.5
+
+# The face in the mirror shows once per player and game run, not on every visit
+# (the screen is made new each time the team walks in).
+static var _face_seen := false
 
 # -1 means: a new random game at every start. Tests set a fixed seed.
 @export var seed_value := -1
@@ -51,6 +61,15 @@ var _mirror_dust: Label
 var _mirror_symbols: HBoxContainer
 var _symbol_images: Array[TextureRect] = []
 var _message: Label
+var _steam: TextureRect
+var _mirror_steam: TextureRect
+var _mirror_face: TextureRect
+var _faucet: AudioStreamPlayer
+var _scare: AudioStreamPlayer
+
+# Sounds this screen played (or would have played in the headless test run).
+var sounds_played: Array[String] = []
+var _seen := {}  # what the shared game showed last time: turns, solved, penalty
 
 
 func _ready() -> void:
@@ -61,6 +80,7 @@ func _ready() -> void:
 		game = _offline_game()
 	_build_ui()
 	_message.text = game.get("last_event", "")
+	_seen = _what_happened_so_far()
 	_refresh()
 
 
@@ -88,6 +108,7 @@ func _on_game_changed() -> void:
 		return  # game is over (host left); main.gd switches the screen
 	game = net.game
 	_message.text = game["last_event"]
+	_react()
 	_refresh()
 
 
@@ -98,6 +119,7 @@ func _send(action: String, data: Dictionary) -> void:
 	else:
 		GameRules.apply(game, 0, action, data)
 		_message.text = game["last_event"]
+		_react()
 		_refresh()
 
 
@@ -176,6 +198,11 @@ func _turn_tap(tap: String) -> void:
 
 func _open_mirror() -> void:
 	_mirror_panel.visible = true
+	if not _face_seen:
+		_face_seen = true
+		_mirror_face.visible = true
+		_play(_scare, "sfx_scare.mp3")
+		get_tree().create_timer(FACE_SECONDS).timeout.connect(func() -> void: _mirror_face.visible = false)
 	if not _bathroom()["solved"]:
 		_message.text = "Too much dust to see anything."
 	_refresh()
@@ -183,6 +210,51 @@ func _open_mirror() -> void:
 
 func _close_mirror() -> void:
 	_mirror_panel.visible = false
+	_mirror_face.visible = false
+
+
+# For tests: the next mirror visit shows the face again.
+func forget_face() -> void:
+	_face_seen = false
+
+
+# ---------- effects (spec 19): sounds and steam ----------
+
+func _what_happened_so_far() -> Dictionary:
+	return {"turns": _bathroom()["turns"].size(), "solved": _bathroom()["solved"],
+			"penalty": game.get("penalty_seconds", 0)}
+
+
+# Something changed in the shared game (here or on a teammate's device): play what fits.
+func _react() -> void:
+	var now := _what_happened_so_far()
+	if now["solved"] and not _seen["solved"]:
+		_play(_faucet, "sfx_faucet.mp3", DRAIN_PITCH)
+		sounds_played[-1] = "sfx_faucet.mp3 (drain)"
+		_rise_steam()
+	elif now["turns"] != _seen["turns"] or now["penalty"] > _seen["penalty"]:
+		_play(_faucet, "sfx_faucet.mp3", 1.0, TAP_SOUND_SECONDS)
+	_seen = now
+
+
+func _play(player: AudioStreamPlayer, file_name: String, pitch := 1.0, cut_after := 0.0) -> void:
+	sounds_played.append(file_name)
+	if DisplayServer.get_name() == "headless":
+		return  # no sound card in the test run
+	player.pitch_scale = pitch
+	player.play()
+	if cut_after > 0.0:
+		get_tree().create_timer(cut_after).timeout.connect(player.stop)
+
+
+# The steam fades in and drifts up a little over the mirror.
+func _rise_steam() -> void:
+	_steam.visible = true
+	_steam.modulate.a = 0.0
+	_steam.position = STEAM_RECT.position + Vector2(0, 30)
+	var tween := create_tween().set_parallel()
+	tween.tween_property(_steam, "modulate:a", 0.85, 1.5)
+	tween.tween_property(_steam, "position", STEAM_RECT.position, 1.5)
 
 
 # ---------- showing the current state ----------
@@ -201,6 +273,8 @@ func _refresh() -> void:
 	_digit_label.visible = solved
 	_digit_label.text = str(_bathroom()["digit"])
 
+	_steam.visible = solved
+	_mirror_steam.visible = solved
 	_mirror_dust.visible = not solved
 	_mirror_symbols.visible = solved
 	var wheels: Array = game.get("bedroom", {}).get("wheels", EXAMPLE_WHEELS)
@@ -254,6 +328,10 @@ func _build_ui() -> void:
 	_digit_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_digit_label.add_theme_constant_override("outline_size", 8)
 
+	# Steam over the mirror once the taps are solved (spec 19).
+	_steam = _picture("Steam", "prop_steam.png", STEAM_RECT)
+	_steam.modulate.a = 0.85
+
 	# The spots: see-through buttons over the picture, with a name.
 	for i in SPOTS.size():
 		var spot: Dictionary = SPOTS[i]
@@ -297,6 +375,15 @@ func _build_ui() -> void:
 	_mirror_panel.size = Vector2(500, 360)
 	_mirror_panel.add_theme_stylebox_override("panel", _box(Color("b9c4c8"), Color("5c4a3a")))
 	add_child(_mirror_panel)
+	# Behind the symbols: steam (after solving). On top: the face, for half a second.
+	_mirror_steam = TextureRect.new()
+	_mirror_steam.name = "MirrorSteam"
+	_mirror_steam.texture = load(IMAGES + "prop_steam.png")
+	_mirror_steam.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_mirror_steam.stretch_mode = TextureRect.STRETCH_SCALE
+	_mirror_steam.modulate.a = 0.7
+	_mirror_steam.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mirror_panel.add_child(_mirror_steam)
 	var mirror_content := VBoxContainer.new()
 	mirror_content.alignment = BoxContainer.ALIGNMENT_CENTER
 	_mirror_panel.add_child(mirror_content)
@@ -322,6 +409,38 @@ func _build_ui() -> void:
 	var hint := _label(mirror_content, "Esc: back", 16)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", Color("4a4a4a"))
+	_mirror_face = TextureRect.new()
+	_mirror_face.name = "MirrorFace"
+	_mirror_face.texture = load(IMAGES + "prop_mirror_face.png")
+	_mirror_face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_mirror_face.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_mirror_face.visible = false
+	_mirror_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mirror_panel.add_child(_mirror_face)
+
+	_faucet = _sound("Faucet", "sfx_faucet.mp3")
+	_scare = _sound("Scare", "sfx_scare.mp3")
+
+
+func _picture(node_name: String, file: String, rect: Rect2) -> TextureRect:
+	var picture := TextureRect.new()
+	picture.name = node_name
+	picture.texture = load(IMAGES + file)
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_SCALE
+	picture.position = rect.position
+	picture.size = rect.size
+	picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(picture)
+	return picture
+
+
+func _sound(node_name: String, file_name: String) -> AudioStreamPlayer:
+	var player := AudioStreamPlayer.new()
+	player.name = node_name
+	player.stream = load(SOUNDS + file_name)
+	add_child(player)
+	return player
 
 
 func _label(parent: Node, text: String, size: int) -> Label:

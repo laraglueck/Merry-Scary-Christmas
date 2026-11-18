@@ -10,21 +10,39 @@ const IMAGES := "res://assets/images/"
 const GIFTS := ["gift_1", "gift_2", "gift_3"]
 const ENDINGS := {
 	"merry": {"picture": "ui_win_merry.webp", "title": "Merry Christmas!", "colour": Color("ffd76a"),
-			"line": "Scary Jingles remembered who he was."},
+			"line": "Scary Jingles remembered who he was.", "sounds": ["sfx_win.mp3", "sfx_bells.mp3"]},
 	"scary": {"picture": "ui_win_scary.webp", "title": "Scary Christmas!", "colour": Color("e05a4a"),
-			"line": "Scary Jingles is locked in. The presents are safe."},
+			"line": "Scary Jingles is locked in. The presents are safe.", "sounds": ["sfx_win.mp3"]},
 	"midnight": {"picture": "ui_lose.webp", "title": "Midnight", "colour": Color("a9c4e8"),
-			"line": "The clock struck twelve. Scary Jingles has won."},
+			"line": "The clock struck twelve. Scary Jingles has won.", "sounds": ["sfx_lose.mp3"]},
 }
 
 @export var place := "merry"  # set by main.gd: the phase that ended the game
 var net: Node = null          # set by main.gd
+const SOUNDS := "res://assets/sounds/"
+
+# Sounds this screen played (or would have played in the headless test run), spec 19.
+var sounds_played: Array[String] = []
 
 
 func _ready() -> void:
 	var game: Dictionary = net.game if net != null and not net.game.is_empty() else {"phase": place}
 	var ending: Dictionary = ENDINGS.get(place, ENDINGS["midnight"])
 	_build_ui(ending, _result_text(game), str(game.get("last_event", "")))
+	for file_name in ending["sounds"]:
+		_play(file_name)
+
+
+# Each ending's sounds at once (the bells ring over the win music).
+func _play(file_name: String) -> void:
+	sounds_played.append(file_name)
+	if DisplayServer.get_name() == "headless":
+		return  # no sound card in the test run
+	var player := AudioStreamPlayer.new()
+	player.name = "Sound_" + file_name.get_basename()
+	player.stream = load(SOUNDS + file_name)
+	add_child(player)
+	player.play()
 
 
 # "Presents found: 2 of 3", and for a win the time that was left.

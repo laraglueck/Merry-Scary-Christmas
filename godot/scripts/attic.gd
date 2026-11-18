@@ -24,6 +24,12 @@ const CHOICES := [
 	{"node": "ChoiceReconcile", "choice": "reconcile", "label": "Leave the photo and cookies"},
 ]
 const GREYED_OUT := 0.5  # the photo choice without the photo
+# Effects (spec 19)
+const SOUNDS := "res://assets/sounds/"
+const STIR_SECONDS := 1.0          # how long he is awake after a wrong code
+const SNORE_LOCKED_DB := -18.0     # heard through the locked door
+const SNORE_OPEN_DB := -8.0
+const DIMMED := Color(0.45, 0.45, 0.5)
 
 # -1 means: a new random game at every start. Tests set a fixed seed.
 @export var seed_value := -1
@@ -44,6 +50,13 @@ var _jingles: TextureRect
 var _key: TextureRect
 var _choice_buttons: Array[Button] = []
 var _message: Label
+var _snore: AudioStreamPlayer
+var _lock_sound: AudioStreamPlayer
+var _stirring := false
+
+# Sounds this screen played (or would have played in the headless test run).
+var sounds_played: Array[String] = []
+var _seen := {}  # what the shared game showed last time: unlocked, penalty
 
 
 func _ready() -> void:
@@ -54,7 +67,10 @@ func _ready() -> void:
 		game = _offline_game()
 	_build_ui()
 	_message.text = game.get("last_event", "")
+	_seen = _what_happened_so_far()
 	_refresh()
+	if DisplayServer.get_name() != "headless":
+		_snore.play()  # not in the test run: no sound card
 
 
 func _online() -> bool:
@@ -81,6 +97,7 @@ func _on_game_changed() -> void:
 		return  # game is over (host left); main.gd switches the screen
 	game = net.game
 	_message.text = game["last_event"]
+	_react()
 	_refresh()
 
 
@@ -91,6 +108,7 @@ func _send(action: String, data: Dictionary) -> void:
 	else:
 		GameRules.apply(game, 0, action, data)
 		_message.text = game["last_event"]
+		_react()
 		_refresh()
 
 
@@ -162,12 +180,52 @@ func _go_to_hall() -> void:
 	_send("go_to", {"place": "hall"})  # the whole team walks back down (spec 07)
 
 
+# ---------- effects (spec 19): sounds, and he stirs ----------
+
+# The picture Jingles shows right now (for tests too).
+func jingles_picture() -> String:
+	return _jingles.texture.resource_path.get_file()
+
+
+func _what_happened_so_far() -> Dictionary:
+	return {"unlocked": _attic()["unlocked"], "penalty": game.get("penalty_seconds", 0)}
+
+
+# Something changed in the shared game (here or on a teammate's device): react to it.
+func _react() -> void:
+	var now := _what_happened_so_far()
+	if now["unlocked"] and not _seen["unlocked"]:
+		_play(_lock_sound, "sfx_key_lock.mp3")
+	elif not now["unlocked"] and now["penalty"] > _seen["penalty"]:
+		_stir()  # the lock rattled: a wrong code
+	_seen = now
+
+
+# A wrong code: he wakes for a moment, the snoring stops, then he sleeps on.
+func _stir() -> void:
+	_stirring = true
+	_snore.stream_paused = true
+	get_tree().create_timer(STIR_SECONDS).timeout.connect(_fall_asleep)
+
+
+func _fall_asleep() -> void:
+	_stirring = false
+	_snore.stream_paused = false
+	_refresh()
+
+
+func _play(player: AudioStreamPlayer, file_name: String) -> void:
+	sounds_played.append(file_name)
+	if DisplayServer.get_name() != "headless":
+		player.play()
+
+
 # ---------- showing the current state ----------
 
 func _refresh() -> void:
 	var locked := _is_locked()
 	_lock_panel.visible = locked
-	_background.modulate = Color(0.45, 0.45, 0.5) if locked else Color.WHITE
+	_background.modulate = DIMMED if locked else Color.WHITE
 
 	for i in 3:
 		var button := _dial_buttons[i]
@@ -175,7 +233,12 @@ func _refresh() -> void:
 		var border: Color = HIGHLIGHT if i == _dial_index else DIAL_COLOURS[i]
 		button.add_theme_stylebox_override("normal", _dial_style(DIAL_COLOURS[i], border))
 
-	_jingles.visible = not locked
+	# Seen asleep through the door while locked (dimmed like the room), awake for a moment
+	# when he stirs.
+	_jingles.visible = true
+	_jingles.texture = load(IMAGES + ("char_jingles_awake.png" if _stirring else "char_jingles_asleep.png"))
+	_jingles.modulate = DIMMED if locked and not _stirring else Color.WHITE
+	_snore.volume_db = SNORE_LOCKED_DB if locked else SNORE_OPEN_DB
 	_key.visible = not locked and not InventoryRules.has(game, "key")
 	var photo := InventoryRules.has(game, "photo")
 	for i in _choice_buttons.size():
@@ -259,12 +322,25 @@ func _build_ui() -> void:
 
 	_build_lock()
 
+	# Snoring that goes on and on, and the lock opening.
+	_snore = AudioStreamPlayer.new()
+	_snore.name = "Snore"
+	var snore_stream: AudioStreamMP3 = load(SOUNDS + "sfx_snore.mp3").duplicate()
+	snore_stream.loop = true
+	_snore.stream = snore_stream
+	_snore.volume_db = SNORE_LOCKED_DB
+	add_child(_snore)
+	_lock_sound = AudioStreamPlayer.new()
+	_lock_sound.name = "LockSound"
+	_lock_sound.stream = load(SOUNDS + "sfx_key_lock.mp3")
+	add_child(_lock_sound)
+
 
 # The locked attic door: three dials and a Try button.
 func _build_lock() -> void:
 	_lock_panel = PanelContainer.new()
 	_lock_panel.name = "LockPanel"
-	_lock_panel.position = Vector2(316, 110)
+	_lock_panel.position = Vector2(40, 110)  # on the left, so Jingles can be seen on the right
 	_lock_panel.size = Vector2(520, 380)
 	_lock_panel.add_theme_stylebox_override("panel", _box(Color("2a1d17"), Color("5c4a3a"), 6))
 	add_child(_lock_panel)
