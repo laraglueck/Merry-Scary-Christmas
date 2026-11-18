@@ -349,3 +349,73 @@ func test_a_finished_game_ends_for_everyone_and_the_room_stays() -> void:
 	assert_eq(room[1].connected and room[2].connected, true, "still connected")
 	assert_eq(room[0].can_start(), true, "a new round can start at once")
 
+
+
+# ---------- character selection (spec 18) ----------
+
+func pick_all(room: Array) -> void:
+	var picks := [["santa", "red"], ["snowman", "green"], ["nutcracker", "yellow"]]
+	for player in 3:
+		room[player].send_action("pick_character", {"character": picks[player][0], "colour": picks[player][1]})
+		room[player].send_action("ready", {})
+
+
+func test_begin_selection_goes_to_everyone() -> void:
+	var room: Array = await make_full_room(47611)
+	room[0].begin_selection()
+	assert_true(await wait_until(func(): return room.all(func(net): return net.game.get("phase") == "select")), "everyone is choosing")
+	assert_eq(room[0].can_start(), false, "cannot start twice")
+	assert_eq(room[0].can_end_game(), false, "the selection is not a finished game")
+
+
+func test_begin_selection_needs_the_host_and_three_players() -> void:
+	var host := make_device("Host")
+	host.host_room(47612)
+	host.begin_selection()
+	assert_eq(host.game, {}, "one player is not enough")
+	var room: Array = await make_full_room(47613)
+	room[1].begin_selection()
+	assert_eq(room[1].game, {}, "players cannot begin")
+
+
+func test_the_clock_waits_during_the_selection() -> void:
+	var room: Array = await make_full_room(47614)
+	room[0].begin_selection()
+	room[0].advance_clock(5.0)
+	assert_eq(room[0].game.get("seconds_played"), null, "no time passes while choosing")
+	assert_eq(room[0].game.get("phase"), "select", "still choosing")
+
+
+func test_picks_are_decided_by_the_host_and_shared() -> void:
+	var room: Array = await make_full_room(47615)
+	room[0].begin_selection()
+	await wait_until(func(): return room[2].game.get("phase") == "select")
+	room[1].send_action("pick_character", {"character": "snowman", "colour": "green"})
+	room[2].send_action("pick_character", {"character": "snowman", "colour": "yellow"})
+	var settled := func(): return room.all(func(net): return net.game["selection"].has(1) and net.game["last_event"] != "")
+	assert_true(await wait_until(settled), "everyone sees the result")
+	assert_eq(room[0].game["selection"][1]["character"], "snowman", "Player 2 got the snowman")
+	assert_eq(room[0].game["selection"].has(2), false, "Player 3 was refused")
+	assert_contains(room[2].game["last_event"], "taken by Player 2", "says why")
+
+
+func test_all_ready_starts_the_game_with_the_characters() -> void:
+	var room: Array = await make_full_room(47616)
+	room[0].begin_selection()
+	await wait_until(func(): return room[2].game.get("phase") == "select")
+	pick_all(room)
+	assert_true(await wait_until(func(): return room.all(func(net): return net.game.get("phase") == "hall")), "the game runs")
+	assert_eq(room[2].game["characters"][1], {"character": "snowman", "colour": "green", "accessory": "none"}, "everyone knows who is who")
+	assert_eq(room[0].game["seconds_played"], 0, "10:00 on the clock")
+
+
+func test_a_player_who_leaves_loses_their_pick() -> void:
+	var room: Array = await make_full_room(47617)
+	room[0].begin_selection()
+	await wait_until(func(): return room[1].game.get("phase") == "select")
+	room[2].send_action("pick_character", {"character": "santa", "colour": "red"})
+	await wait_until(func(): return room[0].game["selection"].has(2))
+	room[2]._close()
+	assert_true(await wait_until(func(): return room[0].players.size() == 2), "Player 3 left")
+	assert_eq(room[0].game["selection"].has(2), false, "the pick is gone")
+	assert_eq(room[0].game.get("phase"), "select", "still choosing")

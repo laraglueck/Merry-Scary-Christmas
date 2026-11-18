@@ -37,6 +37,25 @@ const ITEMS := [
 	{"id": "key", "name": "Key", "picture": "item_key.png"},              # attic (spec 16)
 ]
 
+# Character selection (spec 18): the figures and their scarf/jacket colours.
+# The pictures are char_<id>.png (red) and char_<id>_<colour>.png (green, yellow).
+const CHARACTERS := [
+	{"id": "santa", "name": "Santa"},
+	{"id": "snowman", "name": "Snowman"},
+	{"id": "nutcracker", "name": "Nutcracker"},
+]
+const CHARACTER_COLOURS := [
+	{"id": "red", "name": "Red", "dot": Color("b3262a")},
+	{"id": "green", "name": "Green", "dot": Color("2f7d3a")},
+	{"id": "yellow", "name": "Yellow", "dot": Color("e0b83a")},
+]
+
+# Accessories (spec 18): a placeholder until the pictures are drawn. Add entries here, with
+# a "picture" (shown on the figure), and the arrows on the selection screen page through them.
+const ACCESSORIES := [
+	{"id": "none", "name": "None (coming soon)"},
+]
+
 # Save and resume (spec 15): the host's save file, in Godot's data folder (not the repo).
 # Tests use another file: the environment variable MERRY_SCARY_SAVE (see run_tests.gd).
 const SAVE_PATH := "user://saved_game.save"
