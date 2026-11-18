@@ -9,6 +9,7 @@ const RoomCode = preload("res://scripts/net/room_code.gd")
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const CharacterRules = preload("res://scripts/rules/character_rules.gd")
+const WalkRules = preload("res://scripts/rules/walk_rules.gd")
 const SaveGame = preload("res://scripts/save_game.gd")
 
 signal changed       # status, players or counter changed: the screen should update
@@ -20,6 +21,8 @@ var my_index := -1          # 0 = Player 1 (host), 1 = Player 2, 2 = Player 3
 var players: Array = []     # player indexes in the room, e.g. [0, 1, 2]
 var counter := 0
 var room_code := ""         # host: the code others type in, e.g. "KRTW"
+var _figure_wait := 0.0     # host: time since the figures were last sent (spec 19)
+var _figures_walking := false
 var _clock_rest := 0.0      # host: time since the last whole second (spec 13)
 var save_path := SaveGame.path()  # host: the save file (spec 15)
 var game := {}              # the shared game (spec 04): only the host changes it, everyone gets a copy
@@ -64,6 +67,7 @@ func _process(delta: float) -> void:
 	if _search_socket != null:
 		_listen_for_room(delta)
 	advance_clock(delta)
+	advance_figures(delta)
 
 
 # ---------- pure helpers ----------
@@ -224,6 +228,22 @@ func advance_clock(delta: float) -> void:
 		_save_game()
 		_send_game()
 		game_changed.emit()
+
+
+# Walking figures (spec 19), host only: everybody walks on; while someone walks (and once
+# more when the last one arrives) everybody gets the game about 10 times a second.
+func advance_figures(delta: float) -> void:
+	if game.get("phase") != "hall" or not multiplayer.is_server():
+		return
+	var moved := WalkRules.advance(game, delta)
+	if not moved and not _figures_walking:
+		return
+	_figure_wait += delta
+	if _figure_wait >= Settings.FIGURE_SYNC_SECONDS or (_figures_walking and not moved):
+		_figure_wait = 0.0
+		_send_game()
+		game_changed.emit()
+	_figures_walking = moved
 
 
 # ---------- save and resume (spec 15) ----------

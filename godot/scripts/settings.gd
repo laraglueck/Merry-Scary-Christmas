@@ -56,6 +56,21 @@ const ACCESSORIES := [
 	{"id": "none", "name": "None (coming soon)"},
 ]
 
+# Walking figures (spec 19): WASD, in pixels of the room picture per second.
+const WALK_SPEED := 260.0          # left and right
+const WALK_SPEED_DEPTH := 130.0    # into the room and back is slower (it looks further away)
+const FIGURE_SYNC_SECONDS := 0.1   # the host tells everybody where the figures are this often
+const FIGURE_START_X := [520.0, 688.0, 856.0]  # Player 1, 2, 3 side by side in the hall
+const FIGURE_START_Y := 690.0
+# Where the feet may stand in the hall: a polygon in pixels of room_hall.webp (1376 x 768), far
+# left point first. Wide at the front, narrow at the back; the notch in the middle is the stairs.
+# Press F3 in the game to see it over the picture; move the points if the figure walks into a wall.
+const FLOOR_HALL := [
+	Vector2(530, 500), Vector2(690, 500), Vector2(720, 572), Vector2(985, 578), Vector2(1180, 692),
+	Vector2(1376, 748), Vector2(1376, 768), Vector2(40, 768), Vector2(180, 690), Vector2(380, 572),
+]
+const FAR_SCALE := 0.7             # a figure at the far edge is drawn this big (1 = at the front)
+
 # Save and resume (spec 15): the host's save file, in Godot's data folder (not the repo).
 # Tests use another file: the environment variable MERRY_SCARY_SAVE (see run_tests.gd).
 const SAVE_PATH := "user://saved_game.save"
