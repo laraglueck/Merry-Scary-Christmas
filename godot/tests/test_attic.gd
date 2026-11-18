@@ -57,7 +57,8 @@ func open_the_lock(attic: Node) -> void:
 func test_starts_with_the_lock_and_all_dials_at_1() -> void:
 	var attic := open_attic()
 	assert_true(find(attic, "LockPanel").visible, "lock shown")
-	assert_true(not find(attic, "Jingles").visible, "Jingles not seen yet")
+	assert_true(find(attic, "Jingles").visible, "Jingles seen asleep through the door")
+	assert_eq(attic.jingles_picture(), "char_jingles_asleep.png", "asleep")
 	assert_eq(attic.dial_values(), [1, 1, 1], "dials")
 
 
@@ -159,3 +160,44 @@ func test_online_the_code_goes_to_the_host() -> void:
 	press(attic, "Dial2")
 	press(attic, "TryButton")
 	assert_eq(net.sent, [["try_attic_code", {"dials": [1, 1, 2]}]], "sent to the host")
+
+
+# ---------- effects (spec 19) ----------
+
+func test_he_snores() -> void:
+	var attic := open_attic()
+	var snore: AudioStreamPlayer = find(attic, "Snore")
+	assert_true(snore != null, "snoring is set up")
+	assert_eq(snore.stream.loop, true, "it goes on and on")
+
+
+func test_a_wrong_code_makes_him_stir() -> void:
+	var attic := open_attic()
+	var wrong := right_code(attic)
+	wrong[0] = 1 if wrong[0] != 1 else 2
+	set_dials(attic, wrong)
+	press(attic, "TryButton")
+	assert_eq(attic.jingles_picture(), "char_jingles_awake.png", "awake for a moment")
+	assert_true(find(attic, "LockPanel").visible, "still locked")
+
+
+func test_the_right_code_plays_the_lock() -> void:
+	var attic := open_attic()
+	open_the_lock(attic)
+	assert_true("sfx_key_lock.mp3" in attic.sounds_played, "lock sound")
+	assert_eq(attic.jingles_picture(), "char_jingles_asleep.png", "still asleep")
+
+
+func test_online_a_teammates_wrong_code_makes_him_stir_here_too() -> void:
+	var net := FakeNet.new()
+	tree.root.add_child(net)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42
+	net.game = load("res://scripts/rules/game_rules.gd").new_game(rng)
+	net.game["location"] = "attic"
+	var attic = AtticScene.instantiate()
+	attic.net = net
+	tree.root.add_child(attic)
+	net.game["penalty_seconds"] += 20  # a teammate tried a wrong code
+	net.game_changed.emit()
+	assert_eq(attic.jingles_picture(), "char_jingles_awake.png", "awake for a moment")

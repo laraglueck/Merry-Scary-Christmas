@@ -248,3 +248,49 @@ func test_online_turns_and_present_go_to_the_host() -> void:
 		["take_gift", {"room": "bathroom"}],
 	], "sent to the host")
 	assert_eq(net.game["bathroom"]["solved"], false, "only the host changes the game")
+
+
+# ---------- effects (spec 19) ----------
+
+func test_a_turn_plays_the_tap() -> void:
+	var bathroom := open_bathroom()
+	press(bathroom, "Spot_hot_tap")
+	assert_eq(bathroom.sounds_played, ["sfx_faucet.mp3"], "tap sound")
+
+
+func test_solving_gurgles_and_the_steam_rises() -> void:
+	var bathroom := open_bathroom()
+	assert_eq(is_shown(bathroom, "Steam"), false, "no steam before")
+	click_taps(bathroom, right_taps(bathroom))
+	assert_eq(bathroom.sounds_played.size(), 4, "a sound for each of the four turns")
+	assert_eq(bathroom.sounds_played[3], "sfx_faucet.mp3 (drain)", "the last one gurgles")
+	assert_eq(is_shown(bathroom, "Steam"), true, "steam over the mirror")
+	press(bathroom, "Spot_mirror")
+	assert_eq(is_shown(bathroom, "MirrorSteam"), true, "steam behind the symbols")
+
+
+func test_the_face_shows_the_first_time_only() -> void:
+	var bathroom := open_bathroom()
+	bathroom.forget_face()
+	press(bathroom, "Spot_mirror")
+	assert_eq(is_shown(bathroom, "MirrorFace"), true, "face in the glass")
+	assert_true("sfx_scare.mp3" in bathroom.sounds_played, "scare sound")
+	assert_eq(bathroom.game["penalty_seconds"], 0, "costs no time")
+	key(bathroom, "ui_cancel")
+	var again := open_bathroom()  # a later visit to the bathroom
+	press(again, "Spot_mirror")
+	assert_eq(is_shown(again, "MirrorFace"), false, "not a second time")
+	assert_true(not "sfx_scare.mp3" in again.sounds_played, "no second scare")
+
+
+func test_online_a_teammates_turn_plays_the_tap() -> void:
+	var offline := open_bathroom()
+	var net := FakeNet.new()
+	net.game = offline.game.duplicate(true)
+	tree.root.add_child(net)
+	var bathroom = BathroomScene.instantiate()
+	bathroom.net = net
+	tree.root.add_child(bathroom)
+	net.game["bathroom"]["turns"] = ["cold"]  # a teammate turned the cold tap
+	net.game_changed.emit()
+	assert_eq(bathroom.sounds_played, ["sfx_faucet.mp3"], "heard here too")
