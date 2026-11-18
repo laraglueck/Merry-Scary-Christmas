@@ -18,6 +18,17 @@ const EDGE_SOFTNESS := 0.3      # light pixels at the edge of a cut-out fade out
 const PURE_WHITE := 0.97        # "pure white" like a generated picture's background
 const GAP_PURE_SHARE := 0.9     # an enclosed white gap this pure counts as background
 const MIN_GAP_PIXELS := 200     # smaller white spots inside a figure always stay
+const DARK_HAZE := 0.12         # steam: darker than this is background
+const EDGE_FADE := 0.15         # steam: fades out over this share of the width/height at each edge
+const NIGHT_BLACK := 0.1        # on black: darker than this is background
+const NIGHT_SOFTNESS := 0.25    # ... and the edge fades in over this range
+# Cut-outs whose white holes inside (between bars, in a handle) become see-through too.
+const WITH_HOLES := ["prop_clock_hand_short.png", "prop_clock_hand_long.png", "prop_doll.png",
+		"item_key.png", "prop_doll_turned.png", "ui_clock.png", "ui_clock_hand.png", "ui_noise_meter.png"]
+# Interface parts drawn on white that sit on top of the screen.
+const UI_CUT_OUTS := ["ui_inventory.png", "ui_noise_meter.png", "ui_clock.png", "ui_clock_hand.png"]
+# Light things on black that keep their colours.
+const ON_BLACK := ["prop_moon_full.png", "prop_mirror_face.png"]
 
 
 func _init() -> void:
@@ -42,14 +53,21 @@ func _run(args: PackedStringArray) -> int:
 		print("Could not read the picture: %s" % source)
 		return 1
 
-	# A character on a white background (e.g. a JPG): the white around it becomes
-	# see-through. White inside the character (beard, snow) stays, see _cut_out_white.
-	if file_name.begins_with("char_") and image.detect_alpha() == Image.ALPHA_NONE:
-		_cut_out_white(image)
+	# Steam is white on black: the black becomes see-through.
+	if file_name == "prop_steam.png":
+		_black_to_transparent(image)
+	# A character, item or prop on a white background (e.g. a JPG): the white around it
+	# becomes see-through. White inside it (beard, snow, a clock face) stays, see _cut_out_white.
+	# Something light on black that keeps its own colours (the moon, a ghostly face).
+	elif file_name in ON_BLACK and image.detect_alpha() == Image.ALPHA_NONE:
+		_dark_to_transparent(image)
+	elif _is_cut_out(file_name) and image.detect_alpha() == Image.ALPHA_NONE:
+		_cut_out_white(image, file_name.begins_with("char_") or file_name in WITH_HOLES)
 
 	# A cut-out picture (see-through background) loses its empty margins first,
 	# so the object itself fills the file, however much space was around it.
-	if image.detect_alpha() != Image.ALPHA_NONE:
+	# (Not the steam: it fades out softly towards its edges on purpose.)
+	if image.detect_alpha() != Image.ALPHA_NONE and file_name != "prop_steam.png":
 		var used := _solid_rect(image)
 		if used.size.x > 0 and used.size.y > 0:
 			image = image.get_region(used)
@@ -79,6 +97,43 @@ func _run(args: PackedStringArray) -> int:
 	if kilobytes > MAX_KILOBYTES:
 		print("WARNING: larger than %d KB, the limit for one image." % MAX_KILOBYTES)
 	return 0
+
+
+# Pictures that sit on top of a room or the inventory, without a background of their own.
+func _is_cut_out(file_name: String) -> bool:
+	for start in ["char_", "item_", "prop_", "egg_"]:
+		if file_name.begins_with(start):
+			return true
+	return file_name in UI_CUT_OUTS
+
+
+# The darker a pixel, the more see-through it gets, but it keeps its colour:
+# black disappears, the light object stays as it is, with a soft edge.
+func _dark_to_transparent(image: Image) -> void:
+	image.convert(Image.FORMAT_RGBA8)
+	for y in image.get_height():
+		for x in image.get_width():
+			var colour := image.get_pixel(x, y)
+			var brightness := maxf(colour.r, maxf(colour.g, colour.b))
+			colour.a = clampf((brightness - NIGHT_BLACK) / NIGHT_SOFTNESS, 0.0, 1.0)
+			image.set_pixel(x, y, colour)
+
+
+# The darker a pixel, the more see-through it gets; what stays is white.
+# Near-black haze disappears completely, and everything fades out towards the
+# picture's edges, so no straight border shows over the room.
+# Only right for something light (steam, smoke) on a black background.
+func _black_to_transparent(image: Image) -> void:
+	image.convert(Image.FORMAT_RGBA8)
+	var width := image.get_width()
+	var height := image.get_height()
+	for y in height:
+		for x in width:
+			var colour := image.get_pixel(x, y)
+			var brightness := maxf(colour.r, maxf(colour.g, colour.b))
+			var alpha := clampf((brightness - DARK_HAZE) / (1.0 - DARK_HAZE), 0.0, 1.0)
+			var edge := minf(minf(x, width - 1 - x) / (width * EDGE_FADE), minf(y, height - 1 - y) / (height * EDGE_FADE))
+			image.set_pixel(x, y, Color(1, 1, 1, alpha * clampf(edge, 0.0, 1.0)))
 
 
 # The smallest rectangle that holds every clearly visible pixel. Faint specks
@@ -115,12 +170,12 @@ func _white_to_transparent(image: Image) -> void:
 
 # Makes the white background around a character see-through:
 # - all white connected to the picture's border (flood fill);
-# - white gaps enclosed by the character (between an arm and the body) when they are
-#   almost all pure white like the background. White parts of the character itself
+# - only for characters (`with_gaps`): white gaps enclosed by the figure (between an
+#   arm and the body) when they are almost all pure white like the background. White parts of the character itself
 #   (a beard, a snowman's shaded body) are hardly ever pure white, so they stay.
 # Light pixels right at the edge of the character fade out, so the outline stays
 # smooth instead of jagged.
-func _cut_out_white(image: Image) -> void:
+func _cut_out_white(image: Image, with_gaps: bool) -> void:
 	image.convert(Image.FORMAT_RGBA8)
 	var width := image.get_width()
 	var height := image.get_height()
@@ -139,6 +194,8 @@ func _cut_out_white(image: Image) -> void:
 		seen[index] = 2
 
 	for start in width * height:
+		if not with_gaps:
+			break
 		if seen[start] != 0 or not _is_light(data, start):
 			continue
 		var gap := _white_area(data, width, height, PackedInt32Array([start]), seen)

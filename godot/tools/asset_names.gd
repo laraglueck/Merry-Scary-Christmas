@@ -15,6 +15,7 @@ const SIZE_CANDLE := Vector2i(128, 256)
 const SIZE_STEAM := Vector2i(256, 256)
 const SIZE_BOARD := Vector2i(256, 128)
 const SIZE_BAR := Vector2i(512, 128)
+const SIZE_PART := Vector2i(256, 256)
 
 # Rooms that a fuse lights up: each has a dark and a lit background.
 const FUSE_ROOMS := ["living_room", "bathroom", "bedroom"]
@@ -48,6 +49,8 @@ static func images() -> Dictionary:
 		list["item_gift_%d.png" % number] = SIZE_ITEM
 	list["item_key.png"] = SIZE_ITEM
 	list["item_house_plan.png"] = SIZE_ITEM
+	list["item_photo.png"] = SIZE_ITEM    # Santa and the elf as friends, behind a bedroom calendar door
+	list["item_cookies.png"] = SIZE_ITEM  # left for Scary Jingles in the Merry ending
 
 	# Changing parts that sit on top of a room background
 	list["prop_candle_lit.png"] = SIZE_CANDLE
@@ -57,6 +60,16 @@ static func images() -> Dictionary:
 	list["prop_calendar_open.png"] = SIZE_ICON
 	list["prop_calendar_closed.png"] = SIZE_ICON
 	list["prop_board.png"] = SIZE_BOARD
+	list["prop_steam.png"] = Vector2i(960, 720)  # steam over the bathroom mirror (soft, so small is enough)
+	list["prop_clock_face.png"] = SIZE_ITEM  # the living room clock lock: face and two hands
+	list["prop_clock_hand_short.png"] = SIZE_PART
+	list["prop_clock_hand_long.png"] = SIZE_PART
+	list["prop_note.png"] = SIZE_PART
+	list["prop_wheel.png"] = SIZE_PART  # one symbol wheel of the bedroom chest
+	list["prop_doll.png"] = SIZE_CHARACTER
+	list["prop_doll_turned.png"] = SIZE_CHARACTER  # the same doll, head turned (jumpscare, later)
+	list["prop_moon_full.png"] = SIZE_PART      # the moon in the garden sky (later)
+	list["prop_mirror_face.png"] = SIZE_ITEM    # the face in the bathroom mirror (later)
 
 	# Symbols and wires of the fuse puzzle (same names as in settings.gd)
 	for symbol in ["star", "bell", "tree", "snowflake"]:
@@ -67,10 +80,14 @@ static func images() -> Dictionary:
 	# Interface
 	list["ui_title.webp"] = SIZE_SCREEN
 	list["ui_win.webp"] = SIZE_SCREEN
+	list["ui_win_merry.webp"] = SIZE_SCREEN  # Merry Christmas ending (photo and cookies left)
+	list["ui_win_scary.webp"] = SIZE_SCREEN  # Scary Christmas ending (elf locked in)
 	list["ui_lose.webp"] = SIZE_SCREEN
 	list["ui_fuse_box.webp"] = SIZE_SCREEN  # close-up shown when the fuse box is opened
 	list["ui_house_plan.webp"] = SIZE_SCREEN  # close-up of the house plan, with an empty box for the legend
-	list["ui_clock.png"] = SIZE_BOARD
+	list["ui_clock.png"] = SIZE_PART       # the pocket watch, top right
+	list["ui_clock_hand.png"] = SIZE_PART  # its hand, turned by the game
+	list["ui_scare_face.webp"] = SIZE_SCREEN  # jumpscare (later)
 	list["ui_inventory.png"] = SIZE_BAR
 	list["ui_noise_meter.png"] = SIZE_BAR
 	return list

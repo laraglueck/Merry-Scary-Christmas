@@ -17,17 +17,18 @@ const EXAMPLE_WHEELS := ["bell", "star", "tree"]
 
 # The clickable spots, left to right (the arrow keys follow this order).
 # Rect2(x, y, width, height) on the 1152 x 648 screen, measured on room_bathroom_lit.webp.
-# If a new picture moves things, change these numbers.
+# The door is on the right, as in the house plan. If a new picture moves things, change these numbers.
 const SPOTS := [
-	{"name": "door_hall", "label": "Hall", "rect": Rect2(48, 70, 150, 515)},
-	{"name": "mirror", "label": "Mirror", "rect": Rect2(306, 128, 230, 176)},
-	{"name": "hot_tap", "label": "Hot", "rect": Rect2(366, 300, 52, 52)},
-	{"name": "cold_tap", "label": "Cold", "rect": Rect2(422, 300, 52, 52)},
-	{"name": "bathtub", "label": "Bathtub", "rect": Rect2(620, 378, 420, 175)},
+	{"name": "bathtub", "label": "Bathtub", "rect": Rect2(112, 378, 420, 175)},
+	{"name": "cold_tap", "label": "Cold", "rect": Rect2(678, 300, 52, 52)},
+	{"name": "hot_tap", "label": "Hot", "rect": Rect2(734, 300, 52, 52)},
+	{"name": "mirror", "label": "Mirror", "rect": Rect2(616, 128, 230, 176)},
+	{"name": "door_hall", "label": "Hall", "rect": Rect2(954, 70, 150, 515)},
 ]
-const GIFT_RECT := Rect2(760, 300, 110, 110)  # the present, standing in the empty tub
-const DIGIT_POSITION := Vector2(890, 318)     # the digit scratched into the enamel
-const TURNS_POSITION := Vector2(340, 418)     # the turns so far, under the sink
+const START_SPOT := 4  # the team comes in through the door, so the highlight starts there
+const GIFT_RECT := Rect2(282, 300, 110, 110)  # the present, standing in the empty tub
+const DIGIT_POSITION := Vector2(232, 318)     # the digit scratched into the enamel
+const TURNS_POSITION := Vector2(650, 418)     # the turns so far, under the sink
 const HIGHLIGHT := Color("ffd76a")
 
 # -1 means: a new random game at every start. Tests set a fixed seed.
@@ -37,7 +38,7 @@ const HIGHLIGHT := Color("ffd76a")
 var net: Node = null  # set by main.gd for online play
 
 var game: Dictionary          # offline: our own game; online: the shared game
-var _highlight := 0           # index in SPOTS
+var _highlight := START_SPOT  # index in SPOTS
 
 # Nodes we change later (built in _build_ui)
 var _background: TextureRect
