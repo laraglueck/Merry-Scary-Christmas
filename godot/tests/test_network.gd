@@ -330,3 +330,22 @@ func test_no_resume_without_a_save_or_players() -> void:
 	SaveGame.save(GameRules.new_game(rng), SaveGame.path())
 	assert_eq(room[1].can_resume(), false, "only the host resumes")
 
+
+# ---------- back to the lobby (spec 17) ----------
+
+func test_a_finished_game_ends_for_everyone_and_the_room_stays() -> void:
+	var room: Array = await make_started_room(47601)
+	assert_eq(room[0].can_end_game(), false, "a running game cannot be ended")
+	room[0].end_game()
+	assert_eq(room[0].game.is_empty(), false, "still running")
+	room[0].advance_clock(600.0)
+	await wait_until(func(): return room.all(func(net): return net.game.get("phase") == "midnight"))
+	assert_eq(room[1].can_end_game(), false, "only the host")
+	assert_eq(room[0].can_end_game(), true, "the host can end the finished game")
+	room[0].end_game()
+	var all_empty := func(): return room.all(func(net): return net.game.is_empty())
+	assert_true(await wait_until(all_empty), "everyone's game is cleared")
+	assert_eq(room[0].players.size(), 3, "all three still in the room")
+	assert_eq(room[1].connected and room[2].connected, true, "still connected")
+	assert_eq(room[0].can_start(), true, "a new round can start at once")
+

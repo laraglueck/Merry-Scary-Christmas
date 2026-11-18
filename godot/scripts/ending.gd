@@ -77,14 +77,45 @@ func _build_ui(ending: Dictionary, result: String, last_event: String) -> void:
 	message.size = Vector2(1152, 30)
 	message.add_theme_color_override("font_color", Color("ffd76a"))
 
-	# "Back to the lobby" needs a small network function (host clears the finished
-	# game for everyone, Mathies). Until then the button exists but stays hidden.
+	# Spec 17: the host takes everyone back to the lobby (network.end_game);
+	# Players 2 and 3 wait for the host. Started on its own (no network): neither.
+	var online: bool = net != null and net.get("connected") == true  # get(): a test's stand-in net may not have it
+	var index: int = net.get("my_index") if online else -1
 	var back := Button.new()
 	back.name = "BackButton"
 	back.text = "Back to the lobby"
-	back.visible = false
-	back.position = Vector2(960, 590)
+	back.visible = online and index == 0
+	back.position = Vector2(916, 584)
+	back.custom_minimum_size = Vector2(216, 48)
+	back.add_theme_font_size_override("font_size", 20)
+	_paint_red(back)  # red, so it is clear you can click it (manual test, spec 17)
+	back.pressed.connect(_on_back_pressed)
 	add_child(back)
+	var wait := _label(self, "WaitLabel", "Waiting for Player 1...", 18)
+	wait.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	wait.position = Vector2(760, 596)
+	wait.size = Vector2(372, 30)
+	wait.visible = online and index > 0
+
+
+# Red: lighter on hover, darker when pressed.
+func _paint_red(button: Button) -> void:
+	var red := Color("c0392b")
+	var looks := {"normal": red, "hover": red.lightened(0.15), "pressed": red.darkened(0.2), "focus": red.lightened(0.15)}
+	for state in looks:
+		var box := StyleBoxFlat.new()
+		box.bg_color = looks[state]
+		box.set_corner_radius_all(6)
+		box.set_content_margin_all(8)
+		button.add_theme_stylebox_override(state, box)
+	button.add_theme_color_override("font_color", Color.WHITE)
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_color_override("font_pressed_color", Color.WHITE)
+
+
+func _on_back_pressed() -> void:
+	if net != null:
+		net.end_game()
 
 
 func _label(parent: Node, node_name: String, text: String, size: int) -> Label:

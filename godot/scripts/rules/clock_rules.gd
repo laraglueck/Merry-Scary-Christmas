@@ -4,7 +4,7 @@
 extends RefCounted
 
 const Settings = preload("res://scripts/settings.gd")
-const MIDNIGHT_EVENT := "Midnight! Santa Scare is awake. The team has lost."
+const MIDNIGHT_EVENT := "Midnight! Scary Jingles is awake. The team has lost."
 
 
 static func time_left(game: Dictionary) -> int:
