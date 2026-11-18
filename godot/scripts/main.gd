@@ -1,7 +1,7 @@
 # Main scene (spec 04, 07, 11, 12): keeps the network connection and shows the right
 # screen: on this device only, the loading screen with the story, then the title (until
-# "Start"); the lobby before the game starts, then the place where the team is (hall, a
-# room, the attic). If the host leaves, everyone is back in the lobby.
+# "Start"); the lobby before the game starts, then the character selection (spec 18), then
+# the place where the team is (hall, a room, the attic). If the host leaves, everyone is back in the lobby.
 # The music plays here, so it goes on from screen to screen until the game starts.
 # The clock (spec 13) and the inventory bar (spec 14) are shown here too, on top of
 # every screen while the game runs.
@@ -15,6 +15,7 @@ const SCREENS := {
 	"intro": preload("res://scenes/intro.tscn"),
 	"title": preload("res://scenes/title.tscn"),
 	"lobby": preload("res://scenes/lobby.tscn"),
+	"select": preload("res://scenes/character_select.tscn"),  # choose your character (spec 18)
 	"hall": preload("res://scenes/hall.tscn"),
 	"bathroom": preload("res://scenes/bathroom.tscn"),
 	"attic": preload("res://scenes/attic.tscn"),       # spec 16
@@ -83,7 +84,8 @@ func _update_screen() -> void:
 	if not net.game.is_empty():
 		intro_done = true  # once a game ran here, game over leads back to the lobby
 		title_done = true
-		music.stop()  # the music belongs to the screens before the game
+		if net.game.get("phase") != "select":
+			music.stop()  # the music belongs to the screens before the game (the selection is one of them)
 	var wanted := current_screen()
 	if wanted == screen_name:
 		return

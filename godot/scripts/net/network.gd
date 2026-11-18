@@ -8,6 +8,7 @@ const Settings = preload("res://scripts/settings.gd")
 const RoomCode = preload("res://scripts/net/room_code.gd")
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
+const CharacterRules = preload("res://scripts/rules/character_rules.gd")
 const SaveGame = preload("res://scripts/save_game.gd")
 
 signal changed       # status, players or counter changed: the screen should update
@@ -257,9 +258,10 @@ func _save_game() -> void:
 
 # ---------- back to the lobby (spec 17) ----------
 
-# Only the host, and only a finished game (merry, scary, midnight): a running game stays.
+# Only the host, and only a finished game (merry, scary, midnight): a running game stays,
+# and so does the character selection before it (spec 18).
 func can_end_game() -> bool:
-	return connected and my_index == 0 and not game.is_empty() and game.get("phase") != "hall"
+	return connected and my_index == 0 and not game.is_empty() and game.get("phase") not in ["hall", "select"]
 
 
 # Host: clears the finished game for everyone. All are back in the lobby; the room stays
@@ -277,11 +279,26 @@ func can_start() -> bool:
 	return connected and my_index == 0 and players.size() == Settings.MAX_PLAYERS and game.is_empty()
 
 
+# Host (spec 18): "Start game" in the lobby. Everyone chooses a character first; the real
+# game starts by itself when all three are ready (see _host_apply).
+func begin_selection() -> void:
+	if not can_start():
+		return
+	game = CharacterRules.new_selection_game()
+	_send_game()
+	game_changed.emit()
+	changed.emit()
+
+
 # Host: create the game and send it to everyone.
 func start_game() -> void:
 	if not can_start():
 		return
-	game = GameRules.new_game(_rng)
+	_create_game({})
+
+
+func _create_game(characters: Dictionary) -> void:
+	game = GameRules.new_game(_rng, characters)
 	_clock_rest = 0.0
 	_save_game()
 	_send_game()
@@ -309,9 +326,17 @@ func _host_apply(sender: int, action: String, data: Dictionary) -> void:
 	if not _peer_to_index.has(sender) or game.is_empty():
 		return
 	GameRules.apply(game, _peer_to_index[sender], action, data)
+	if game.get("phase") == "select" and CharacterRules.all_ready(game["selection"]):
+		_begin_game_from_selection()
+		return
 	_save_game()
 	_send_game()
 	game_changed.emit()
+
+
+# All three are ready: the real game starts with the chosen characters, for everyone.
+func _begin_game_from_selection() -> void:
+	_create_game(CharacterRules.final_characters(game["selection"]))
 
 
 func _send_game() -> void:
@@ -345,7 +370,12 @@ func _on_peer_connected(id: int) -> void:
 func _on_peer_disconnected(id: int) -> void:
 	if not multiplayer.is_server():
 		return
+	var index: int = _peer_to_index.get(id, -1)
 	if _peer_to_index.erase(id):
+		if game.get("phase") == "select":  # whoever leaves while choosing loses their pick (spec 18)
+			game["selection"].erase(index)
+			_send_game()
+			game_changed.emit()
 		players = _sorted_players()
 		_send_state()
 		changed.emit()

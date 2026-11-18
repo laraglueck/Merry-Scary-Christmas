@@ -77,7 +77,7 @@ func test_start_button_for_host_needs_three_players() -> void:
 	await wait_until(func(): return host.players.size() == 3)
 	assert_eq(start.disabled, false, "3 players: enabled")
 	press(lobby, "StartButton")
-	assert_eq(host.game.get("phase"), "hall", "game started")
+	assert_eq(host.game.get("phase"), "select", "the characters are chosen first (spec 18)")
 
 
 func test_start_button_hidden_for_players() -> void:
@@ -141,15 +141,15 @@ func test_new_game_over_a_save_asks_first() -> void:
 	assert_eq(SaveGame.load_from(SaveGame.path()).get("penalty_seconds"), 30, "the save is kept")
 	press(lobby, "StartButton")
 	press(lobby, "YesNewGameButton")
-	assert_eq(room[0].game.get("penalty_seconds"), 0, "a new game")
-	assert_eq(SaveGame.load_from(SaveGame.path()).get("penalty_seconds"), 0, "the old save is replaced")
+	assert_eq(room[0].game.get("phase"), "select", "a new game begins with the character selection (spec 18)")
+	assert_eq(SaveGame.load_from(SaveGame.path()).get("penalty_seconds"), 30, "the old save stays until the game really starts")
 
 
 func test_new_game_without_a_save_starts_at_once() -> void:
 	var room: Array = await make_full_room(47589)
 	var lobby := open_lobby_with(room[0])
 	press(lobby, "StartButton")
-	assert_eq(room[0].game.get("phase"), "hall", "started without asking")
+	assert_eq(room[0].game.get("phase"), "select", "selection begins without asking (spec 18)")
 
 
 

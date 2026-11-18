@@ -12,11 +12,13 @@ const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 const AtticRules = preload("res://scripts/rules/attic_rules.gd")
+const CharacterRules = preload("res://scripts/rules/character_rules.gd")
 
 
-static func new_game(rng: RandomNumberGenerator) -> Dictionary:
+static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary:
 	return {
 		"phase": "hall",                            # "hall" = the game runs inside the house
+		"characters": characters,                   # who plays whom (spec 18): {player: {character, colour}}
 		"location": "hall",                         # where the whole team is (spec 07)
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
@@ -32,6 +34,9 @@ static func new_game(rng: RandomNumberGenerator) -> Dictionary:
 # Host only: one player's action changes the game. Unknown actions change nothing.
 # After midnight (or another end) nothing changes any more (spec 13).
 static func apply(game: Dictionary, player: int, action: String, data: Dictionary) -> void:
+	if game.get("phase") == "select":  # before the game: the characters are chosen (spec 18)
+		CharacterRules.apply(game, player, action, data)
+		return
 	if game.get("phase") != "hall":
 		return
 
