@@ -33,6 +33,9 @@ const ITEMS := [
 	{"id": "gift_1", "name": "Present 1", "picture": "item_gift_1.png"},  # living room (Gloria)
 	{"id": "gift_2", "name": "Present 2", "picture": "item_gift_2.png"},  # bathroom
 	{"id": "gift_3", "name": "Present 3", "picture": "item_gift_3.png"},  # bedroom (Leon)
+	{"id": "photo_piece_1", "name": "Torn piece", "picture": "item_photo_piece_1.png"},  # living room (spec 21)
+	{"id": "photo_piece_2", "name": "Torn piece", "picture": "item_photo_piece_2.png"},  # bathroom
+	{"id": "photo_piece_3", "name": "Torn piece", "picture": "item_photo_piece_3.png"},  # bedroom calendar
 	{"id": "photo", "name": "Photo", "picture": "item_photo.png"},         # bedroom calendar
 	{"id": "key", "name": "Key", "picture": "item_key.png"},              # attic (spec 16)
 ]

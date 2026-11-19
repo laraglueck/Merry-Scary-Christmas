@@ -79,4 +79,4 @@ func test_standalone_bedroom_calendar_chest_and_shared_items() -> void:
 	assert_eq(bedroom.photo_button.visible, false)
 	GameRules.apply(game, 0, "take_photo", {})
 	GameRules.apply(game, 0, "take_gift", {"room": "bedroom"})
-	assert_eq(game["inventory"], ["gift_3", "photo"], "items are awarded once")
+	assert_eq(game["inventory"], ["gift_3", "photo_piece_3"], "items are awarded once")

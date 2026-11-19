@@ -32,6 +32,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | char_snowman.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
 | char_santa.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
 | char_jingles_asleep.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | asleep in his armchair, hugging the sack; white background removed |
+| char_jingles_peek.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | edit of char_jingles_asleep, one eye half open; white background removed |
 | char_jingles_awake.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | awake in the same armchair; white background removed |
 | char_nutcracker.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | white background removed with add_image.gd |
 | char_santa_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, white background removed with add_image.gd |
@@ -49,6 +50,9 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | item_key.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background and the holes in the bow removed |
 | item_house_plan.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | item_photo.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | Santa and the elf as friends; white background removed |
+| item_photo_piece_1.png | images | cut from item_photo.png by `godot/tools/cut_photo.gd` | Gloria | own work (from our own AI picture) | Yes (from item_photo.png) | piece 1 of 3, torn edges drawn by the tool |
+| item_photo_piece_2.png | images | cut from item_photo.png by `godot/tools/cut_photo.gd` | Gloria | own work (from our own AI picture) | Yes (from item_photo.png) | piece 2 of 3, torn edges drawn by the tool |
+| item_photo_piece_3.png | images | cut from item_photo.png by `godot/tools/cut_photo.gd` | Gloria | own work (from our own AI picture) | Yes (from item_photo.png) | piece 3 of 3, torn edges drawn by the tool |
 | item_cookies.png | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | white background removed |
 | prop_candle_lit.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | prop_candle_out.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |

@@ -18,7 +18,7 @@ const SYMBOL_ART := {
 	"snowflake": preload(IMAGES + "sym_snowflake.png"),
 }
 const GIFT_ART = preload(IMAGES + "item_gift_3.png")
-const PHOTO_ART = preload(IMAGES + "item_photo.png")
+const PHOTO_ART = preload(IMAGES + "item_photo_piece_3.png")  # one torn piece (spec 21)
 const CHEST_OPEN_SOUND = preload("res://assets/sounds/sfx_creak.mp3")
 const GIFT_SOUND = preload("res://assets/sounds/sfx_gift.mp3")
 
@@ -400,9 +400,9 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 			"calendar":
 				_update_calendar(game.get("living_room", {}), solved)
 			"photo":
-				popup_description.text = "An old photograph shows Santa and Scary Jingles together."
+				popup_description.text = "A torn piece of an old photograph: Santa's red coat... and a sleigh. Where is the rest?"
 				if photo_taken:
-					status_label.text = "The photograph has been collected."
+					status_label.text = "The torn piece has been collected."
 	status_label.visible = not status_label.text.is_empty()
 	popup_description.visible = not popup_description.text.is_empty()
 

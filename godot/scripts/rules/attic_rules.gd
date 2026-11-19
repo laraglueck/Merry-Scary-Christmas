@@ -15,7 +15,7 @@ const NO_PHOTO := "You have nothing that could change his mind."
 # The attic part of the shared game. The code is not stored here: it is the
 # three room digits, see code().
 static func create() -> Dictionary:
-	return {"unlocked": false, "choice": ""}
+	return {"unlocked": false, "key_taken": false, "choice": ""}
 
 
 # The digits the lock wants, in dial order red, green, gold. Until the bedroom
@@ -48,6 +48,18 @@ static func try_code(attic: Dictionary, dials: Array, wanted: Array) -> Dictiona
 	return {"correct": true, "penalty_seconds": 0, "error": ""}
 
 
+# The key on the floor beside him (spec 21): once the lock is open, and once.
+static func take_key(attic: Dictionary) -> Dictionary:
+	# 1. Check ...
+	if not attic["unlocked"]:
+		return {"ok": false, "error": "The attic is still locked."}
+	if attic.get("key_taken", false):
+		return {"ok": false, "error": "The key is already taken."}
+	# 2. ... then change.
+	attic["key_taken"] = true
+	return {"ok": true, "error": ""}
+
+
 # The final choice beside the sleeping Scary Jingles. Returns the ending
 # ("scary" or "merry"), or "" and an error text when refused.
 static func choose(attic: Dictionary, choice: String, has_photo: bool) -> Dictionary:
@@ -60,6 +72,8 @@ static func choose(attic: Dictionary, choice: String, has_photo: bool) -> Dictio
 		return {"ending": "", "error": "Unknown choice: %s" % choice}
 	if choice == "reconcile" and not has_photo:
 		return {"ending": "", "error": NO_PHOTO}
+	if choice == "lock_in" and not attic.get("key_taken", false):
+		return {"ending": "", "error": "Take the key first."}
 
 	# 2. ... then change.
 	attic["choice"] = choice

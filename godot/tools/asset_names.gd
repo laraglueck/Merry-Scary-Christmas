@@ -35,7 +35,7 @@ static func images() -> Dictionary:
 	list["room_bathroom_drained.webp"] = SIZE_SCREEN  # lit, the tub empty after the taps are solved
 
 	# Characters
-	for character in ["santa", "snowman", "nutcracker", "jingles_asleep", "jingles_awake"]:  # three heroes, then the villain Scary Jingles
+	for character in ["santa", "snowman", "nutcracker", "jingles_asleep", "jingles_peek", "jingles_awake"]:  # three heroes, then the villain Scary Jingles
 		list["char_%s.png" % character] = SIZE_CHARACTER
 	# The same figures with a green or yellow scarf / jacket (the first ones wear red).
 	for character in ["santa", "snowman", "nutcracker"]:
@@ -50,6 +50,8 @@ static func images() -> Dictionary:
 	list["item_key.png"] = SIZE_ITEM
 	list["item_house_plan.png"] = SIZE_ITEM
 	list["item_photo.png"] = SIZE_ITEM    # Santa and the elf as friends, behind a bedroom calendar door
+	for piece in range(1, 4):  # the photo torn in three (spec 21), cut by tools/cut_photo.gd
+		list["item_photo_piece_%d.png" % piece] = SIZE_ITEM
 	list["item_cookies.png"] = SIZE_ITEM  # left for Scary Jingles in the Merry ending
 
 	# Changing parts that sit on top of a room background

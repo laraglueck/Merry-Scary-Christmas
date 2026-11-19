@@ -39,7 +39,7 @@ func game_with_attic_open() -> Dictionary:
 
 
 func test_new_game_has_a_locked_attic() -> void:
-	assert_eq(new_game().get("attic"), {"unlocked": false, "choice": ""}, "attic")
+	assert_eq(new_game().get("attic"), {"unlocked": false, "key_taken": false, "choice": ""}, "attic")
 
 
 func test_right_code_opens_the_lock_for_everyone() -> void:
@@ -73,10 +73,13 @@ func test_attic_actions_only_work_in_the_attic() -> void:
 
 func test_lock_in_ends_the_game_as_scary_christmas_with_the_key() -> void:
 	var game := game_with_attic_open()
+	GameRules.apply(game, 2, "take_key", {})
+	assert_true(InventoryRules.has(game, "key"), "the key goes into the inventory when taken")
+	assert_contains(game["last_event"], "Player 3 took the key", "event")
 	GameRules.apply(game, 2, "choose_ending", {"choice": "lock_in"})
 	assert_eq(game["phase"], "scary", "phase")
 	assert_true(InventoryRules.has(game, "key"), "key in the inventory")
-	assert_contains(game["last_event"], "Player 3 took the key and locked Scary Jingles in", "event")
+	assert_contains(game["last_event"], "Player 3 locked Scary Jingles in", "event")
 
 
 func test_reconcile_with_the_photo_ends_the_game_as_merry_christmas() -> void:
@@ -104,6 +107,7 @@ func test_choosing_before_the_lock_is_open_changes_nothing() -> void:
 
 func test_after_the_ending_nothing_changes() -> void:
 	var game := game_with_attic_open()
+	GameRules.apply(game, 0, "take_key", {})
 	GameRules.apply(game, 0, "choose_ending", {"choice": "lock_in"})
 	var before := game.duplicate(true)
 	GameRules.apply(game, 0, "try_attic_code", {"dials": [1, 1, 1]})
@@ -116,3 +120,10 @@ func test_a_game_saved_before_the_attic_existed_still_works() -> void:
 	game.erase("attic")
 	GameRules.apply(game, 0, "try_attic_code", {"dials": right_dials(game)})
 	assert_eq(game["attic"]["unlocked"], true, "unlocked")
+
+
+func test_lock_in_without_the_key_changes_nothing() -> void:
+	var game := game_with_attic_open()
+	GameRules.apply(game, 0, "choose_ending", {"choice": "lock_in"})
+	assert_eq(game["phase"], "hall", "game goes on")
+	assert_contains(game["last_event"], "key", "explains why")

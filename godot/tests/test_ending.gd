@@ -69,4 +69,22 @@ func test_midnight_shows_no_time_left() -> void:
 func test_each_ending_plays_its_sounds() -> void:
 	assert_eq(open_ending("merry", []).sounds_played, ["sfx_win.mp3", "sfx_bells.mp3"], "merry")
 	assert_eq(open_ending("scary", []).sounds_played, ["sfx_win.mp3"], "scary")
-	assert_eq(open_ending("midnight", [], Settings.GAME_SECONDS).sounds_played, ["sfx_lose.mp3"], "midnight")
+	# Midnight: first the clock strikes and Jingles wakes; the lose music comes after (spec 21).
+	assert_eq(open_ending("midnight", [], Settings.GAME_SECONDS).sounds_played, ["sfx_clock_chime.mp3"], "midnight")
+
+
+# ---------- midnight: he wakes up (spec 21) ----------
+
+func test_at_midnight_jingles_wakes_up_first() -> void:
+	var ending := open_ending("midnight", [], Settings.GAME_SECONDS)
+	var wake: Control = find(ending, "WakeUp")
+	assert_true(wake != null and wake.visible, "the wake-up comes first")
+	assert_eq(find(ending, "WakeUpJingles").texture.resource_path.get_file(), "char_jingles_awake.png", "wide awake")
+	ending.show_ending()  # what happens after the strikes
+	assert_eq(wake.visible, false, "then the end screen")
+	assert_true("sfx_lose.mp3" in ending.sounds_played, "and the lose music")
+
+
+func test_a_win_has_no_wake_up() -> void:
+	var ending := open_ending("merry", [])
+	assert_true(ending.find_child("WakeUp", true, false) == null, "no wake-up for a win")

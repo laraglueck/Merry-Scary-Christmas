@@ -38,7 +38,7 @@ func assert_choice_rejected(attic: Dictionary, choice: String, has_photo: bool, 
 # ---------- create and code ----------
 
 func test_new_attic_is_locked_and_nothing_is_chosen() -> void:
-	assert_eq(Rules.create(), {"unlocked": false, "choice": ""}, "new attic")
+	assert_eq(Rules.create(), {"unlocked": false, "key_taken": false, "choice": ""}, "new attic")
 
 
 func test_code_is_the_three_room_digits() -> void:
@@ -94,6 +94,7 @@ func test_trying_an_open_lock_is_refused() -> void:
 
 func test_lock_in_gives_scary_christmas() -> void:
 	var attic := open_attic()
+	Rules.take_key(attic)
 	var result := Rules.choose(attic, "lock_in", false)
 	assert_eq(result, {"ending": "scary", "error": ""}, "result")
 	assert_eq(attic["choice"], "lock_in", "choice kept")
@@ -120,5 +121,20 @@ func test_unknown_choice_is_refused() -> void:
 
 func test_second_choice_is_refused() -> void:
 	var attic := open_attic()
+	Rules.take_key(attic)
 	Rules.choose(attic, "lock_in", true)
 	assert_choice_rejected(attic, "reconcile", true, "already")
+
+
+# ---------- the key (spec 21) ----------
+
+func test_the_key_can_be_taken_once_the_lock_is_open() -> void:
+	assert_contains(Rules.take_key(closed_attic())["error"], "locked", "refused while locked")
+	var attic := open_attic()
+	assert_eq(Rules.take_key(attic), {"ok": true, "error": ""}, "taken")
+	assert_eq(attic["key_taken"], true, "key taken")
+	assert_contains(Rules.take_key(attic)["error"], "already", "only once")
+
+
+func test_lock_in_needs_the_key() -> void:
+	assert_choice_rejected(open_attic(), "lock_in", true, "key")
