@@ -158,6 +158,7 @@ func test_mirror_shows_only_dust_before_solving() -> void:
 	assert_eq(is_shown(bathroom, "MirrorPanel"), true, "close-up open")
 	assert_eq(is_shown(bathroom, "MirrorSymbols"), false, "no symbols")
 	assert_contains(text_of(bathroom, "Message"), "dust", "message")
+	assert_contains(text_of(bathroom, "MirrorDust"), "steam", "a hint that the mirror will matter later")
 
 
 func test_mirror_shows_the_symbols_reversed_and_flipped_after_solving() -> void:

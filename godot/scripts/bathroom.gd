@@ -204,7 +204,7 @@ func _open_mirror() -> void:
 		_play(_scare, "sfx_scare.mp3")
 		get_tree().create_timer(FACE_SECONDS).timeout.connect(func() -> void: _mirror_face.visible = false)
 	if not _bathroom()["solved"]:
-		_message.text = "Too much dust to see anything."
+		_message.text = "Too much dust to see anything... but something seems hidden underneath."
 	_refresh()
 
 
@@ -389,7 +389,8 @@ func _build_ui() -> void:
 	var mirror_content := VBoxContainer.new()
 	mirror_content.alignment = BoxContainer.ALIGNMENT_CENTER
 	_mirror_panel.add_child(mirror_content)
-	_mirror_dust = _label(mirror_content, "Grey dust covers the glass.", 24)
+	# A hint that the mirror will matter later: the steam from the hot water clears it.
+	_mirror_dust = _label(mirror_content, "Grey dust covers the glass.\nFaint marks hide underneath...\nperhaps warm steam would bring them out.", 22)
 	_mirror_dust.name = "MirrorDust"
 	_mirror_dust.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mirror_dust.add_theme_color_override("font_color", Color("4a4a4a"))
