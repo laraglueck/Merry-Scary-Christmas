@@ -17,12 +17,19 @@ func test_unknown_character_or_colour_is_refused() -> void:
 	assert_eq(selection, {}, "nothing changed")
 
 
-func test_a_taken_character_or_colour_is_refused() -> void:
+func test_a_taken_character_is_refused() -> void:
 	var selection := {}
 	CharacterRules.pick(selection, 0, "santa", "red")
 	assert_contains(CharacterRules.pick(selection, 1, "santa", "green"), "taken by Player 1", "character")
-	assert_contains(CharacterRules.pick(selection, 1, "snowman", "red"), "taken by Player 1", "colour")
 	assert_eq(selection.has(1), false, "Player 2 has nothing yet")
+
+
+# Spec 18, change: two players may share a colour, the figures tell them apart.
+func test_a_colour_can_be_shared() -> void:
+	var selection := {}
+	CharacterRules.pick(selection, 0, "santa", "red")
+	assert_eq(CharacterRules.pick(selection, 1, "snowman", "red"), "", "red twice is fine")
+	assert_eq(selection[1]["colour"], "red", "Player 2 is red too")
 
 
 func test_a_player_can_change_their_own_pick() -> void:
@@ -94,15 +101,14 @@ func test_unknown_accessory_is_refused() -> void:
 	assert_eq(selection, {}, "nothing changed")
 
 
-func test_next_colour_goes_round_and_skips_the_taken_ones() -> void:
+func test_next_colour_goes_round_through_all_colours() -> void:
 	var selection := {}
 	CharacterRules.pick(selection, 0, "santa", "red")
 	assert_eq(CharacterRules.next_colour(selection, 0, 1), "green", "red -> green")
 	assert_eq(CharacterRules.next_colour(selection, 0, -1), "yellow", "red <- yellow (round)")
 	CharacterRules.pick(selection, 1, "snowman", "green")
-	assert_eq(CharacterRules.next_colour(selection, 0, 1), "yellow", "green is taken: skipped")
 	CharacterRules.pick(selection, 2, "nutcracker", "yellow")
-	assert_eq(CharacterRules.next_colour(selection, 0, 1), "red", "nothing else free: stays")
+	assert_eq(CharacterRules.next_colour(selection, 0, 1), "green", "all taken: still changes (shared)")
 
 
 func test_next_accessory_goes_round() -> void:

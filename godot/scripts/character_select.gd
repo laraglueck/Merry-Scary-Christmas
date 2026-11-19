@@ -22,6 +22,7 @@ const ARROW_SIZE := Vector2(64, 64)
 const ACCESSORY_ROW_Y := 40.0           # head height inside the figure area
 const COLOUR_ROW_Y := 235.0             # hip height
 const ARROW_GAP := 40.0
+const LABELS_HEIGHT := 64.0             # "Accessory: ..." and "Colour: ..." under the figure
 
 var net: Node = null  # main.gd hands this in; started alone, it stays null
 
@@ -40,6 +41,8 @@ var _colour_prev: Button
 var _colour_next: Button
 var _accessory_prev: Button
 var _accessory_next: Button
+var _colour_label: Label     # "Colour: Green" under the figure (spec 18)
+var _accessory_label: Label  # "Accessory: None (coming soon)"
 var _player_buttons: Array[Button] = []
 
 
@@ -136,6 +139,8 @@ func _refresh() -> void:
 				owner_label.text += " - ready"
 	if not mine.is_empty():
 		_big.texture = load(IMAGES + CharacterRules.picture_file(mine["character"], mine["colour"]))
+		_colour_label.text = "Colour: " + _name_of(Settings.CHARACTER_COLOURS, mine["colour"])
+		_accessory_label.text = "Accessory: " + _name_of(Settings.ACCESSORIES, mine["accessory"])
 	var is_ready: bool = not mine.is_empty() and mine["ready"]
 	for arrow in [_colour_prev, _colour_next, _accessory_prev, _accessory_next]:
 		arrow.disabled = mine.is_empty() or is_ready
@@ -282,7 +287,7 @@ func _build_ui() -> void:
 func _build_figure_area() -> Control:
 	var area := Control.new()
 	area.name = "FigureArea"
-	area.custom_minimum_size = FIGURE_BOX + Vector2((ARROW_SIZE.x + ARROW_GAP) * 2 + 40, 0)
+	area.custom_minimum_size = FIGURE_BOX + Vector2((ARROW_SIZE.x + ARROW_GAP) * 2 + 40, LABELS_HEIGHT)
 	var middle_x := area.custom_minimum_size.x / 2.0
 
 	_big = TextureRect.new()
@@ -303,7 +308,25 @@ func _build_figure_area() -> Control:
 	_place_arrow(area, _colour_prev, Vector2(middle_x - side - ARROW_SIZE.x, COLOUR_ROW_Y))
 	_place_arrow(area, _colour_next, Vector2(middle_x + side, COLOUR_ROW_Y))
 
+	# What the arrows chose, under the figure.
+	_accessory_label = _build_choice_label("AccessoryLabel", area, FIGURE_BOX.y + 4)
+	_colour_label = _build_choice_label("ColourLabel", area, FIGURE_BOX.y + 32)
+
 	return area
+
+
+func _build_choice_label(node_name: String, area: Control, y: float) -> Label:
+	var label := Label.new()
+	label.name = node_name
+	label.position = Vector2(0, y)
+	label.size = Vector2(area.custom_minimum_size.x, 28)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_color_override("font_color", CREAM)
+	label.add_theme_color_override("font_outline_color", NIGHT)
+	label.add_theme_constant_override("outline_size", 6)
+	area.add_child(label)
+	return label
 
 
 func _build_arrow(node_name: String, text: String, direction: int, handler: Callable) -> Button:
