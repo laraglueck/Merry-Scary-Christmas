@@ -1,7 +1,7 @@
-# Main scene (spec 04, 07, 11, 12, 23): keeps the network connection and shows the right
-# screen: on this device the title (until "Start"), then the lobby; for the whole team the
-# character selection (spec 18), the story (spec 12, now inside the game: spec 23), then the
-# place where the team is (hall, a room, the attic). If the host leaves, everyone is back in the lobby.
+# Main scene (spec 04, 07, 11, 12, 23, 25): keeps the network connection and shows the right
+# screen: on this device first the story (spec 12, until it ends or is skipped: spec 25),
+# then the title (until "Start"), then the lobby; for the whole team the character selection (spec 18),
+# then the place where the team is (hall, a room, the attic). If the host leaves, everyone is back in the lobby.
 # The menu music plays here, on the title only (spec 23).
 # While the game runs in the house, quiet house music plays instead (spec 22).
 # The clock (spec 13) and the inventory bar (spec 14) are shown here too, on top of
@@ -39,8 +39,8 @@ const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
 var net: Node
 var screen: Node
 var screen_name := ""
-var intro_wait_label: Label  # "Waiting for the others to finish the story..." (spec 23)
 var title_done := false  # "Start" pressed, or a game already started on this device
+var story_done := false  # the story ended or was skipped on this device (spec 25)
 var music: AudioStreamPlayer
 var menu_music_on := false   # spec 23: true while the menu music plays, only on the title (the tests read this)
 var house_music: AudioStreamPlayer
@@ -59,17 +59,18 @@ func _ready() -> void:
 	_start_music()
 	_build_house_music()
 	_build_clock()
-	_build_intro_wait()
 	_build_inventory()
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
 
 
-# First the story, then before "Start" -> title; no game yet (or game over) -> lobby; in the house -> where
+# First the story; then before "Start" -> title; no game yet (or game over) -> lobby; in the house -> where
 # the team is; later phases (e.g. an end screen) -> that phase.
 func current_screen() -> String:
 	if net.game.is_empty():
+		if not story_done:
+			return "intro"
 		return "lobby" if title_done else "title"
 	var phase: String = net.game.get("phase", "hall")
 	if phase == "hall":
@@ -77,9 +78,9 @@ func current_screen() -> String:
 	return phase
 
 
-# This player's story is over (voice ended, click or key): tell the host (spec 23).
+# The story is over on this device (voice ended, click or key): on to the title (spec 25).
 func _on_intro_finished() -> void:
-	net.send_action("intro_done", {})
+	story_done = true
 	_update_screen()
 
 
@@ -90,11 +91,11 @@ func _on_title_start_pressed() -> void:
 
 func _update_screen() -> void:
 	_update_clock()
-	_update_intro_wait()
 	_update_house_music()
 	_update_inventory()
 	if not net.game.is_empty():
 		title_done = true
+		story_done = true
 	var wanted := current_screen()
 	_set_menu_music(wanted == "title")
 	if wanted == screen_name:
@@ -330,29 +331,3 @@ func _update_house_music() -> void:
 		house_music.play()
 	else:
 		house_music.stop()
-
-
-# Spec 23: after my story, until the others are done.
-func _build_intro_wait() -> void:
-	intro_wait_label = Label.new()
-	intro_wait_label.name = "IntroWaitLabel"
-	intro_wait_label.text = "Waiting for the others to finish the story..."
-	intro_wait_label.set_anchors_preset(Control.PRESET_CENTER)  # in the middle (manual test)
-	intro_wait_label.offset_left = -300
-	intro_wait_label.offset_right = 300
-	intro_wait_label.offset_top = -20
-	intro_wait_label.offset_bottom = 20
-	intro_wait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	intro_wait_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	intro_wait_label.add_theme_font_size_override("font_size", 22)
-	intro_wait_label.add_theme_color_override("font_color", Color("ffd76a"))
-	intro_wait_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	intro_wait_label.add_theme_constant_override("outline_size", 6)
-	intro_wait_label.visible = false
-	get_node("ClockLayer").add_child(intro_wait_label)
-
-
-func _update_intro_wait() -> void:
-	var in_story: bool = not net.game.is_empty() and net.game.get("phase") == "intro"
-	intro_wait_label.visible = in_story and net.my_index in net.game.get("intro_done", [])
-
