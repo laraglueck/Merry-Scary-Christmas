@@ -103,7 +103,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
-| sfx_fuse_click.mp3 | sounds | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
+| sfx_fuse_click.mp3 | sounds | made with ffmpeg from noise and an 85 Hz tone (command in specs/22-sound-pack.md) | Mathies | own work | No | two metal clicks and a low thud, 0.44 s |
 | sfx_spark.mp3 | sounds | Pixabay, original file `faespencer-high-voltage-spark-486895.mp3` | faespencer | Pixabay Content License | No |  |
 | sfx_creak.mp3 | sounds | Pixabay, original file `dragon-studio-floorboard-creak-03-499651.mp3` | DRAGON-STUDIO | Pixabay Content License | No |  |
 | sfx_snore.mp3 | sounds | Pixabay, original file `audiopapkin-male-snoring-297875.mp3` | audiopapkin | Pixabay Content License | No |  |

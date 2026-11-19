@@ -3,6 +3,7 @@
 # "Start"); the lobby before the game starts, then the character selection (spec 18), then
 # the place where the team is (hall, a room, the attic). If the host leaves, everyone is back in the lobby.
 # The music plays here, so it goes on from screen to screen until the game starts.
+# While the game runs in the house, quiet house music plays instead (spec 22).
 # The clock (spec 13) and the inventory bar (spec 14) are shown here too, on top of
 # every screen while the game runs.
 #
@@ -41,6 +42,8 @@ var screen_name := ""
 var intro_done := false  # story finished or skipped, or a game already started here
 var title_done := false  # "Start" pressed, or a game already started on this device
 var music: AudioStreamPlayer
+var house_music: AudioStreamPlayer
+var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
 var clock_label: Label
 var inventory_bar: PanelContainer
 var _item_pictures := {}  # item id -> its picture in the bar
@@ -53,6 +56,7 @@ func _ready() -> void:
 	net.name = "Network"
 	add_child(net)
 	_start_music()
+	_build_house_music()
 	_build_clock()
 	_build_inventory()
 	net.changed.connect(_update_screen)
@@ -85,6 +89,7 @@ func _on_title_start_pressed() -> void:
 
 func _update_screen() -> void:
 	_update_clock()
+	_update_house_music()
 	_update_inventory()
 	if not net.game.is_empty():
 		intro_done = true  # once a game ran here, game over leads back to the lobby
@@ -115,6 +120,7 @@ func _start_music() -> void:
 	var stream: AudioStreamMP3 = load("res://assets/sounds/music_lobby.mp3")
 	stream.loop = true
 	music.stream = stream
+	music.volume_db = Settings.MENU_MUSIC_DB  # the trailer gets loud after its quiet start (spec 22)
 	# Not in the headless test run: no sound card there, and a sound still playing at
 	# the end shows up as a leak warning.
 	music.autoplay = DisplayServer.get_name() != "headless"
@@ -285,4 +291,29 @@ func _hud_box(fill: Color, border: Color, margin: int) -> StyleBoxFlat:
 	box.set_corner_radius_all(6)
 	box.set_content_margin_all(margin)
 	return box
+
+
+# Spec 22: quiet music in the house, under the rooms' own sounds.
+func _build_house_music() -> void:
+	house_music = AudioStreamPlayer.new()
+	house_music.name = "HouseMusic"
+	var stream: AudioStreamMP3 = load("res://assets/sounds/music_house.mp3")
+	stream.loop = true
+	house_music.stream = stream
+	house_music.volume_db = Settings.HOUSE_MUSIC_DB
+	add_child(house_music)
+
+
+# On while the game runs in the house (every room), off before it and at the end.
+func _update_house_music() -> void:
+	var in_house: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
+	if in_house == house_music_on:
+		return
+	house_music_on = in_house
+	if DisplayServer.get_name() == "headless":
+		return  # the test run has no sound card
+	if in_house:
+		house_music.play()
+	else:
+		house_music.stop()
 

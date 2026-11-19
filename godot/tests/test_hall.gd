@@ -802,3 +802,46 @@ func test_the_doll_on_the_stairs_turns_her_head_once() -> void:
 	again.find_child("StairsButton", true, false).gui_input.emit(click)
 	assert_eq(texture_file(again, "Doll"), "prop_doll.png", "only once")
 
+
+# ---------- sound pack (spec 22) ----------
+
+func test_right_order_clicks_the_fuse_in() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	assert_eq(hall.sounds_played.count("sfx_fuse_click.mp3"), 1, "one click: %s" % [hall.sounds_played])
+	assert_eq(hall.sounds_played.has("sfx_spark.mp3"), false, "no sparks")
+
+
+func test_wrong_order_does_not_click() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_WRONG)
+	assert_eq(hall.sounds_played.has("sfx_fuse_click.mp3"), false, "no click for a wrong order")
+
+
+func test_online_everyone_hears_the_fuse_click() -> void:
+	var room: Array = await make_started_room(47641)
+	var hall_a := open_online_hall(room[1])
+	var hall_b := open_online_hall(room[2])
+	room[1].send_action("try_fuse", {"wires": room[1].game["puzzle"]["fuses"][1]["order"].duplicate()})
+	var both_hear := func(): return hall_a.sounds_played.has("sfx_fuse_click.mp3") and hall_b.sounds_played.has("sfx_fuse_click.mp3")
+	assert_true(await wait_until(both_hear), "Player 2 and Player 3 hear the click")
+
+
+func test_coming_back_to_the_hall_replays_no_click() -> void:
+	var room: Array = await make_started_room(47642)
+	room[0].send_action("try_fuse", {"wires": room[0].game["puzzle"]["fuses"][0]["order"].duplicate()})
+	await wait_until(func(): return room[1].game["puzzle"]["fuses"][0]["solved"])
+	var hall := open_online_hall(room[1])
+	var played_before: int = room[1].game.get("seconds_played", 0)
+	room[0].advance_clock(1.0)  # the next change of the game (here: one second of the clock)
+	await wait_until(func(): return room[1].game.get("seconds_played", 0) > played_before)
+	assert_eq(hall.sounds_played.has("sfx_fuse_click.mp3"), false, "an old fuse does not click again")
+
+
+func test_the_fuse_click_is_a_short_real_click() -> void:
+	var click: AudioStreamMP3 = load("res://assets/sounds/sfx_fuse_click.mp3")
+	var length := click.get_length() if click != null else 0.0
+	assert_true(length > 0.1 and length < 0.5, "a short click, not the 0.52 s silent placeholder: %.2f s" % length)
+

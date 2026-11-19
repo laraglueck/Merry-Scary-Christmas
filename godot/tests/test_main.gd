@@ -308,3 +308,26 @@ func test_back_to_the_lobby_button_is_red() -> void:
 			var colour: Color = style.bg_color
 			assert_true(colour.r > 0.6 and colour.g < 0.35 and colour.b < 0.35 and colour.a > 0.9, "red: %s" % colour)
 
+
+# ---------- sound pack (spec 22) ----------
+
+func test_menu_music_is_quieter() -> void:
+	var main := make_main_device("Solo22")
+	var music: AudioStreamPlayer = main.get_node_or_null("Music")
+	assert_true(music != null and music.volume_db <= -8.0, "menu music turned down: %s" % (music.volume_db if music != null else "none"))
+
+
+func test_house_music_plays_quietly_while_the_game_runs() -> void:
+	var solo := make_main_device("Solo23")
+	assert_eq(solo.get("house_music_on"), false, "no house music before the game")
+	var mains: Array = await make_started_mains(47643)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	assert_true(mains.all(func(m): return m.get("house_music_on") == true), "house music on all three")
+	var house: AudioStreamPlayer = mains[1].get_node_or_null("HouseMusic")
+	assert_true(house != null and house.stream != null and house.stream.resource_path.ends_with("music_house.mp3"), "music_house.mp3")
+	assert_true(house != null and house.stream.loop, "it loops")
+	assert_true(house != null and house.volume_db <= -14.0, "quiet")
+	mains[0].net.advance_clock(600.0)
+	await wait_until(screens_are(mains, "midnight"))
+	assert_true(mains.all(func(m): return m.get("house_music_on") == false), "stops at the end")
+

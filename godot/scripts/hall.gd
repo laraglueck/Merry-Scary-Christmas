@@ -104,9 +104,11 @@ var _label_fuse: TextureRect       # a small fuse in that colour
 var _fuse_hint: RichTextLabel      # hints that grow clearer after wrong tries
 var _wrong_tries := 0              # this player's wrong orders for their own fuse
 var _seen_penalty := 0             # online: to notice a wrong order by anyone (sparks)
+var _seen_solved := 0              # online: to notice a fuse going on, whoever did it (click, spec 22)
 var _doll: TextureRect
 var _spark: AudioStreamPlayer
 var _creak: AudioStreamPlayer
+var _click: AudioStreamPlayer      # a fuse snaps in (spec 22)
 # The doll turns her head once per player and game run (the hall is made new on every visit).
 static var _doll_seen := false
 var _message: Label
@@ -117,6 +119,7 @@ func _ready() -> void:
 		current_player = net.my_index
 		_take_game()
 		_seen_penalty = net.game.get("penalty_seconds", 0)
+		_seen_solved = _solved_count()  # fuses already on when we come back: no click
 		net.game_changed.connect(_on_game_changed)
 	else:
 		var rng := RandomNumberGenerator.new()
@@ -149,6 +152,7 @@ func _on_game_changed() -> void:
 	_take_game()
 	_message.text = net.game["last_event"]
 	_notice_wrong_order(net.game)
+	_notice_fuse_on()
 	_refresh()
 
 
@@ -233,6 +237,7 @@ func _submit_attempt() -> void:
 		_message.text = result["error"]
 	elif result["correct"]:
 		_message.text = "The %s fuse is on! The %s is lit." % [fuse["colour"], fuse["room"]]
+		_play(_click, "sfx_fuse_click.mp3")
 	else:
 		penalty_total += result["penalty_seconds"]
 		_message.text = "Sparks! -%d s" % result["penalty_seconds"]
@@ -373,6 +378,22 @@ func _doll_turns_back() -> void:
 # For tests: the next click on the dark stairs makes her turn again.
 func forget_doll() -> void:
 	_doll_seen = false
+
+
+# Online (spec 22): a fuse went on, whoever solved it: its click on every device.
+func _notice_fuse_on() -> void:
+	var solved := _solved_count()
+	if solved > _seen_solved:
+		_play(_click, "sfx_fuse_click.mp3")
+	_seen_solved = solved
+
+
+func _solved_count() -> int:
+	var count := 0
+	for fuse in puzzle["fuses"]:
+		if fuse["solved"]:
+			count += 1
+	return count
 
 
 func _play(player: AudioStreamPlayer, file_name: String) -> void:
@@ -638,6 +659,10 @@ func _build_ui() -> void:
 	_creak.name = "CreakSound"
 	_creak.stream = load(SOUNDS + "sfx_creak.mp3")
 	add_child(_creak)
+	_click = AudioStreamPlayer.new()
+	_click.name = "FuseClickSound"
+	_click.stream = load(SOUNDS + "sfx_fuse_click.mp3")
+	add_child(_click)
 
 
 # Fuse box close-up: the box picture, cables to click, fuses in their sockets, and a
