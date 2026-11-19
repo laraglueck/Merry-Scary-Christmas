@@ -139,17 +139,16 @@ func test_everyone_walks_into_the_living_room_and_back() -> void:
 	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
 
 
-# Until Mika's bedroom is merged, it is the room still shown as a placeholder.
-func test_unbuilt_room_shows_a_placeholder_with_a_way_back() -> void:
+func test_everyone_walks_into_the_bedroom_and_back() -> void:
 	var mains: Array = await make_started_mains(47563)
 	await wait_until(screens_are(mains, "hall"))
 	light_fuse(mains[2].net, 2)
 	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"][2]["solved"])
 	mains[0].net.send_action("go_to", {"place": "bedroom"})
 	assert_true(await wait_until(screens_are(mains, "bedroom")), "all three in the bedroom")
+	assert_eq(mains[1].screen.scene_file_path, "res://scenes/bedroom.tscn", "Mika's bedroom screen")
 	await wait_frames(2)
-	assert_contains(text_of(mains[1], "PlaceTitle"), "bedroom", "placeholder title")
-	press(mains[1], "BackButton")
+	mains[1].screen.back_button.pressed.emit()
 	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
 
 
