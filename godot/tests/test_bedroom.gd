@@ -80,3 +80,38 @@ func test_standalone_bedroom_calendar_chest_and_shared_items() -> void:
 	GameRules.apply(game, 0, "take_photo", {})
 	GameRules.apply(game, 0, "take_gift", {"room": "bedroom"})
 	assert_eq(game["inventory"], ["gift_3", "photo_piece_3"], "items are awarded once")
+
+
+# Spec 24: the door, not a button, like in the bathroom.
+func test_the_bedroom_door_is_the_way_back() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var bedroom = BedroomScene.instantiate()
+	bedroom.seed_value = 42
+	tree.root.add_child(bedroom)
+	await wait_frames(2)
+	var buttons: Array = bedroom.find_children("*", "Button", true, false)
+	assert_true(buttons.all(func(b): return not ("Back to the" in b.text)), "no Back to the hall button")
+	var door: Button = bedroom.find_child("DoorHall", true, false)
+	assert_true(door != null, "the door is a click area")
+	if door != null:
+		assert_true(Rect2(20, 60, 300, 470).encloses(door.get_global_rect()), "on the open door: %s" % door.get_global_rect())
+		assert_eq(door.mouse_default_cursor_shape, Control.CURSOR_POINTING_HAND, "the hand on hover")
+		assert_contains(door.tooltip_text, "hall", "the hint")
+		assert_true(door.get_theme_stylebox("normal") is StyleBoxEmpty, "invisible until the mouse is over it")
+		door.pressed.emit()
+		assert_eq(bedroom.offline_game["location"], "hall", "the team walks back to the hall")
+
+
+# Spec 24, after the manual test: the frames are gold, as in the other rooms.
+func test_bedroom_frames_are_gold() -> void:
+	var bedroom = BedroomScene.instantiate()
+	bedroom.seed_value = 42
+	tree.root.add_child(bedroom)
+	for node_name in ["CalendarHotspot", "ChestHotspot", "DoorHall"]:
+		var button: Button = bedroom.find_child(node_name, true, false)
+		assert_true(button != null, node_name + " exists")
+		if button != null:
+			var hover = button.get_theme_stylebox("hover")
+			var gold: bool = hover is StyleBoxFlat and hover.border_color.is_equal_approx(Color("ffd76a"))
+			assert_true(gold, node_name + ": gold frame on hover")
+
