@@ -115,6 +115,8 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | sfx_win.mp3 | sounds | Pixabay, original file `emand_edroff-victory-bell-success-fanfare-576275.mp3` | emand_edroff | Pixabay Content License | No |  |
 | sfx_lose.mp3 | sounds | Pixabay, original file `emand_edroff-comedic-trombone-disappointment-576276.mp3` | emand_edroff | Pixabay Content License | No |  |
 | sfx_faucet.mp3 | sounds | Pixabay, original file `alex_jauk-squeaky-old-faucet-197041.mp3` | alex_jauk | Pixabay Content License | No |  |
+| sfx_drain.mp3 | sounds | original file `vsx-bathtub-water-draining.mp3`, website to confirm | to confirm | to confirm | to confirm | the tub drains when the taps are solved |
+| sfx_steam.mp3 | sounds | original file `vsx-steam-hissing.mp3`, website to confirm | to confirm | to confirm | to confirm | the steam rises over the mirror |
 | sfx_clock_tick.mp3 | sounds | Pixabay, original file `dragon-studio-slow-cinematic-clock-ticking-357979.mp3` | DRAGON-STUDIO | Pixabay Content License | No |  |
 | sfx_clock_wrong.mp3 | sounds | Pixabay, original file `freesound_community-metal-scraping-47621.mp3` | freesound_community | Pixabay Content License | No |  |
 | sfx_clock_chime.mp3 | sounds | Pixabay, original file `freesound_community-clock-chime-88027.mp3` | freesound_community | Pixabay Content License | No |  |
