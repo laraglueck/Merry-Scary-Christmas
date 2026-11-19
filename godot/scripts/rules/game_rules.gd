@@ -8,6 +8,7 @@ extends RefCounted
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
+const Settings = preload("res://scripts/settings.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
@@ -36,11 +37,29 @@ static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary
 	}
 
 
+# The story before the hall (spec 23): everyone sees it; the hall (and the clock) starts
+# when all players have finished or skipped it.
+static func begin_intro(game: Dictionary) -> void:
+	game["phase"] = "intro"
+	game["intro_done"] = []
+
+
+static func _finish_intro(game: Dictionary, player: int) -> void:
+	if player not in game["intro_done"]:
+		game["intro_done"].append(player)
+	if game["intro_done"].size() >= Settings.MAX_PLAYERS:
+		game["phase"] = "hall"
+
+
 # Host only: one player's action changes the game. Unknown actions change nothing.
 # After midnight (or another end) nothing changes any more (spec 13).
 static func apply(game: Dictionary, player: int, action: String, data: Dictionary) -> void:
 	if game.get("phase") == "select":  # before the game: the characters are chosen (spec 18)
 		CharacterRules.apply(game, player, action, data)
+		return
+	if game.get("phase") == "intro":  # the story (spec 23): only "I have finished it"
+		if action == "intro_done":
+			_finish_intro(game, player)
 		return
 	if game.get("phase") != "hall":
 		return

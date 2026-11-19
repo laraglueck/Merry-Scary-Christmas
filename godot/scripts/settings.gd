@@ -27,6 +27,7 @@ const ATTIC_PENALTY_SECONDS := 20
 # Music volumes (spec 22), in decibels: 0 = as loud as the file, -6 = about half as loud.
 const MENU_MUSIC_DB := -10.0    # music_lobby.mp3: intro, title, lobby
 const HOUSE_MUSIC_DB := -18.0   # music_house.mp3: quietly under the rooms while the game runs
+const STORY_LEAD_IN_SECONDS := 2.0  # the story fades in from black before the voice starts (spec 23)
 
 # The clock (spec 13)
 const GAME_SECONDS := 600            # 10 minutes until midnight
