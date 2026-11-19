@@ -83,6 +83,13 @@ const FAR_SCALE := 0.7             # a figure at the far edge is drawn this big 
 # Tests use another file: the environment variable MERRY_SCARY_SAVE (see run_tests.gd).
 const SAVE_PATH := "user://saved_game.save"
 
+# The real weather (spec 26): the elf's house is in Greenland. Open-Meteo, free, no key.
+const WEATHER_PLACE := "Nuuk, Greenland"
+const WEATHER_LATITUDE := 64.18
+const WEATHER_LONGITUDE := -51.69
+const WEATHER_TIMEOUT_SECONDS := 4.0
+const WINDOW_WIPE_SECONDS := 3.5  # the frost is wiped off the window this slowly, then the weather shows
+
 # Network
 const NETWORK_PORT := 47411
 const MAX_PLAYERS := 3

@@ -8,6 +8,7 @@ const RED_FUSE := 0
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const RoomStage = preload("res://scripts/room_stage.gd")
+const WindowView = preload("res://scripts/window_view.gd")
 
 @export var seed_value := -1
 @export var red_fuse_on := true
@@ -50,6 +51,7 @@ func _ready() -> void:
 	_build_reward()
 	_build_note_ui()
 	_build_door()
+	_build_window()
 	_refresh()
 	RoomStage.put_on_stage(self)  # click areas stay on their objects when the window changes (spec 21)
 
@@ -390,6 +392,25 @@ func _build_door() -> void:
 	_frame_on_hover(door)
 	door.pressed.connect(func() -> void: _send("go_to", {"place": "hall"}))
 	add_child(door)
+
+
+# Spec 26: the window shows the outside, with the real weather in Nuuk (window_view.gd).
+func _build_window() -> void:
+	var window := Button.new()
+	window.name = "WindowButton"
+	window.position = Vector2(44, 18)
+	window.size = Vector2(160, 345)
+	window.tooltip_text = "Look out of the window"
+	window.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_frame_on_hover(window)
+	window.pressed.connect(_open_window_view)
+	add_child(window)
+
+
+func _open_window_view() -> void:
+	var stage := get_node_or_null("Stage")  # the room's stage (spec 21), so the view scales with it
+	var view := WindowView.new()
+	(stage if stage != null else self).add_child(view)
 
 
 # Spec 24: like in the other rooms, an object is invisible until the mouse is over it,
