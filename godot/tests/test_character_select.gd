@@ -92,7 +92,7 @@ func test_next_button_fits_on_the_screen() -> void:
 		assert_true(screen.get_viewport().get_visible_rect().encloses(next.get_global_rect()), "Next fits: %s" % next.get_global_rect())
 
 
-func test_taken_figure_and_colour_are_blocked_for_the_next_player() -> void:
+func test_taken_figure_is_blocked_but_colours_are_shared() -> void:
 	var screen := open_select()
 	press(screen, "ColourNext")  # Player 1: red santa -> green santa
 	press(screen, "Player2Button")
@@ -101,8 +101,20 @@ func test_taken_figure_and_colour_are_blocked_for_the_next_player() -> void:
 	assert_eq(is_disabled(screen, "Card_santa"), true, "santa is taken")
 	assert_eq(is_disabled(screen, "Card_snowman"), false, "own figure stays free")
 	assert_contains(text_of(screen, "Owner_santa"), "Player 1", "says who has it")
-	press(screen, "ColourNext")  # red -> green is taken -> yellow
-	assert_eq(screen.selection()[1]["colour"], "yellow", "green is skipped")
+	press(screen, "ColourNext")  # red -> green, even though Player 1 is green
+	assert_eq(screen.selection()[1]["colour"], "green", "green twice is fine")
+	assert_contains(text_of(screen, "ColourLabel"), "Green", "shows the colour")
+
+
+# With all three players on screen, the colour arrows still change the colour.
+func test_colour_arrows_work_with_three_players() -> void:
+	var screen := open_select()
+	press(screen, "Player2Button")
+	press(screen, "Player3Button")
+	assert_eq(screen.selection().size(), 3, "all three have a figure")
+	var before: String = screen.selection()[2]["colour"]
+	press(screen, "ColourNext")
+	assert_true(screen.selection()[2]["colour"] != before, "the colour changed: %s" % screen.selection()[2]["colour"])
 
 
 func test_waits_for_the_others_after_next() -> void:

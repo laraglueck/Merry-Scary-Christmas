@@ -14,7 +14,8 @@ Showing the figures in the house (spec 19) and walking around with them (spec 20
   `selection` maps the player index to `{"character", "colour", "accessory", "ready"}`.
 - `scripts/rules/character_rules.gd` (pure functions, like `inventory_rules.gd`):
   - `pick(selection, player, character, colour) -> String`: sets the player's choice and
-    resets "ready". Each character and each colour can only be taken by one player; a refused
+    resets "ready". Each character can only be taken by one player (a colour may be shared, see
+    "Change after manual test" below); a refused
     pick changes nothing and returns the reason.
   - `set_ready(selection, player) -> String`: needs a pick first.
   - `all_ready(selection) -> bool`: all `Settings.MAX_PLAYERS` players are ready.
@@ -40,7 +41,8 @@ Showing the figures in the house (spec 19) and walking around with them (spec 20
   - two pairs of arrows beside the figure: at head height `AccessoryPrev`/`AccessoryNext`
     (`AccessoryLabel`; a placeholder: only "None (coming soon)" until the pictures exist,
     `Settings.ACCESSORIES`), at hip height `ColourPrev`/`ColourNext` (`ColourLabel`, scarf; the
-    nutcracker has a jacket); colours taken by others are skipped;
+    nutcracker has a jacket); the colour arrows go through all colours, shared ones too;
+    the labels sit under the figure;
   - everybody starts with the first free figure and colour; clicking a card changes the figure
     and keeps colour and accessory;
   - `NextButton` ("Next") confirms; then `WaitLabel` ("Waiting for the others ...") and no more
@@ -58,5 +60,14 @@ characters, choosing again after the game started.
 - The new tests `tests/test_character_rules.gd`, `tests/test_character_select.gd` and the new
   ones in `test_network.gd`, `test_game_rules.gd`, `test_main.gd`, `test_lobby.gd` were red first
   and are green; all older tests stay green.
-- Manual: three windows, "Start game" -> everyone sees the selection; a figure or colour taken by
+- Manual: three windows, "Start game" -> everyone sees the selection; a figure taken by
   another player is blocked; when all are ready the game starts at 10:00.
+
+## Change after manual test (19.11., Leon)
+- With three players and three colours every colour was always taken, so the colour arrows
+  did nothing. Now two players may share a colour; the figures already tell them apart.
+  `pick` no longer refuses a taken colour, `next_colour` goes round all colours without
+  skipping. Everybody still starts with the first free colour, so the start looks different.
+- `AccessoryLabel` and `ColourLabel` now exist, under the big figure ("Accessory: ...",
+  "Colour: ..."), so a player sees what the arrows chose.
+- The accessory arrows still only have "None (coming soon)" until the pictures exist.
