@@ -19,6 +19,7 @@ const SCREENS := {
 	"hall": preload("res://scenes/hall.tscn"),
 	"living_room": preload("res://scenes/living_room.tscn"),  # Lara
 	"bathroom": preload("res://scenes/bathroom.tscn"),
+	"bedroom": preload("res://scenes/bedroom.tscn"),
 	"attic": preload("res://scenes/attic.tscn"),       # spec 16
 	"merry": preload("res://scenes/ending.tscn"),      # the three ways a game ends (spec 16)
 	"scary": preload("res://scenes/ending.tscn"),

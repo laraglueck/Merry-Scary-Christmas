@@ -1,0 +1,41 @@
+[gd_scene format=3 uid="uid://458pwoheqlqd"]
+
+[ext_resource type="Script" uid="uid://dejf8l8o45fnu" path="res://scripts/bedroom.gd" id="1_2f21x"]
+
+[node name="Bedroom" type="Control" unique_id=1251790280]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_2f21x")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1751211713]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 50.0
+offset_right = 450.0
+offset_bottom = 400.0
+theme_override_constants/separation = 12
+
+[node name="ToyChestButton" type="Button" parent="VBoxContainer" unique_id=723613054]
+layout_mode = 2
+text = "Open Toy Chest"
+
+[node name="CalendarButton" type="Button" parent="VBoxContainer" unique_id=1912054362]
+layout_mode = 2
+text = "Examine Advent Calendar"
+
+[node name="GiftButton" type="Button" parent="VBoxContainer" unique_id=393302497]
+layout_mode = 2
+text = "Take Gift"
+
+[node name="PhotoButton" type="Button" parent="VBoxContainer" unique_id=1210005577]
+layout_mode = 2
+text = "Take Photograph"
+
+[node name="Wheel1" type="OptionButton" parent="VBoxContainer" unique_id=1835649493]
+layout_mode = 2
+
+[node name="Wheel2" type="OptionButton" parent="VBoxContainer" unique_id=1040989024]
+layout_mode = 2
+
+[node name="Wheel3" type="OptionButton" parent="VBoxContainer" unique_id=850531173]
+layout_mode = 2
