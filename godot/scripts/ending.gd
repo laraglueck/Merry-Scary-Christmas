@@ -21,7 +21,7 @@ const ENDINGS := {
 var net: Node = null          # set by main.gd
 const SOUNDS := "res://assets/sounds/"
 
-# Sounds this screen played (or would have played in the headless test run), spec 19.
+# Sounds this screen played (or would have played in the headless test run), spec 20.
 var sounds_played: Array[String] = []
 
 

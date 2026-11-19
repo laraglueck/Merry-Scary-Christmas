@@ -162,7 +162,7 @@ func test_online_the_code_goes_to_the_host() -> void:
 	assert_eq(net.sent, [["try_attic_code", {"dials": [1, 1, 2]}]], "sent to the host")
 
 
-# ---------- effects (spec 19) ----------
+# ---------- effects (spec 20) ----------
 
 func test_he_snores() -> void:
 	var attic := open_attic()

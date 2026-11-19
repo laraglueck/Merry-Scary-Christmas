@@ -250,7 +250,7 @@ func test_online_turns_and_present_go_to_the_host() -> void:
 	assert_eq(net.game["bathroom"]["solved"], false, "only the host changes the game")
 
 
-# ---------- effects (spec 19) ----------
+# ---------- effects (spec 20) ----------
 
 func test_a_turn_plays_the_tap() -> void:
 	var bathroom := open_bathroom()

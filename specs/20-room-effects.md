@@ -1,4 +1,4 @@
-# Spec 19: Effects in the bathroom, the attic and the endings
+# Spec 20: Effects in the bathroom, the attic and the endings
 
 Owner: Gloria (her own screens: bathroom, attic, end screen)
 
