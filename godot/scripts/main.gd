@@ -46,6 +46,9 @@ var menu_music_on := false   # spec 23: true while the menu music plays, only on
 var house_music: AudioStreamPlayer
 var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
 var clock_label: Label
+var pause_button: Button   # spec 26: next to the clock while the game runs
+var pause_overlay: Control # spec 26: over every screen while the game is paused
+var pause_label: Label
 var inventory_bar: PanelContainer
 var _item_pictures := {}  # item id -> its picture in the bar
 var _item_names := {}     # item id -> its name under the picture
@@ -60,6 +63,7 @@ func _ready() -> void:
 	_build_house_music()
 	_build_clock()
 	_build_inventory()
+	_build_pause()
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
@@ -93,6 +97,7 @@ func _update_screen() -> void:
 	_update_clock()
 	_update_house_music()
 	_update_inventory()
+	_update_pause()
 	if not net.game.is_empty():
 		title_done = true
 		story_done = true
@@ -331,3 +336,67 @@ func _update_house_music() -> void:
 		house_music.play()
 	else:
 		house_music.stop()
+
+
+# ---------- pause (spec 26) ----------
+
+# "Pause" right of the clock; while paused a dark layer over everything with "Continue".
+func _build_pause() -> void:
+	pause_button = Button.new()
+	pause_button.name = "PauseButton"
+	pause_button.text = "Pause"
+	pause_button.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	pause_button.offset_left = 170
+	pause_button.offset_right = 270
+	pause_button.offset_top = 12
+	pause_button.offset_bottom = 52
+	pause_button.add_theme_font_size_override("font_size", 20)
+	pause_button.pressed.connect(func(): net.send_action("pause", {}))
+	pause_button.visible = false
+	get_node("ClockLayer").add_child(pause_button)
+
+	var layer := CanvasLayer.new()  # above the clock, the inventory and the photo puzzle
+	layer.name = "PauseLayer"
+	layer.layer = 10
+	add_child(layer)
+	pause_overlay = ColorRect.new()
+	pause_overlay.name = "PauseOverlay"
+	pause_overlay.color = Color(0, 0, 0, 0.7)
+	pause_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pause_overlay.mouse_filter = Control.MOUSE_FILTER_STOP  # no clicks on the game below
+	pause_overlay.visible = false
+	layer.add_child(pause_overlay)
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_CENTER)
+	box.offset_left = -220
+	box.offset_right = 220
+	box.offset_top = -80
+	box.offset_bottom = 80
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 24)
+	pause_overlay.add_child(box)
+	pause_label = Label.new()
+	pause_label.name = "PauseLabel"
+	pause_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pause_label.add_theme_font_size_override("font_size", 36)
+	pause_label.add_theme_color_override("font_color", CLOCK_COLOUR)
+	pause_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	pause_label.add_theme_constant_override("outline_size", 6)
+	box.add_child(pause_label)
+	var go_on := Button.new()
+	go_on.name = "ContinueButton"
+	go_on.text = "Continue"
+	go_on.custom_minimum_size = Vector2(240, 58)
+	go_on.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	go_on.add_theme_font_size_override("font_size", 28)
+	go_on.pressed.connect(func(): net.send_action("resume", {}))
+	box.add_child(go_on)
+
+
+func _update_pause() -> void:
+	var running: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
+	var paused: bool = running and net.game.get("paused", false)
+	pause_button.visible = running and not paused
+	pause_overlay.visible = paused
+	if paused:
+		pause_label.text = "Paused by Player %d" % (int(net.game.get("paused_by", 0)) + 1)

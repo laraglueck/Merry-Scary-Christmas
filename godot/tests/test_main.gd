@@ -407,3 +407,34 @@ func test_the_story_fades_in_before_the_voice() -> void:
 	assert_eq(intro.get("voice_started"), true, "now the voice starts")
 	assert_eq(text_of(intro, "SubtitleLabel"), "Once I was Santa's most loyal helper.", "the first line")
 
+
+# ---------- pause (spec 26) ----------
+
+func test_anyone_pauses_for_everyone_and_anyone_continues() -> void:
+	var mains: Array = await make_started_mains(47660)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	await wait_frames(2)
+	var pause: Node = mains[1].find_child("PauseButton", true, false)
+	assert_true(pause != null and pause.is_visible_in_tree(), "Pause button while the game runs")
+	press(mains[1], "PauseButton")  # Player 2 pauses
+	var all_paused := func(): return mains.all(func(m):
+		var overlay: Node = m.find_child("PauseOverlay", true, false)
+		return overlay != null and overlay.is_visible_in_tree())
+	assert_true(await wait_until(all_paused), "all three see the pause")
+	assert_contains(text_of(mains[0], "PauseLabel"), "Paused by Player 2", "says who")
+	var played: int = mains[0].net.game["seconds_played"]
+	mains[0].net.advance_clock(30.0)
+	assert_eq(mains[0].net.game["seconds_played"], played, "the clock stands still")
+	press(mains[2], "ContinueButton")  # Player 3 continues
+	var all_running := func(): return mains.all(func(m):
+		var overlay: Node = m.find_child("PauseOverlay", true, false)
+		return overlay != null and not overlay.visible)
+	assert_true(await wait_until(all_running), "the game runs again for all three")
+	mains[0].net.advance_clock(2.0)
+	assert_eq(mains[0].net.game["seconds_played"], played + 2, "the clock runs again")
+
+
+func test_no_pause_button_before_the_game() -> void:
+	var main := make_main_device("NoPause")
+	var pause: Node = main.find_child("PauseButton", true, false)
+	assert_true(pause == null or not pause.is_visible_in_tree(), "no Pause on the story or the title")

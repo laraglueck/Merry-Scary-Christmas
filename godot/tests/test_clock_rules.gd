@@ -92,3 +92,13 @@ func test_clock_text() -> void:
 	assert_eq(ClockRules.as_text(61), "01:01", "one minute one second")
 	assert_eq(ClockRules.as_text(59), "00:59", "last minute")
 	assert_eq(ClockRules.as_text(0), "00:00", "midnight")
+
+
+# Spec 26: no time runs out while the game is paused.
+func test_the_clock_waits_while_paused() -> void:
+	var game := {"phase": "hall", "seconds_played": 10, "penalty_seconds": 0, "paused": true}
+	assert_true(ClockRules.tick(game, 5) != "", "refused")
+	assert_eq(game["seconds_played"], 10, "no time lost")
+	game["paused"] = false
+	assert_eq(ClockRules.tick(game, 5), "", "runs again")
+	assert_eq(game["seconds_played"], 15, "five seconds on")
