@@ -1,7 +1,7 @@
 # The loading screen (spec 12): a dark night with falling snow, the story read out
 # (voice_title.mp3) and shown as subtitles, one line after the other. When the voice
-# ends, or on a click or key, it sends `finished`; main.gd tells the host this player is done
-# (spec 23: the story now comes after the character selection, right before the hall).
+# ends, or on a click or key, it sends `finished`; main.gd then shows the title
+# (spec 25: the story comes first on each device, before the title).
 # Spec 23: no music under the story any more (main.gd plays it on the title only).
 extends Control
 

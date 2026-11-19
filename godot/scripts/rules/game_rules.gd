@@ -37,29 +37,11 @@ static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary
 	}
 
 
-# The story before the hall (spec 23): everyone sees it; the hall (and the clock) starts
-# when all players have finished or skipped it.
-static func begin_intro(game: Dictionary) -> void:
-	game["phase"] = "intro"
-	game["intro_done"] = []
-
-
-static func _finish_intro(game: Dictionary, player: int) -> void:
-	if player not in game["intro_done"]:
-		game["intro_done"].append(player)
-	if game["intro_done"].size() >= Settings.MAX_PLAYERS:
-		game["phase"] = "hall"
-
-
 # Host only: one player's action changes the game. Unknown actions change nothing.
 # After midnight (or another end) nothing changes any more (spec 13).
 static func apply(game: Dictionary, player: int, action: String, data: Dictionary) -> void:
 	if game.get("phase") == "select":  # before the game: the characters are chosen (spec 18)
 		CharacterRules.apply(game, player, action, data)
-		return
-	if game.get("phase") == "intro":  # the story (spec 23): only "I have finished it"
-		if action == "intro_done":
-			_finish_intro(game, player)
 		return
 	if game.get("phase") != "hall":
 		return

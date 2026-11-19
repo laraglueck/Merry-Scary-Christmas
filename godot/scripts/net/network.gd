@@ -282,7 +282,7 @@ func _save_game() -> void:
 # Only the host, and only a finished game (merry, scary, midnight): a running game stays,
 # and so does the character selection before it (spec 18).
 func can_end_game() -> bool:
-	return connected and my_index == 0 and not game.is_empty() and game.get("phase") not in ["hall", "select", "intro"]
+	return connected and my_index == 0 and not game.is_empty() and game.get("phase") not in ["hall", "select"]
 
 
 # Host: clears the finished game for everyone. All are back in the lobby; the room stays
@@ -318,10 +318,8 @@ func start_game() -> void:
 	_create_game({})
 
 
-func _create_game(characters: Dictionary, with_story := false) -> void:
+func _create_game(characters: Dictionary) -> void:
 	game = GameRules.new_game(_rng, characters)
-	if with_story:
-		GameRules.begin_intro(game)  # everyone sees the story first (spec 23)
 	TestStart.apply_if_asked(game, OS.get_cmdline_user_args())  # only when started with "-- test"
 	_clock_rest = 0.0
 	_save_game()
@@ -359,9 +357,9 @@ func _host_apply(sender: int, action: String, data: Dictionary) -> void:
 
 
 # All three are ready: the real game starts with the chosen characters, for everyone,
-# with the story first (spec 23).
+# straight in the hall (spec 25: the story came before the lobby).
 func _begin_game_from_selection() -> void:
-	_create_game(CharacterRules.final_characters(game["selection"]), true)
+	_create_game(CharacterRules.final_characters(game["selection"]))
 
 
 func _send_game() -> void:
