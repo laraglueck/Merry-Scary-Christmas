@@ -55,7 +55,7 @@ func test_shows_the_presents_found() -> void:
 
 
 func test_a_win_shows_the_time_left() -> void:
-	var ending := open_ending("merry", ["photo"], 150)  # 600 - 150 = 450 s = 07:30
+	var ending := open_ending("merry", ["photo"], Settings.GAME_SECONDS - 450)  # 450 s left = 07:30
 	assert_contains(text_of(ending, "Result"), "07:30 before midnight", "time left")
 
 

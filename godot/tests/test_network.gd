@@ -266,14 +266,14 @@ func test_only_the_host_counts_the_time_and_everyone_sees_it() -> void:
 	assert_eq(room[1].game.get("seconds_played", -1), before, "Player 2 does not count")
 	room[0].advance_clock(61.0)
 	var left: int = ClockRules.time_left(room[0].game)
-	assert_true(left >= 536 and left <= 539, "host: 61 s gone, %d s left" % left)
+	assert_true(left >= Settings.GAME_SECONDS - 64 and left <= Settings.GAME_SECONDS - 61, "host: 61 s gone, %d s left" % left)
 	var same := func(): return room.all(func(net): return ClockRules.time_left(net.game) == ClockRules.time_left(room[0].game))
 	assert_true(await wait_until(same), "everyone has the host's time")
 
 
 func test_midnight_ends_the_game_for_everyone() -> void:
 	var room: Array = await make_started_room(47572)
-	room[0].advance_clock(600.0)
+	room[0].advance_clock(float(Settings.GAME_SECONDS))
 	var all_midnight := func(): return room.all(func(net): return net.game.get("phase") == "midnight")
 	assert_true(await wait_until(all_midnight), "everyone at midnight")
 
@@ -301,7 +301,7 @@ func test_the_host_saves_the_clock() -> void:
 
 func test_midnight_deletes_the_save() -> void:
 	var room: Array = await make_started_room(47583)
-	room[0].advance_clock(600.0)
+	room[0].advance_clock(float(Settings.GAME_SECONDS))
 	assert_eq(SaveGame.exists(SaveGame.path()), false, "nothing to resume after the game")
 
 
@@ -338,7 +338,7 @@ func test_a_finished_game_ends_for_everyone_and_the_room_stays() -> void:
 	assert_eq(room[0].can_end_game(), false, "a running game cannot be ended")
 	room[0].end_game()
 	assert_eq(room[0].game.is_empty(), false, "still running")
-	room[0].advance_clock(600.0)
+	room[0].advance_clock(float(Settings.GAME_SECONDS))
 	await wait_until(func(): return room.all(func(net): return net.game.get("phase") == "midnight"))
 	assert_eq(room[1].can_end_game(), false, "only the host")
 	assert_eq(room[0].can_end_game(), true, "the host can end the finished game")

@@ -32,7 +32,7 @@ func test_a_saved_game_loads_back_unchanged() -> void:
 	var loaded := SaveGame.load_from(SaveGame.path())
 	assert_eq(loaded, game, "the same game")
 	assert_eq(typeof(loaded.get("seconds_played")), TYPE_INT, "numbers stay whole numbers")
-	assert_eq(ClockRules.time_left(loaded), 485, "the same time left")
+	assert_eq(ClockRules.time_left(loaded), ClockRules.time_left(game), "the same time left")
 
 
 func test_no_save_loads_as_empty() -> void:

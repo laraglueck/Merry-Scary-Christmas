@@ -29,7 +29,7 @@ const MENU_MUSIC_DB := -10.0    # music_lobby.mp3: intro, title, lobby
 const HOUSE_MUSIC_DB := -18.0   # music_house.mp3: quietly under the rooms while the game runs
 
 # The clock (spec 13)
-const GAME_SECONDS := 600            # 10 minutes until midnight
+const GAME_SECONDS := 1200           # 20 minutes until midnight (second test round: 10 were too short)
 const CLOCK_WARNING_SECONDS := 60    # the last minute: the clock turns red
 
 # The inventory (spec 14): everything the team can find, in the order the bar shows it.

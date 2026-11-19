@@ -115,7 +115,7 @@ func test_each_turn_shows_a_mark() -> void:
 	var bathroom := open_bathroom()
 	press(bathroom, "Spot_hot_tap")
 	press(bathroom, "Spot_cold_tap")
-	assert_eq(text_of(bathroom, "TurnsLabel"), "hot  cold", "marks")
+	assert_eq(text_of(bathroom, "TurnsLabel"), "warm  cold", "marks, in the rhyme's words")
 
 
 func test_four_right_turns_solve_the_bathroom() -> void:
@@ -229,7 +229,7 @@ func test_online_marks_show_the_turns_of_the_whole_team() -> void:
 	var bathroom = BathroomScene.instantiate()
 	bathroom.net = net
 	tree.root.add_child(bathroom)
-	assert_eq(text_of(bathroom, "TurnsLabel"), "cold  hot", "teammates' turns shown")
+	assert_eq(text_of(bathroom, "TurnsLabel"), "cold  warm", "teammates' turns shown")
 
 
 func test_online_turns_and_present_go_to_the_host() -> void:
@@ -329,7 +329,7 @@ func test_a_torn_piece_lies_in_the_drained_tub() -> void:
 
 func test_only_the_taps_have_names() -> void:
 	var bathroom := open_bathroom()
-	assert_eq(text_of(bathroom, "Spot_hot_tap"), "Hot", "hot tap")
+	assert_eq(text_of(bathroom, "Spot_hot_tap"), "Warm", "warm tap, like in the rhyme")
 	assert_eq(text_of(bathroom, "Spot_cold_tap"), "Cold", "cold tap")
 	for spot in ["door_hall", "mirror", "bathtub"]:
 		assert_eq(text_of(bathroom, "Spot_" + spot), "", "no name on " + spot)
@@ -343,3 +343,45 @@ func test_the_room_scales_as_a_whole_when_the_window_changes() -> void:
 	assert_eq(stage.position, Vector2(0, 138), "centred, with bars above and below")
 	bathroom.size = Vector2(1152, 648)
 	assert_eq(stage.scale, Vector2(1, 1), "full size again")
+
+
+# ---------- second test round (fix/room-feedback) ----------
+
+func test_the_bathtub_area_goes_once_the_tub_is_drained() -> void:
+	var bathroom := open_bathroom()
+	assert_eq(is_shown(bathroom, "Spot_bathtub"), true, "before: the full tub")
+	click_taps(bathroom, right_taps(bathroom))
+	assert_eq(is_shown(bathroom, "Spot_bathtub"), false, "after: present and piece are clicked themselves")
+
+
+func test_no_frame_until_the_arrow_keys_are_used() -> void:
+	var bathroom := open_bathroom()
+	var door: Button = find(bathroom, "Spot_door_hall")
+	assert_eq(door.get_theme_stylebox("normal").border_color.a, 0.0, "no frame at first")
+	key(bathroom, "ui_left")
+	var mirror: Button = find(bathroom, "Spot_mirror")
+	assert_eq(mirror.get_theme_stylebox("normal").border_color, bathroom.HIGHLIGHT, "the key frame shows")
+
+
+func test_the_symbols_appear_in_the_steamed_mirror_by_themselves() -> void:
+	var bathroom := open_bathroom()
+	assert_eq(is_shown(bathroom, "RoomMirrorSymbols"), false, "not before")
+	click_taps(bathroom, right_taps(bathroom))
+	assert_eq(is_shown(bathroom, "RoomMirrorSymbols"), true, "in the mirror, without clicking it")
+	var wheels: Array = bathroom.game.get("bedroom", {}).get("wheels", ["bell", "star", "tree"])
+	var first: TextureRect = find(bathroom, "RoomMirrorSymbol0")
+	assert_eq(first.texture.resource_path.get_file(), "sym_%s.png" % wheels[2], "reversed, like in a mirror")
+	assert_eq(first.flip_h, true, "and flipped")
+
+
+func test_the_face_in_the_mirror_stays_longer() -> void:
+	var bathroom := open_bathroom()
+	assert_true(bathroom.FACE_SECONDS >= 1.5, "long enough to be scary")
+
+
+func test_the_turns_do_not_say_how_many_are_needed() -> void:
+	var bathroom := open_bathroom()
+	assert_eq(text_of(bathroom, "TurnsLabel"), "", "nothing before the first turn")
+	press(bathroom, "Spot_hot_tap")
+	assert_true(not text_of(bathroom, "TurnsLabel").contains("4"), "how many stays a secret")
+	assert_contains(text_of(bathroom, "Message"), "warm tap", "the message says warm too")
