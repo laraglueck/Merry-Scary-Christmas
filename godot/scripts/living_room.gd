@@ -6,6 +6,8 @@ const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const IMAGES := "res://assets/images/"
 const RED_FUSE := 0
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
+const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
+const RoomStage = preload("res://scripts/room_stage.gd")
 
 @export var seed_value := -1
 @export var red_fuse_on := true
@@ -21,6 +23,7 @@ var _hour_position := 3
 var _minute_position := 12
 var _message: Label
 var _gift_button: TextureButton
+var _piece_button: TextureButton  # a torn piece of the photo in the open clock (spec 21)
 var _digit_label: Label
 var _note_panel: Panel
 var _note_text: Label
@@ -48,6 +51,7 @@ func _ready() -> void:
 	_build_note_ui()
 	_build_back_button()
 	_refresh()
+	RoomStage.put_on_stage(self)  # click areas stay on their objects when the window changes (spec 21)
 
 
 func _offline_game() -> Dictionary:
@@ -85,6 +89,8 @@ func _refresh() -> void:
 	var solved: bool = room["solved"]
 
 	_gift_button.visible = solved and not room["gift_taken"]
+	_piece_button.visible = solved and not InventoryRules.has(game, "photo_piece_1") \
+			and not InventoryRules.has(game, "photo")
 	_digit_label.visible = solved
 	_digit_label.text = str(room["digit"])
 
@@ -107,7 +113,9 @@ func _build_clock_ui() -> void:
 	add_child(clock_button)
 
 	var clock_label := Label.new()
-	clock_label.text = "Inspect clock"
+	clock_label.text = ""  # spec 21: no names on the objects; the name shows on hover
+	clock_button.tooltip_text = "Inspect the clock"
+	clock_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	clock_label.position = Vector2(0, 12)
 	clock_label.size = Vector2(140, 30)
 	clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -274,6 +282,20 @@ func _build_reward() -> void:
 	_gift_button.pressed.connect(_take_gift)
 	add_child(_gift_button)
 
+	# Spec 21: a torn piece of the photo, tucked into the open clock case.
+	_piece_button = TextureButton.new()
+	_piece_button.name = "PhotoPiece"
+	_piece_button.texture_normal = load(IMAGES + "item_photo_piece_1.png")
+	_piece_button.ignore_texture_size = true
+	_piece_button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	_piece_button.position = Vector2(250, 300)
+	_piece_button.size = Vector2(70, 70)
+	_piece_button.rotation_degrees = 10
+	_piece_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_piece_button.tooltip_text = "A torn piece of paper"
+	_piece_button.pressed.connect(func() -> void: _send("take_piece", {"room": "living_room"}))
+	add_child(_piece_button)
+
 	_digit_label = Label.new()
 	_digit_label.name = "DigitLabel"
 	_digit_label.position = Vector2(230, 375)
@@ -290,7 +312,9 @@ func _take_gift() -> void:
 func _build_note_ui() -> void:
 	var note_button := Button.new()
 	note_button.name = "NoteButton"
-	note_button.text = "Read note"
+	note_button.text = ""  # spec 21: no names on the objects; the name shows on hover
+	note_button.tooltip_text = "Read the note"
+	note_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	note_button.position = Vector2(1000, 260)
 	note_button.size = Vector2(130, 120)
 	note_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -344,7 +368,7 @@ func _open_note() -> void:
 	var lines := LivingRoomRules.rhyme_for(game["bathroom"]["tap_order"])
 	_note_text.text = "\n\n".join(lines)
 	_clock_panel.hide()
-	move_child(_note_panel, get_child_count() - 1)
+	_note_panel.get_parent().move_child(_note_panel, -1)  # on top (it lives on the stage, spec 21)
 	_note_panel.show()
 
 

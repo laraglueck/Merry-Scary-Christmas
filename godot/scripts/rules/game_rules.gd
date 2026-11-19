@@ -13,6 +13,7 @@ const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
 const AtticRules = preload("res://scripts/rules/attic_rules.gd")
+const PhotoRules = preload("res://scripts/rules/photo_rules.gd")
 const CharacterRules = preload("res://scripts/rules/character_rules.gd")
 const WalkRules = preload("res://scripts/rules/walk_rules.gd")
 
@@ -73,6 +74,12 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 			_try_attic_code(game, player, data)
 		"choose_ending":
 			_choose_ending(game, player, data)
+		"take_key":
+			_take_key(game, player)
+		"take_piece":
+			_take_piece(game, player, data)
+		"assemble_photo":
+			_assemble_photo(game, player, data)
 
 	ClockRules.check_midnight(game)
 	
@@ -235,8 +242,7 @@ static func _choose_ending(game: Dictionary, player: int, data: Dictionary) -> v
 		game["last_event"] = "%s: %s" % [who, result["error"]]
 		return
 	if choice == "lock_in":
-		InventoryRules.add(game, "key")
-		game["last_event"] = "%s took the key and locked Scary Jingles in." % who
+		game["last_event"] = "%s locked Scary Jingles in." % who
 	else:
 		game["last_event"] = "%s left the photo and the cookies beside him." % who
 	game["phase"] = result["ending"]  # the game ends, like at midnight
@@ -312,7 +318,48 @@ static func _take_bedroom_photo(game: Dictionary, player: int) -> void:
 	var result := BedroomRules.take_photo(game["bedroom"])
 
 	if result["ok"]:
-		InventoryRules.add(game, "photo")
-		game["last_event"] = "%s found an old photograph!" % who
+		InventoryRules.add(game, "photo_piece_3")  # the photo is torn in three (spec 21)
+		game["last_event"] = "%s found a torn piece of a photo!" % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
+
+
+# The key beside the sleeping Jingles (spec 21): into the inventory, then the choice.
+static func _take_key(game: Dictionary, player: int) -> void:
+	if not _in_attic(game, player):
+		return
+	var who := "Player %d" % (player + 1)
+	var result := AtticRules.take_key(game["attic"])
+	if result["ok"]:
+		InventoryRules.add(game, "key")
+		game["last_event"] = "%s took the key. He didn't wake up... yet." % who
+	else:
+		game["last_event"] = "%s: %s" % [who, result["error"]]
+
+
+# A torn piece of the photo (spec 21): only in its room, with the whole team there.
+static func _take_piece(game: Dictionary, player: int, data: Dictionary) -> void:
+	var who := "Player %d" % (player + 1)
+	var room := str(data.get("room", ""))
+	if game.get("location") != room:
+		game["last_event"] = "%s: go into the %s first" % [who, room]
+		return
+	var error := PhotoRules.take_piece(game, room)
+	if error == "":
+		game["last_event"] = "%s found a torn piece of a photo!" % who
+	else:
+		game["last_event"] = "%s: %s" % [who, error]
+
+
+# The three pieces laid in an order: the right one makes the whole photo (spec 21).
+static func _assemble_photo(game: Dictionary, player: int, data: Dictionary) -> void:
+	var who := "Player %d" % (player + 1)
+	var order = data.get("order", [])
+	if typeof(order) != TYPE_ARRAY:
+		order = []
+	var error := PhotoRules.assemble(game, order)
+	if error == "":
+		game["last_event"] = "%s put the photo together: Santa and a young, laughing Jingles." % who
+	else:
+		game["last_event"] = "%s: %s" % [who, error]
+

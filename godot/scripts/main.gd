@@ -28,6 +28,8 @@ const SCREENS := {
 const PLACEHOLDER = preload("res://scenes/placeholder_room.tscn")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
+const PhotoRules = preload("res://scripts/rules/photo_rules.gd")
+const PhotoPuzzle = preload("res://scenes/photo_puzzle.tscn")
 const IMAGES := "res://assets/images/"
 const Settings = preload("res://scripts/settings.gd")
 const CLOCK_COLOUR := Color("f3e6cf")
@@ -43,6 +45,7 @@ var clock_label: Label
 var inventory_bar: PanelContainer
 var _item_pictures := {}  # item id -> its picture in the bar
 var _item_names := {}     # item id -> its name under the picture
+var _piece_pictures := {} # torn photo piece -> its small picture in the photo's slot (spec 21)
 
 
 func _ready() -> void:
@@ -172,6 +175,8 @@ func _build_inventory() -> void:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inventory_bar.add_child(row)
 	for item in Settings.ITEMS:
+		if item["id"] in PhotoRules.PIECES:
+			continue  # the torn pieces share the photo's slot (spec 21)
 		var slot := PanelContainer.new()
 		slot.name = "InventorySlot_" + item["id"]
 		slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -196,6 +201,8 @@ func _build_inventory() -> void:
 			picture.texture = load(file)
 		picture.visible = false
 		holder.add_child(picture)
+		if item["id"] == PhotoRules.WHOLE:
+			_build_piece_pictures(slot, holder)
 		var name_label := Label.new()
 		name_label.name = "InventoryName_" + item["id"]
 		name_label.custom_minimum_size = Vector2(0, 16)
@@ -208,6 +215,45 @@ func _build_inventory() -> void:
 		_item_names[item["id"]] = name_label
 
 
+# The photo's slot also shows the torn pieces found so far, small and side by side, and
+# a click on it opens the puzzle once all three are there (spec 21).
+func _build_piece_pictures(slot: PanelContainer, holder: Control) -> void:
+	var row := HBoxContainer.new()
+	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	row.add_theme_constant_override("separation", 1)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(row)
+	for piece in PhotoRules.PIECES:
+		var picture := TextureRect.new()
+		picture.name = "InventoryPiece_" + piece
+		picture.texture = load(IMAGES + "item_%s.png" % piece)
+		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		picture.custom_minimum_size = Vector2(18, 44)
+		picture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		picture.visible = false
+		row.add_child(picture)
+		_piece_pictures[piece] = picture
+	slot.mouse_filter = Control.MOUSE_FILTER_STOP
+	slot.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	slot.gui_input.connect(_on_photo_slot_input)
+
+
+func _on_photo_slot_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		open_photo_puzzle()
+
+
+# All three pieces found and the photo not whole yet: the puzzle opens over the game.
+func open_photo_puzzle() -> void:
+	if net.game.is_empty() or not PhotoRules.all_found(net.game) or get_node("ClockLayer").has_node("PhotoPuzzle"):
+		return
+	var puzzle := PhotoPuzzle.instantiate()
+	puzzle.name = "PhotoPuzzle"
+	puzzle.net = net
+	get_node("ClockLayer").add_child(puzzle)
+
+
 # A found item shows its picture and name; an empty slot stays dark (no spoiler).
 func _update_inventory() -> void:
 	var running: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
@@ -215,9 +261,20 @@ func _update_inventory() -> void:
 	if not running:
 		return
 	for item in Settings.ITEMS:
+		if not _item_pictures.has(item["id"]):
+			continue  # a torn piece: shown in the photo's slot
 		var found := InventoryRules.has(net.game, item["id"])
 		_item_pictures[item["id"]].visible = found
 		_item_names[item["id"]].text = item["name"] if found else ""
+	# The torn pieces in the photo's slot, until the photo is whole (spec 21).
+	var pieces := 0
+	for piece in PhotoRules.PIECES:
+		var has_piece := InventoryRules.has(net.game, piece)
+		_piece_pictures[piece].visible = has_piece
+		if has_piece:
+			pieces += 1
+	if pieces > 0 and not InventoryRules.has(net.game, PhotoRules.WHOLE):
+		_item_names[PhotoRules.WHOLE].text = "Pieces %d/3" % pieces
 
 
 func _hud_box(fill: Color, border: Color, margin: int) -> StyleBoxFlat:

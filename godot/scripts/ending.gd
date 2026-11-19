@@ -23,13 +23,51 @@ const SOUNDS := "res://assets/sounds/"
 
 # Sounds this screen played (or would have played in the headless test run), spec 20.
 var sounds_played: Array[String] = []
+const WAKE_SECONDS := 5.0    # midnight: how long the wake-up shows before the end screen
+const WAKE_FADE_IN := 2.0     # how slowly his face comes out of the dark
 
 
 func _ready() -> void:
 	var game: Dictionary = net.game if net != null and not net.game.is_empty() else {"phase": place}
 	var ending: Dictionary = ENDINGS.get(place, ENDINGS["midnight"])
 	_build_ui(ending, _result_text(game), str(game.get("last_event", "")))
-	for file_name in ending["sounds"]:
+	if place == "midnight":
+		_wake_up()  # spec 21: the clock strikes and he wakes, then the end screen
+	else:
+		for file_name in ending["sounds"]:
+			_play(file_name)
+
+
+# Midnight (spec 21): a dark screen, the clock strikes, and Scary Jingles is wide awake.
+# After a few seconds the end screen fades in with the lose music.
+func _wake_up() -> void:
+	var wake := ColorRect.new()
+	wake.name = "WakeUp"
+	wake.color = Color("050304")
+	wake.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(wake)
+	var jingles := TextureRect.new()
+	jingles.name = "WakeUpJingles"
+	jingles.texture = load(IMAGES + "char_jingles_awake.png")
+	jingles.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	jingles.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	jingles.set_anchors_preset(Control.PRESET_FULL_RECT)
+	jingles.offset_top = 40
+	jingles.offset_bottom = -40
+	jingles.modulate.a = 0.0
+	wake.add_child(jingles)
+	create_tween().tween_property(jingles, "modulate:a", 1.0, WAKE_FADE_IN)
+	_play("sfx_clock_chime.mp3")
+	get_tree().create_timer(WAKE_SECONDS).timeout.connect(show_ending)
+
+
+# After the wake-up: the end screen with its picture and the lose music (tests call it too).
+func show_ending() -> void:
+	var wake := get_node_or_null("WakeUp")
+	if wake == null or not wake.visible:
+		return
+	wake.visible = false
+	for file_name in ENDINGS["midnight"]["sounds"]:
 		_play(file_name)
 
 

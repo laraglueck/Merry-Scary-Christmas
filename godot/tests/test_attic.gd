@@ -3,6 +3,7 @@ extends "res://tests/base_test.gd"
 
 const AtticScene = preload("res://scenes/attic.tscn")
 const AtticRules = preload("res://scripts/rules/attic_rules.gd")
+const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 
 
 # Stands in for network.gd in the online test: records what the screen sends.
@@ -50,6 +51,12 @@ func set_dials(attic: Node, digits: Array) -> void:
 func open_the_lock(attic: Node) -> void:
 	set_dials(attic, right_code(attic))
 	press(attic, "TryButton")
+
+
+# Open the lock and take the key: then the choice is shown (spec 21).
+func open_and_take_the_key(attic: Node) -> void:
+	open_the_lock(attic)
+	press(attic, "Key")
 
 
 # ---------- the lock ----------
@@ -106,6 +113,8 @@ func test_right_code_with_keys_only_shows_jingles_and_the_choices() -> void:
 	assert_true(not find(attic, "LockPanel").visible, "lock gone")
 	assert_true(find(attic, "Jingles").visible, "Jingles asleep")
 	assert_true(find(attic, "Key").visible, "the key beside him")
+	assert_true(not find(attic, "ChoiceLockIn").visible, "no choice before the key")
+	key(attic, "ui_accept")  # Enter takes the key
 	assert_true(find(attic, "ChoiceLockIn").visible, "lock-in choice")
 	assert_true(find(attic, "ChoiceReconcile").visible, "photo choice")
 
@@ -114,7 +123,7 @@ func test_right_code_with_keys_only_shows_jingles_and_the_choices() -> void:
 
 func test_photo_choice_is_greyed_out_and_explains_without_the_photo() -> void:
 	var attic := open_attic()
-	open_the_lock(attic)
+	open_and_take_the_key(attic)
 	assert_true(find(attic, "ChoiceReconcile").modulate.a < 1.0, "greyed out")
 	press(attic, "ChoiceReconcile")
 	assert_contains(text_of(attic, "Message"), "nothing that could change his mind", "reason")
@@ -123,16 +132,15 @@ func test_photo_choice_is_greyed_out_and_explains_without_the_photo() -> void:
 
 func test_lock_in_ends_the_game_as_scary_christmas() -> void:
 	var attic := open_attic()
-	open_the_lock(attic)
+	open_and_take_the_key(attic)
 	press(attic, "ChoiceLockIn")
 	assert_eq(attic.game["phase"], "scary", "phase")
-	assert_true(not find(attic, "Key").visible, "the team took the key")
 	assert_contains(text_of(attic, "Message"), "locked Scary Jingles in", "message")
 
 
 func test_with_the_photo_the_choice_is_open_and_ends_merry() -> void:
 	var attic := open_attic(true)
-	open_the_lock(attic)
+	open_and_take_the_key(attic)
 	assert_eq(find(attic, "ChoiceReconcile").modulate.a, 1.0, "not greyed out")
 	key(attic, "ui_right")  # from "Lock him in" to the photo
 	key(attic, "ui_accept")
@@ -177,7 +185,7 @@ func test_a_wrong_code_makes_him_stir() -> void:
 	wrong[0] = 1 if wrong[0] != 1 else 2
 	set_dials(attic, wrong)
 	press(attic, "TryButton")
-	assert_eq(attic.jingles_picture(), "char_jingles_awake.png", "awake for a moment")
+	assert_eq(attic.jingles_picture(), "char_jingles_peek.png", "peeks for a moment")
 	assert_true(find(attic, "LockPanel").visible, "still locked")
 
 
@@ -200,4 +208,26 @@ func test_online_a_teammates_wrong_code_makes_him_stir_here_too() -> void:
 	tree.root.add_child(attic)
 	net.game["penalty_seconds"] += 20  # a teammate tried a wrong code
 	net.game_changed.emit()
-	assert_eq(attic.jingles_picture(), "char_jingles_awake.png", "awake for a moment")
+	assert_eq(attic.jingles_picture(), "char_jingles_peek.png", "peeks for a moment")
+
+
+# ---------- the key (spec 21) ----------
+
+func test_taking_the_key_makes_him_peek_and_shows_the_choice() -> void:
+	var attic := open_attic()
+	open_the_lock(attic)
+	assert_true(not find(attic, "ChoiceLockIn").visible, "no choice yet")
+	press(attic, "Key")
+	assert_true(InventoryRules.has(attic.game, "key"), "the key is in the inventory")
+	assert_true(not find(attic, "Key").visible, "gone from the floor")
+	assert_eq(attic.jingles_picture(), "char_jingles_peek.png", "he peeks")
+	assert_true(find(attic, "ChoiceLockIn").visible, "now the choice")
+	assert_contains(text_of(attic, "Message"), "didn't wake up", "message")
+
+
+func test_the_attic_scales_as_a_whole_when_the_window_changes() -> void:
+	var attic := open_attic()
+	attic.size = Vector2(2304, 648)  # a very wide window
+	var stage: Control = find(attic, "Stage")
+	assert_eq(stage.scale, Vector2(1, 1), "as high as the window")
+	assert_eq(stage.position, Vector2(576, 0), "centred, with bars left and right")

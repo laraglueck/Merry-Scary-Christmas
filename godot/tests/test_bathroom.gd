@@ -310,3 +310,36 @@ func test_the_present_catches_mouse_clicks() -> void:
 	var bathroom := open_bathroom()
 	var gift: Control = find(bathroom, "Gift")
 	assert_true(gift.mouse_filter != Control.MOUSE_FILTER_IGNORE, "a real click lands on the present")
+
+
+# ---------- the torn photo (spec 21) ----------
+
+func test_a_torn_piece_lies_in_the_drained_tub() -> void:
+	var bathroom := open_bathroom()
+	assert_eq(is_shown(bathroom, "PhotoPiece"), false, "not before the tub drains")
+	click_taps(bathroom, right_taps(bathroom))
+	assert_eq(is_shown(bathroom, "PhotoPiece"), true, "in the tub")
+	press(bathroom, "PhotoPiece")
+	assert_true(InventoryRules.has(bathroom.game, "photo_piece_2"), "in the inventory")
+	assert_eq(is_shown(bathroom, "PhotoPiece"), false, "gone from the tub")
+	assert_contains(text_of(bathroom, "Message"), "torn piece", "message")
+
+
+# ---------- tidier rooms (spec 21) ----------
+
+func test_only_the_taps_have_names() -> void:
+	var bathroom := open_bathroom()
+	assert_eq(text_of(bathroom, "Spot_hot_tap"), "Hot", "hot tap")
+	assert_eq(text_of(bathroom, "Spot_cold_tap"), "Cold", "cold tap")
+	for spot in ["door_hall", "mirror", "bathtub"]:
+		assert_eq(text_of(bathroom, "Spot_" + spot), "", "no name on " + spot)
+
+
+func test_the_room_scales_as_a_whole_when_the_window_changes() -> void:
+	var bathroom := open_bathroom()
+	bathroom.size = Vector2(576, 600)  # a narrow window
+	var stage: Control = find(bathroom, "Stage")
+	assert_eq(stage.scale, Vector2(0.5, 0.5), "half as large")
+	assert_eq(stage.position, Vector2(0, 138), "centred, with bars above and below")
+	bathroom.size = Vector2(1152, 648)
+	assert_eq(stage.scale, Vector2(1, 1), "full size again")

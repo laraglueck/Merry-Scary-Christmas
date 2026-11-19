@@ -7,6 +7,7 @@ extends Node
 const Settings = preload("res://scripts/settings.gd")
 const RoomCode = preload("res://scripts/net/room_code.gd")
 const GameRules = preload("res://scripts/rules/game_rules.gd")
+const TestStart = preload("res://scripts/test_start.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const CharacterRules = preload("res://scripts/rules/character_rules.gd")
 const WalkRules = preload("res://scripts/rules/walk_rules.gd")
@@ -319,6 +320,7 @@ func start_game() -> void:
 
 func _create_game(characters: Dictionary) -> void:
 	game = GameRules.new_game(_rng, characters)
+	TestStart.apply_if_asked(game, OS.get_cmdline_user_args())  # only when started with "-- test"
 	_clock_rest = 0.0
 	_save_game()
 	_send_game()

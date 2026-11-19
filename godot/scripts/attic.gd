@@ -10,6 +10,7 @@ extends Control
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const AtticRules = preload("res://scripts/rules/attic_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
+const RoomStage = preload("res://scripts/room_stage.gd")
 
 const IMAGES := "res://assets/images/"
 const HIGHLIGHT := Color("ffd76a")
@@ -26,7 +27,7 @@ const CHOICES := [
 const GREYED_OUT := 0.5  # the photo choice without the photo
 # Effects (spec 20)
 const SOUNDS := "res://assets/sounds/"
-const STIR_SECONDS := 1.0          # how long he is awake after a wrong code
+const STIR_SECONDS := 1.0          # how long he peeks after a wrong code or when the key is taken
 const SNORE_LOCKED_DB := -18.0     # heard through the locked door
 const SNORE_OPEN_DB := -8.0
 const DIMMED := Color(0.45, 0.45, 0.5)
@@ -47,7 +48,7 @@ var _background: TextureRect
 var _lock_panel: PanelContainer
 var _dial_buttons: Array[Button] = []
 var _jingles: TextureRect
-var _key: TextureRect
+var _key: TextureButton  # click to take it (spec 21)
 var _choice_buttons: Array[Button] = []
 var _message: Label
 var _snore: AudioStreamPlayer
@@ -69,6 +70,7 @@ func _ready() -> void:
 	_message.text = game.get("last_event", "")
 	_seen = _what_happened_so_far()
 	_refresh()
+	RoomStage.put_on_stage(self)  # click areas stay on their objects when the window changes (spec 21)
 	if DisplayServer.get_name() != "headless":
 		_snore.play()  # not in the test run: no sound card
 
@@ -141,6 +143,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_accept"):
 		if _is_locked():
 			_try_code()
+		elif not _key_taken():
+			_take_key()  # Enter takes the key first (spec 21)
 		else:
 			_choose(_choice_index)
 	else:
@@ -176,6 +180,14 @@ func _choose(index: int) -> void:
 	_send("choose_ending", {"choice": CHOICES[index]["choice"]})
 
 
+func _take_key() -> void:
+	_send("take_key", {})
+
+
+func _key_taken() -> bool:
+	return _attic().get("key_taken", false)
+
+
 func _go_to_hall() -> void:
 	_send("go_to", {"place": "hall"})  # the whole team walks back down (spec 07)
 
@@ -188,7 +200,8 @@ func jingles_picture() -> String:
 
 
 func _what_happened_so_far() -> Dictionary:
-	return {"unlocked": _attic()["unlocked"], "penalty": game.get("penalty_seconds", 0)}
+	return {"unlocked": _attic()["unlocked"], "penalty": game.get("penalty_seconds", 0),
+			"key": _key_taken()}
 
 
 # Something changed in the shared game (here or on a teammate's device): react to it.
@@ -198,10 +211,12 @@ func _react() -> void:
 		_play(_lock_sound, "sfx_key_lock.mp3")
 	elif not now["unlocked"] and now["penalty"] > _seen["penalty"]:
 		_stir()  # the lock rattled: a wrong code
+	elif now["key"] and not _seen.get("key", false):
+		_stir()  # the key scraped over the floor
 	_seen = now
 
 
-# A wrong code: he wakes for a moment, the snoring stops, then he sleeps on.
+# A wrong code or the key: he peeks with one eye, the snoring stops, then he sleeps on.
 func _stir() -> void:
 	_stirring = true
 	_snore.stream_paused = true
@@ -233,17 +248,17 @@ func _refresh() -> void:
 		var border: Color = HIGHLIGHT if i == _dial_index else DIAL_COLOURS[i]
 		button.add_theme_stylebox_override("normal", _dial_style(DIAL_COLOURS[i], border))
 
-	# Seen asleep through the door while locked (dimmed like the room), awake for a moment
-	# when he stirs.
+	# Seen asleep through the door while locked (dimmed like the room), peeking for a
+	# moment when he stirs (spec 21; wide awake is kept for midnight).
 	_jingles.visible = true
-	_jingles.texture = load(IMAGES + ("char_jingles_awake.png" if _stirring else "char_jingles_asleep.png"))
+	_jingles.texture = load(IMAGES + ("char_jingles_peek.png" if _stirring else "char_jingles_asleep.png"))
 	_jingles.modulate = DIMMED if locked and not _stirring else Color.WHITE
 	_snore.volume_db = SNORE_LOCKED_DB if locked else SNORE_OPEN_DB
-	_key.visible = not locked and not InventoryRules.has(game, "key")
+	_key.visible = not locked and not _key_taken()
 	var photo := InventoryRules.has(game, "photo")
 	for i in _choice_buttons.size():
 		var button := _choice_buttons[i]
-		button.visible = not locked
+		button.visible = not locked and _key_taken()  # the choice comes with the key (spec 21)
 		var border := HIGHLIGHT if i == _choice_index else Color("5c4a3a")
 		button.add_theme_stylebox_override("normal", _box(Color(0.1, 0.07, 0.07, 0.85), border, 3))
 	# Without the photo the second choice stays clickable, so the reason can be shown.
@@ -282,14 +297,16 @@ func _build_ui() -> void:
 	add_child(_jingles)
 
 	# The key to the attic door, on the floor beside him.
-	_key = TextureRect.new()
+	_key = TextureButton.new()
 	_key.name = "Key"
-	_key.texture = load(IMAGES + "item_key.png")
-	_key.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_key.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_key.texture_normal = load(IMAGES + "item_key.png")
+	_key.ignore_texture_size = true
+	_key.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	_key.position = KEY_RECT.position
 	_key.size = KEY_RECT.size
-	_key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_key.tooltip_text = "Take the key"
+	_key.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_key.pressed.connect(_take_key)
 	add_child(_key)
 
 	# The two choices, bottom right.

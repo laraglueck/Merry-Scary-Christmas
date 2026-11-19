@@ -8,6 +8,8 @@ extends Control
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
+const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
+const RoomStage = preload("res://scripts/room_stage.gd")
 const Settings = preload("res://scripts/settings.gd")
 
 const IMAGES := "res://assets/images/"
@@ -27,6 +29,7 @@ const SPOTS := [
 ]
 const START_SPOT := 4  # the team comes in through the door, so the highlight starts there
 const GIFT_RECT := Rect2(282, 300, 110, 110)  # the present, standing in the empty tub
+const PIECE_RECT := Rect2(398, 352, 74, 60)   # a torn piece of the photo, beside it (spec 21)
 const DIGIT_POSITION := Vector2(232, 318)     # the digit scratched into the enamel
 const TURNS_POSITION := Vector2(650, 418)     # the turns so far, under the sink
 const HIGHLIGHT := Color("ffd76a")
@@ -55,6 +58,7 @@ var _background: TextureRect
 var _spot_buttons: Array[Button] = []
 var _turns_label: Label
 var _gift: TextureButton  # the present itself can be clicked to take it
+var _piece: TextureButton  # a torn piece of the photo (spec 21)
 var _digit_label: Label
 var _mirror_panel: PanelContainer
 var _mirror_dust: Label
@@ -82,6 +86,7 @@ func _ready() -> void:
 	_message.text = game.get("last_event", "")
 	_seen = _what_happened_so_far()
 	_refresh()
+	RoomStage.put_on_stage(self)  # click areas stay on their objects when the window changes (spec 21)
 
 
 func _online() -> bool:
@@ -96,6 +101,7 @@ func _offline_game() -> Dictionary:
 	else:
 		rng.randomize()
 	var new_game := GameRules.new_game(rng)
+	new_game["location"] = "bathroom"  # the team stands here (for the torn piece, spec 21)
 	if green_fuse_on:
 		var order: Array = new_game["puzzle"]["fuses"][GREEN_FUSE]["order"].duplicate()
 		FuseRules.try_fuse(new_game["puzzle"], GREEN_FUSE, order)
@@ -270,6 +276,7 @@ func _refresh() -> void:
 
 	var solved: bool = _bathroom()["solved"]
 	_gift.visible = solved and not _bathroom()["gift_taken"]
+	_piece.visible = solved and not InventoryRules.has(game, "photo_piece_2") and not InventoryRules.has(game, "photo")
 	_digit_label.visible = solved
 	_digit_label.text = str(_bathroom()["digit"])
 
@@ -323,6 +330,18 @@ func _build_ui() -> void:
 	_gift.position = GIFT_RECT.position
 	_gift.size = GIFT_RECT.size
 	add_child(_gift)
+	_piece = TextureButton.new()
+	_piece.name = "PhotoPiece"
+	_piece.texture_normal = load(IMAGES + "item_photo_piece_2.png")
+	_piece.ignore_texture_size = true
+	_piece.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	_piece.position = PIECE_RECT.position
+	_piece.size = PIECE_RECT.size
+	_piece.rotation_degrees = -12  # lying a little crooked in the tub
+	_piece.tooltip_text = "A torn piece of paper"
+	_piece.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_piece.pressed.connect(func() -> void: _send("take_piece", {"room": "bathroom"}))
+	add_child(_piece)
 	_digit_label = _label(self, "", 44)
 	_digit_label.name = "DigitLabel"
 	_digit_label.position = DIGIT_POSITION
@@ -339,7 +358,9 @@ func _build_ui() -> void:
 		var spot: Dictionary = SPOTS[i]
 		var button := Button.new()
 		button.name = "Spot_" + spot["name"]
-		button.text = spot["label"]
+		# Spec 21: no names on the objects, except the taps; the name shows on hover.
+		button.text = spot["label"] if spot["name"] in ["hot_tap", "cold_tap"] else ""
+		button.tooltip_text = spot["label"]
 		button.position = spot["rect"].position
 		button.size = spot["rect"].size
 		button.add_theme_font_size_override("font_size", 16)

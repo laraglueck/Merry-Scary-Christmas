@@ -226,6 +226,8 @@ func test_inventory_bar_on_every_screen_while_the_game_runs() -> void:
 		var parts: Array = [bar]
 		parts.append_array(bar.find_children("*", "Control", true, false))
 		for part in parts:
+			if part.name == "InventorySlot_photo":
+				continue  # spec 21: a click on the photo's slot opens the photo puzzle
 			assert_eq(part.mouse_filter, Control.MOUSE_FILTER_IGNORE, "%s lets clicks through" % part.name)
 
 
