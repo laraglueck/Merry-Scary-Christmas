@@ -404,7 +404,12 @@ func test_all_ready_starts_the_game_with_the_characters() -> void:
 	room[0].begin_selection()
 	await wait_until(func(): return room[2].game.get("phase") == "select")
 	pick_all(room)
-	assert_true(await wait_until(func(): return room.all(func(net): return net.game.get("phase") == "hall")), "the game runs")
+	assert_true(await wait_until(func(): return room.all(func(net): return net.game.get("phase") == "intro")), "first the story (spec 23)")
+	room[0].advance_clock(5.0)
+	assert_eq(room[0].can_end_game(), false, "the story is not a finished game")
+	for net in room:
+		net.send_action("intro_done", {})
+	assert_true(await wait_until(func(): return room.all(func(net): return net.game.get("phase") == "hall")), "then the game runs")
 	assert_eq(room[2].game["characters"][1], {"character": "snowman", "colour": "green", "accessory": "none"}, "everyone knows who is who")
 	assert_eq(room[0].game["seconds_played"], 0, "10:00 on the clock")
 

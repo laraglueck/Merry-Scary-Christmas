@@ -2,6 +2,7 @@
 extends "res://tests/base_test.gd"
 
 const GameRules = preload("res://scripts/rules/game_rules.gd")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 
 
 func new_game() -> Dictionary:
@@ -117,3 +118,37 @@ func test_new_game_keeps_the_chosen_characters() -> void:
 	var chosen := {0: {"character": "santa", "colour": "red"}}
 	assert_eq(GameRules.new_game(rng, chosen)["characters"], chosen, "stored")
 	assert_eq(GameRules.new_game(rng)["characters"], {}, "empty by default")
+
+
+# ---------- the story before the hall (spec 23) ----------
+
+func intro_game() -> Dictionary:
+	var game := new_game()
+	GameRules.begin_intro(game)
+	return game
+
+
+func test_the_story_comes_before_the_hall() -> void:
+	var game := intro_game()
+	assert_eq(game.get("phase"), "intro", "the story first")
+	assert_eq(game.get("intro_done"), [], "nobody has finished it yet")
+
+
+func test_the_hall_starts_when_all_three_finished_the_story() -> void:
+	var game := intro_game()
+	GameRules.apply(game, 0, "intro_done", {})
+	GameRules.apply(game, 0, "intro_done", {})  # twice counts once
+	assert_eq(game.get("intro_done"), [0], "Player 1 is done")
+	GameRules.apply(game, 2, "intro_done", {})
+	assert_eq(game.get("phase"), "intro", "still waiting for Player 2")
+	GameRules.apply(game, 1, "intro_done", {})
+	assert_eq(game.get("phase"), "hall", "all three: into the hall")
+
+
+func test_nothing_else_happens_during_the_story() -> void:
+	var game := intro_game()
+	GameRules.apply(game, 0, "try_fuse", {"wires": right_order(game, 0)})
+	assert_eq(game["puzzle"]["fuses"][0]["solved"], false, "no fuses during the story")
+	assert_true(ClockRules.tick(game, 5) != "", "the clock does not run")
+	assert_eq(game.get("seconds_played"), 0, "no time lost")
+
