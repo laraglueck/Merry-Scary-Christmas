@@ -43,12 +43,15 @@ const SPOTS := [
 	{"name": "bedroom", "node": "Door_bedroom", "rect": Rect2(1018, 40, 162, 650)},
 	{"name": "house_plan", "node": "HousePlanButton", "rect": Rect2(1195, 70, 181, 290)},
 ]
-# ui_fuse_box.webp: the four cables (left to right) and the sockets.
+# ui_fuse_box.webp (the modern box, second test round): the four cables hanging from the
+# terminal block (left to right) and the three breakers. A solved fuse shows its breaker
+# from ui_fuse_box_on.webp (all breakers up), cut out at the same place.
 const WIRE_RECTS := {
-	"blue": Rect2(553, 425, 87, 295), "yellow": Rect2(642, 425, 56, 295),
-	"white": Rect2(698, 425, 43, 295), "black": Rect2(741, 425, 64, 295),
+	"blue": Rect2(540, 470, 88, 245), "yellow": Rect2(628, 470, 62, 245),
+	"white": Rect2(690, 470, 88, 245), "black": Rect2(778, 470, 57, 245),
 }
-const SOCKET_CENTRES := {"red": Vector2(575, 275), "green": Vector2(688, 275), "gold": Vector2(800, 275)}
+const BREAKER_RECTS := {"red": Rect2(560, 238, 62, 92), "green": Rect2(660, 238, 60, 92),
+		"gold": Rect2(760, 238, 61, 92)}
 # ui_house_plan.webp: the rooms by fuse index (living room, bathroom, bedroom) and the
 # inner part of the empty legend box.
 const PLAN_ROOMS := [Rect2(349, 317, 266, 231), Rect2(424, 140, 190, 164), Rect2(765, 262, 236, 205)]
@@ -100,7 +103,6 @@ var _flicker_steps: Array = []  # what is left of the current flicker cycle
 var _player_buttons: Array[Button] = []
 var _penalty_label: Label
 var _label_frame: PanelContainer   # the order's symbols, framed in the colour of their fuse
-var _label_fuse: TextureRect       # a small fuse in that colour
 var _fuse_hint: RichTextLabel      # hints that grow clearer after wrong tries
 var _wrong_tries := 0              # this player's wrong orders for their own fuse
 var _seen_penalty := 0             # online: to notice a wrong order by anyone (sparks)
@@ -109,8 +111,21 @@ var _doll: TextureRect
 var _spark: AudioStreamPlayer
 var _creak: AudioStreamPlayer
 var _click: AudioStreamPlayer      # a fuse snaps in (spec 22)
-# The doll turns her head once per player and game run (the hall is made new on every visit).
-static var _doll_seen := false
+var _doll_turned := false  # she is looking at the players right now
+var _mission_card: Control
+# The mission card shows once per game: the first time the team stands in the hall.
+# Remembered by the game's own random puzzle, so a new game shows it again.
+static var _mission_seen_for := ""
+const MISSION_TEXT := """[font_size=30][b]🎄 Your mission[/b][/font_size]
+
+Scary Jingles has stolen three presents. Bring them back before midnight!
+
+[b]You are one team: talk to each other![/b]
+
+•  [b]Look into every room first:[/b] what you find in one room may help in another.
+•  [b]Solve the puzzles,[/b] and collect the presents and anything that seems important.
+
+⏰ 20 minutes until midnight."""
 var _message: Label
 
 
@@ -134,6 +149,7 @@ func _ready() -> void:
 			button.visible = false  # each device is one player
 		_message.text = net.game["last_event"]
 	_refresh()
+	_show_mission(_mission_seen_for != _mission_key())  # once per game, at the first visit
 
 
 func _online() -> bool:
@@ -359,11 +375,12 @@ func _on_spot_input(event: InputEvent, index: int) -> void:
 		_on_spot_pressed(index)
 
 
-# The doll on the stairs turns her head towards the players, with a creak, then back.
+# The doll on the stairs turns her head towards the players, with a slow creak, then
+# back. Every click on the dark stairs makes her turn (not again while she is turned).
 func _doll_turns() -> void:
-	if _doll_seen:
+	if _doll_turned:
 		return
-	_doll_seen = true
+	_doll_turned = true
 	_doll.texture = load(IMAGES + "prop_doll_turned.png")
 	_doll.modulate = Color.WHITE  # for a moment the lamp lights her up
 	_play(_creak, "sfx_creak.mp3")
@@ -371,13 +388,9 @@ func _doll_turns() -> void:
 
 
 func _doll_turns_back() -> void:
+	_doll_turned = false
 	_doll.texture = load(IMAGES + "prop_doll.png")
 	_doll.modulate = DOLL_DIMMED
-
-
-# For tests: the next click on the dark stairs makes her turn again.
-func forget_doll() -> void:
-	_doll_seen = false
 
 
 # Online (spec 22): a fuse went on, whoever solved it: its click on every device.
@@ -400,6 +413,89 @@ func _play(player: AudioStreamPlayer, file_name: String) -> void:
 	sounds_played.append(file_name)
 	if DisplayServer.get_name() != "headless":
 		player.play()  # not in the test run: no sound card
+
+
+# ---------- the mission card (second test round) ----------
+
+func _mission_key() -> String:
+	return str(puzzle.get("legend", {})) + str(puzzle.get("fuses", []))
+
+
+func _show_mission(shown: bool) -> void:
+	_mission_card.visible = shown
+	_show_figures(not shown and not _fuse_panel.visible and not _house_plan_panel.visible)
+
+
+func _close_mission() -> void:
+	_mission_seen_for = _mission_key()
+	_show_mission(false)
+
+
+# For tests: the next hall shows the card again, as at the start of a new game.
+static func forget_mission() -> void:
+	_mission_seen_for = ""
+
+
+func _build_mission_card() -> void:
+	_mission_card = Control.new()
+	_mission_card.name = "MissionCard"
+	_mission_card.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_mission_card)
+	var shade := ColorRect.new()  # catches clicks, so the hall waits until the card is read
+	shade.color = Color(0, 0, 0, 0.6)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_mission_card.add_child(shade)
+	var paper := TextureRect.new()  # the empty note from the living room
+	paper.texture = load(IMAGES + "prop_note.png")
+	paper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	paper.stretch_mode = TextureRect.STRETCH_SCALE
+	paper.set_anchors_preset(Control.PRESET_CENTER)
+	paper.offset_left = -330
+	paper.offset_right = 330
+	paper.offset_top = -300
+	paper.offset_bottom = 300
+	_mission_card.add_child(paper)
+	var text := RichTextLabel.new()
+	text.name = "MissionText"
+	text.bbcode_enabled = true
+	text.text = MISSION_TEXT
+	text.scroll_active = false
+	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text.set_anchors_preset(Control.PRESET_FULL_RECT)
+	text.offset_left = 70
+	text.offset_right = -60
+	text.offset_top = 70
+	text.offset_bottom = -110
+	text.add_theme_font_size_override("normal_font_size", 21)
+	text.add_theme_font_size_override("bold_font_size", 21)
+	for colour_name in ["default_color"]:
+		text.add_theme_color_override(colour_name, Color("3b2a1a"))
+	paper.add_child(text)
+	var go := Button.new()
+	go.name = "MissionGo"
+	go.text = "Let's go!"
+	go.add_theme_font_size_override("font_size", 22)
+	go.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	go.offset_left = -80
+	go.offset_right = 80
+	go.offset_top = -95
+	go.offset_bottom = -45
+	go.pressed.connect(_close_mission)
+	paper.add_child(go)
+	# The "?" (top right, under the player buttons) opens the card again.
+	var again := Button.new()
+	again.name = "MissionButton"
+	again.text = "?"
+	again.tooltip_text = "Your mission"
+	again.add_theme_font_size_override("font_size", 22)
+	again.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	again.offset_left = -64
+	again.offset_right = -24
+	again.offset_top = 62
+	again.offset_bottom = 102
+	again.pressed.connect(_show_mission.bind(true))
+	add_child(again)
+	move_child(again, _mission_card.get_index())  # under the card, over the hall
 
 
 func _why_dark(place: String) -> String:
@@ -461,7 +557,6 @@ func _refresh() -> void:
 	for i in _label_symbols.size():
 		_show_symbol(_label_symbols[i], label[i])
 	_label_frame.add_theme_stylebox_override("panel", _box(Color(0.05, 0.03, 0.03, 0.6), UI_COLOURS[seen_colour], 8))
-	_label_fuse.texture = load(IMAGES + "item_fuse_%s.png" % seen_colour)
 	# Hints that grow clearer: after one wrong try a question, after two the answer.
 	if fuse["solved"] and not puzzle["fuses"][seen]["solved"]:
 		_fuse_hint.text = "Your fuse is on. But these symbols are still here... someone else might need them."
@@ -658,7 +753,10 @@ func _build_ui() -> void:
 	_creak = AudioStreamPlayer.new()
 	_creak.name = "CreakSound"
 	_creak.stream = load(SOUNDS + "sfx_creak.mp3")
+	_creak.pitch_scale = 0.8  # slower and lower: creepier for the doll
 	add_child(_creak)
+
+	_build_mission_card()  # on top of everything, also the flicker
 	_click = AudioStreamPlayer.new()
 	_click.name = "FuseClickSound"
 	_click.stream = load(SOUNDS + "sfx_fuse_click.mp3")
@@ -670,12 +768,20 @@ func _build_ui() -> void:
 func _build_fuse_box() -> void:
 	_fuse_panel = _close_up("FusePanel")
 	_fuse_area = _picture_area(_fuse_panel, "FuseBoxPicture", "ui_fuse_box.webp")
-	for colour in SOCKET_CENTRES:
-		var socket := _image("FuseSocket_" + colour, "item_fuse_%s.png" % colour)
-		_place(socket, Rect2(SOCKET_CENTRES[colour] - Vector2(33, 62), Vector2(66, 124)))
-		socket.visible = false
-		_fuse_area.add_child(socket)
-		_sockets[colour] = socket
+	var on_picture: Texture2D = load(IMAGES + "ui_fuse_box_on.webp")
+	var to_texture := Vector2(on_picture.get_size()) / PICTURE_SIZE
+	for colour in BREAKER_RECTS:
+		var rect: Rect2 = BREAKER_RECTS[colour]
+		var piece := AtlasTexture.new()  # this one breaker, switched on
+		piece.atlas = on_picture
+		piece.region = Rect2(rect.position * to_texture, rect.size * to_texture)
+		var breaker := _image("BreakerOn_" + colour, "")
+		breaker.texture = piece
+		breaker.stretch_mode = TextureRect.STRETCH_SCALE
+		_place(breaker, rect)
+		breaker.visible = false
+		_fuse_area.add_child(breaker)
+		_sockets[colour] = breaker
 	for i in Settings.WIRE_COLOURS.size():
 		var colour: String = Settings.WIRE_COLOURS[i]
 		var rect: Rect2 = WIRE_RECTS[colour]
@@ -689,7 +795,7 @@ func _build_fuse_box() -> void:
 		var name_label := _label(_fuse_area, colour, 13)
 		name_label.name = "WireName_" + colour
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_place(name_label, Rect2(rect.get_center().x - 40, 376 + (i % 2) * 24, 80, 24))
+		_place(name_label, Rect2(rect.get_center().x - 40, 380 + (i % 2) * 22, 80, 24))  # above the terminal block
 		_outline(name_label)
 
 	var side := PanelContainer.new()
@@ -728,9 +834,6 @@ func _build_fuse_box() -> void:
 		symbol.custom_minimum_size = Vector2(56, 56)
 		symbols.add_child(symbol)
 		_label_symbols.append(symbol)
-	_label_fuse = _image("LabelFuse", "")
-	_label_fuse.custom_minimum_size = Vector2(28, 56)
-	symbols.add_child(_label_fuse)
 	_fuse_hint = RichTextLabel.new()
 	_fuse_hint.name = "FuseHint"
 	_fuse_hint.bbcode_enabled = true

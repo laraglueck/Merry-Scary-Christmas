@@ -3,6 +3,7 @@ extends "res://tests/base_test.gd"
 
 const MainScene = preload("res://scenes/main.tscn")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
+const Settings = preload("res://scripts/settings.gd")
 
 
 # One device running the whole game (main scene), with its own multiplayer.
@@ -162,9 +163,11 @@ func test_every_screen_shows_the_clock() -> void:
 	await wait_until(screens_are(mains, "hall"))
 	mains[0].net.advance_clock(61.0)
 	var shows_its_time := func(m): return text_of(m, "ClockLabel") == "Midnight in " + ClockRules.as_text(ClockRules.time_left(m.net.game))
-	var all_show := func(): return mains.all(func(m): return ClockRules.time_left(m.net.game) <= 539 and shows_its_time.call(m))
+	var all_show := func(): return mains.all(func(m): return ClockRules.time_left(m.net.game) <= Settings.GAME_SECONDS - 61 and shows_its_time.call(m))
 	assert_true(await wait_until(all_show), "all three show the time left")
-	assert_contains(text_of(mains[2], "ClockLabel"), "Midnight in 08:5", "about 8:59 left")
+	# 61 s after the start: one minute and a bit less than the full time (Settings.GAME_SECONDS).
+	var expected := "Midnight in %s" % ClockRules.as_text(Settings.GAME_SECONDS - 61).left(4)
+	assert_contains(text_of(mains[2], "ClockLabel"), expected, "about a minute less")
 	var clock: Node = mains[2].find_child("ClockLabel", true, false)
 	assert_true(clock != null and clock.is_visible_in_tree(), "clock visible on Player 3")
 
@@ -174,8 +177,8 @@ func test_last_minute_in_red() -> void:
 	await wait_until(screens_are(mains, "hall"))
 	var clock: Node = mains[1].find_child("ClockLabel", true, false)
 	var colour: Color = clock.get_theme_color("font_color") if clock != null else Color.RED
-	assert_true(colour.g > 0.6, "not red with 10 minutes left: %s" % colour)
-	mains[0].net.advance_clock(545.0)
+	assert_true(colour.g > 0.6, "not red at the start: %s" % colour)
+	mains[0].net.advance_clock(Settings.GAME_SECONDS - 55.0)
 	await wait_until(func(): return ClockRules.time_left(mains[1].net.game) <= 55)
 	colour = clock.get_theme_color("font_color") if clock != null else Color.WHITE
 	assert_true(colour.r > 0.8 and colour.g < 0.4, "red in the last minute: %s" % colour)
@@ -184,7 +187,7 @@ func test_last_minute_in_red() -> void:
 func test_midnight_shows_the_loss_without_a_way_back() -> void:
 	var mains: Array = await make_started_mains(47575)
 	await wait_until(screens_are(mains, "hall"))
-	mains[0].net.advance_clock(600.0)
+	mains[0].net.advance_clock(float(Settings.GAME_SECONDS))
 	assert_true(await wait_until(screens_are(mains, "midnight")), "all three at midnight")
 	await wait_frames(2)
 	assert_eq(text_of(mains[1], "PlaceTitle"), "Midnight", "title")
@@ -248,7 +251,7 @@ func test_a_found_present_shows_on_all_three_screens() -> void:
 func test_inventory_bar_hidden_after_midnight() -> void:
 	var mains: Array = await make_started_mains(47578)
 	await wait_until(screens_are(mains, "hall"))
-	mains[0].net.advance_clock(600.0)
+	mains[0].net.advance_clock(float(Settings.GAME_SECONDS))
 	await wait_until(screens_are(mains, "midnight"))
 	var bar: Node = mains[1].find_child("InventoryBar", true, false)
 	assert_true(bar != null and not bar.visible, "bar hidden after the game")
@@ -259,7 +262,7 @@ func test_inventory_bar_hidden_after_midnight() -> void:
 func test_back_to_the_lobby_after_the_end_and_play_again() -> void:
 	var mains: Array = await make_started_mains(47602)
 	await wait_until(screens_are(mains, "hall"))
-	mains[0].net.advance_clock(600.0)
+	mains[0].net.advance_clock(float(Settings.GAME_SECONDS))
 	assert_true(await wait_until(screens_are(mains, "midnight")), "all three see the end")
 	await wait_frames(2)
 	var back: Node = mains[0].find_child("BackButton", true, false)
@@ -297,7 +300,7 @@ func test_end_screen_alone_shows_no_back_button() -> void:
 func test_back_to_the_lobby_button_is_red() -> void:
 	var mains: Array = await make_started_mains(47603)
 	await wait_until(screens_are(mains, "hall"))
-	mains[0].net.advance_clock(600.0)
+	mains[0].net.advance_clock(float(Settings.GAME_SECONDS))
 	await wait_until(screens_are(mains, "midnight"))
 	await wait_frames(2)
 	var back: Button = mains[0].find_child("BackButton", true, false)
@@ -327,7 +330,7 @@ func test_house_music_plays_quietly_while_the_game_runs() -> void:
 	assert_true(house != null and house.stream != null and house.stream.resource_path.ends_with("music_house.mp3"), "music_house.mp3")
 	assert_true(house != null and house.stream.loop, "it loops")
 	assert_true(house != null and house.volume_db <= -14.0, "quiet")
-	mains[0].net.advance_clock(600.0)
+	mains[0].net.advance_clock(float(Settings.GAME_SECONDS))
 	await wait_until(screens_are(mains, "midnight"))
 	assert_true(mains.all(func(m): return m.get("house_music_on") == false), "stops at the end")
 

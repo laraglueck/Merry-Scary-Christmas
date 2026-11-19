@@ -114,7 +114,7 @@ static func _turn_tap(game: Dictionary, player: int, data: Dictionary) -> void:
 	if result["error"] != "":
 		game["last_event"] = "%s: %s" % [who, result["error"]]
 	elif not result["tried"]:
-		game["last_event"] = "%s turned the %s tap." % [who, tap]
+		game["last_event"] = "%s turned the %s tap." % [who, "warm" if tap == "hot" else tap]  # the rhyme says warm
 	elif result["correct"]:
 		game["last_event"] = "%s: the pipes rattle and the water drains away." % who
 	else:

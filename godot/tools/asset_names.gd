@@ -86,6 +86,7 @@ static func images() -> Dictionary:
 	list["ui_win_scary.webp"] = SIZE_SCREEN  # Scary Christmas ending (elf locked in)
 	list["ui_lose.webp"] = SIZE_SCREEN
 	list["ui_fuse_box.webp"] = SIZE_SCREEN  # close-up shown when the fuse box is opened
+	list["ui_fuse_box_on.webp"] = SIZE_SCREEN  # the same box with all breakers up (tools/make_fuse_box.gd)
 	list["ui_house_plan.webp"] = SIZE_SCREEN  # close-up of the house plan, with an empty box for the legend
 	list["ui_clock.png"] = SIZE_PART       # the pocket watch, top right
 	list["ui_clock_hand.png"] = SIZE_PART  # its hand, turned by the game

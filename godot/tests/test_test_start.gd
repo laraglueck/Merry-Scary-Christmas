@@ -22,7 +22,7 @@ func test_without_the_word_nothing_changes() -> void:
 	TestStart.apply_if_asked(game, PackedStringArray([]))
 	TestStart.apply_if_asked(game, PackedStringArray(["--resolution", "576x324"]))
 	assert_eq(game, before, "a normal game stays a normal game")
-	assert_eq(ClockRules.time_left(game), Settings.GAME_SECONDS, "10 minutes")
+	assert_eq(ClockRules.time_left(game), Settings.GAME_SECONDS, "the normal time")
 
 
 func test_with_the_word_all_fuses_are_on() -> void:

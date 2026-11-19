@@ -23,7 +23,7 @@ const EXAMPLE_WHEELS := ["bell", "star", "tree"]
 const SPOTS := [
 	{"name": "bathtub", "label": "Bathtub", "rect": Rect2(112, 378, 420, 175)},
 	{"name": "cold_tap", "label": "Cold", "rect": Rect2(678, 300, 52, 52)},
-	{"name": "hot_tap", "label": "Hot", "rect": Rect2(734, 300, 52, 52)},
+	{"name": "hot_tap", "label": "Warm", "rect": Rect2(734, 300, 52, 52)},
 	{"name": "mirror", "label": "Mirror", "rect": Rect2(616, 128, 230, 176)},
 	{"name": "door_hall", "label": "Hall", "rect": Rect2(954, 70, 150, 515)},
 ]
@@ -36,9 +36,10 @@ const HIGHLIGHT := Color("ffd76a")
 # Effects (spec 20)
 const SOUNDS := "res://assets/sounds/"
 const STEAM_RECT := Rect2(586, 92, 290, 226)  # over the mirror, a little larger
+const MIRROR_SYMBOLS_RECT := Rect2(636, 176, 190, 70)  # the symbols, seen in the steamed mirror in the room
 const TAP_SOUND_SECONDS := 1.5                # a turn plays only the start of the faucet
 const DRAIN_PITCH := 0.7                      # lower and slower: the tub gurgles
-const FACE_SECONDS := 0.5
+const FACE_SECONDS := 1.8  # long enough to be scary (second test round)
 
 # The face in the mirror shows once per player and game run, not on every visit
 # (the screen is made new each time the team walks in).
@@ -73,6 +74,9 @@ var _scare: AudioStreamPlayer
 
 # Sounds this screen played (or would have played in the headless test run).
 var sounds_played: Array[String] = []
+var _keys_used := false  # the key frame only shows once someone uses the arrow keys
+var _room_symbols: HBoxContainer        # the symbols in the steamed mirror, in the room
+var _room_symbol_images: Array[TextureRect] = []
 var _seen := {}  # what the shared game showed last time: turns, solved, penalty
 
 
@@ -145,8 +149,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _mirror_panel.visible:
 		return  # in the close-up only Esc / down does something
 	elif event.is_action_pressed("ui_left"):
+		_keys_used = true
 		_move_highlight(-1)
 	elif event.is_action_pressed("ui_right"):
+		_keys_used = true
 		_move_highlight(1)
 	elif event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_up"):
 		_use_spot(highlighted_spot())
@@ -207,8 +213,10 @@ func _open_mirror() -> void:
 	if not _face_seen:
 		_face_seen = true
 		_mirror_face.visible = true
+		_mirror_dust.modulate.a = 0.0  # only the face, nothing else in the glass
 		_play(_scare, "sfx_scare.mp3")
-		get_tree().create_timer(FACE_SECONDS).timeout.connect(func() -> void: _mirror_face.visible = false)
+		_shake(_mirror_panel)
+		get_tree().create_timer(FACE_SECONDS).timeout.connect(_face_goes)
 	if not _bathroom()["solved"]:
 		_message.text = "Too much dust to see anything... but something seems hidden underneath."
 	_refresh()
@@ -216,7 +224,12 @@ func _open_mirror() -> void:
 
 func _close_mirror() -> void:
 	_mirror_panel.visible = false
+	_face_goes()
+
+
+func _face_goes() -> void:
 	_mirror_face.visible = false
+	_mirror_dust.modulate.a = 1.0
 
 
 # For tests: the next mirror visit shows the face again.
@@ -254,6 +267,28 @@ func _play(player: AudioStreamPlayer, file_name: String, pitch := 1.0, cut_after
 
 
 # The steam fades in and drifts up a little over the mirror.
+# A short, hard shake: the scare hits harder.
+func _shake(node: Control) -> void:
+	var home := node.position
+	var tween := create_tween()
+	for i in 8:
+		var push := Vector2(randf_range(-10, 10), randf_range(-6, 6))
+		tween.tween_property(node, "position", home + push, 0.04)
+	tween.tween_property(node, "position", home, 0.05)
+
+
+# The rhyme says "warm", so the screen does too (the rules keep "hot").
+static func _tap_word(tap: String) -> String:
+	return "warm" if tap == "hot" else tap
+
+
+func _spot_index(spot_name: String) -> int:
+	for i in SPOTS.size():
+		if SPOTS[i]["name"] == spot_name:
+			return i
+	return -1
+
+
 func _rise_steam() -> void:
 	_steam.visible = true
 	_steam.modulate.a = 0.0
@@ -261,6 +296,8 @@ func _rise_steam() -> void:
 	var tween := create_tween().set_parallel()
 	tween.tween_property(_steam, "modulate:a", 0.85, 1.5)
 	tween.tween_property(_steam, "position", STEAM_RECT.position, 1.5)
+	_room_symbols.modulate.a = 0.0  # the symbols show through the steam a moment later
+	tween.tween_property(_room_symbols, "modulate:a", 0.85, 1.2).set_delay(0.8)
 
 
 # ---------- showing the current state ----------
@@ -268,11 +305,18 @@ func _rise_steam() -> void:
 func _refresh() -> void:
 	_background.texture = load(IMAGES + background_picture())
 
+	# No frames on the picture: a frame only on hover, or on the spot the arrow keys chose.
 	for i in _spot_buttons.size():
-		var border := HIGHLIGHT if i == _highlight else Color(1, 1, 1, 0.12)
+		var border := HIGHLIGHT if _keys_used and i == _highlight else Color(1, 1, 1, 0)
 		_spot_buttons[i].add_theme_stylebox_override("normal", _spot_style(border))
+	var solved_now: bool = _bathroom()["solved"]
+	_spot_buttons[_spot_index("bathtub")].visible = not solved_now  # present and piece are clicked themselves
 
-	_turns_label.text = "  ".join(_bathroom()["turns"])
+	# The turns made so far, in the rhyme's words ("warm  cold"); how many are needed stays a secret.
+	var words := []
+	for tap in _bathroom()["turns"]:
+		words.append(_tap_word(tap))
+	_turns_label.text = "  ".join(words)
 
 	var solved: bool = _bathroom()["solved"]
 	_gift.visible = solved and not _bathroom()["gift_taken"]
@@ -284,10 +328,12 @@ func _refresh() -> void:
 	_mirror_steam.visible = solved
 	_mirror_dust.visible = not solved
 	_mirror_symbols.visible = solved
+	_room_symbols.visible = solved  # in the room's mirror too, without clicking it
 	var wheels: Array = game.get("bedroom", {}).get("wheels", EXAMPLE_WHEELS)
 	var mirrored := BathroomRules.mirror_symbols(wheels)
 	for i in _symbol_images.size():
 		_symbol_images[i].texture = load(IMAGES + "sym_%s.png" % mirrored[i])
+		_room_symbol_images[i].texture = _symbol_images[i].texture
 
 
 # Dark until the green fuse is on, then lit with a full tub, then drained once solved.
@@ -351,6 +397,26 @@ func _build_ui() -> void:
 
 	# Steam over the mirror once the taps are solved (spec 20).
 	_steam = _picture("Steam", "prop_steam.png", STEAM_RECT)
+	# The symbols show through the steam on the mirror, as soon as the taps are right.
+	_room_symbols = HBoxContainer.new()
+	_room_symbols.name = "RoomMirrorSymbols"
+	_room_symbols.alignment = BoxContainer.ALIGNMENT_CENTER
+	_room_symbols.add_theme_constant_override("separation", 10)
+	_room_symbols.position = MIRROR_SYMBOLS_RECT.position
+	_room_symbols.size = MIRROR_SYMBOLS_RECT.size
+	_room_symbols.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_room_symbols.modulate = Color(1, 1, 1, 0.85)
+	add_child(_room_symbols)
+	for i in 3:
+		var symbol := TextureRect.new()
+		symbol.name = "RoomMirrorSymbol%d" % i
+		symbol.custom_minimum_size = Vector2(52, 52)
+		symbol.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		symbol.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		symbol.flip_h = true  # a mirror shows each symbol the wrong way round
+		symbol.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_room_symbols.add_child(symbol)
+		_room_symbol_images.append(symbol)
 	_steam.modulate.a = 0.85
 
 	# The spots: see-through buttons over the picture, with a name.

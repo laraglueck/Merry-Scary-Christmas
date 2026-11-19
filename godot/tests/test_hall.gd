@@ -39,6 +39,12 @@ func assert_no_symbol_names(text: String) -> void:
 		assert_true(not text.contains(symbol), "no symbol names in the text: %s" % text)
 
 
+# The colour of the frame around the order's symbols: whose fuse the order is for.
+func frame_colour(hall: Node) -> Color:
+	var frame: Node = hall.find_child("LabelFrame", true, false)
+	return frame.get_theme_stylebox("panel").border_color if frame != null else Color.TRANSPARENT
+
+
 func click_wires(hall: Node, colours: Array) -> void:
 	for colour in colours:
 		press(hall, "Wire_" + colour)
@@ -75,7 +81,7 @@ func test_player_1_has_red_fuse_and_sees_gold_label() -> void:
 	press(hall, "FuseBoxButton")
 	assert_contains(text_of(hall, "FuseTitle"), "red", "own fuse")
 	var hint := text_of(hall, "LabelHint")
-	assert_eq(texture_file(hall, "LabelFuse"), "item_fuse_gold.png", "the order of which fuse (its frame)")
+	assert_eq(frame_colour(hall), HallScript.UI_COLOURS["gold"], "the order of which fuse (its frame)")
 	assert_eq(label_pictures(hall), ["bell", "snowflake", "star", "tree"], "label symbols as pictures")
 	assert_no_symbol_names(hint)
 
@@ -86,7 +92,7 @@ func test_player_2_has_green_fuse_and_sees_red_label() -> void:
 	press(hall, "PlayerButton1")
 	assert_contains(text_of(hall, "FuseTitle"), "green", "own fuse")
 	var hint := text_of(hall, "LabelHint")
-	assert_eq(texture_file(hall, "LabelFuse"), "item_fuse_red.png", "the order of which fuse (its frame)")
+	assert_eq(frame_colour(hall), HallScript.UI_COLOURS["red"], "the order of which fuse (its frame)")
 	assert_eq(label_pictures(hall), ["star", "bell", "snowflake", "tree"], "label symbols as pictures")
 	assert_no_symbol_names(hint)
 
@@ -202,7 +208,7 @@ func test_online_hall_shows_only_my_player() -> void:
 	assert_contains(text_of(hall, "FuseTitle"), "Player 2", "who")
 	assert_contains(text_of(hall, "FuseTitle"), "GREEN", "own fuse")
 	if not a.game.is_empty():
-		assert_eq(texture_file(hall, "LabelFuse"), "item_fuse_red.png", "sees the red fuse's order (its frame)")
+		assert_eq(frame_colour(hall), HallScript.UI_COLOURS["red"], "sees the red fuse's order (its frame)")
 		assert_eq(label_pictures(hall), FuseRules.label_for(a.game["puzzle"], 0), "label symbols as pictures")
 		assert_no_symbol_names(text_of(hall, "LabelHint"))
 
@@ -457,18 +463,19 @@ func test_dark_door_by_key_explains_which_fuse() -> void:
 	assert_contains(text_of(hall, "Message"), "green fuse", "explanation")
 
 
-func test_fuse_appears_in_its_socket_once_it_is_on() -> void:
+# The modern fuse box (second test round): a solved fuse flips its breaker up, cut from
+# the "all on" picture, so it lines up exactly with the "all off" box.
+func test_a_solved_fuse_flips_its_breaker_up() -> void:
 	var hall := open_hall()
 	press(hall, "FuseBoxButton")
-	assert_eq(is_shown(hall, "FuseSocket_red"), false, "no red fuse yet")
+	assert_eq(texture_file(hall, "FuseBoxPicture"), "ui_fuse_box.webp", "the box, all breakers down")
+	assert_eq(is_shown(hall, "BreakerOn_red"), false, "red still down")
 	click_wires(hall, RED_RIGHT)
-	assert_eq(is_shown(hall, "FuseSocket_red"), true, "red fuse in its socket")
-	assert_eq(texture_file(hall, "FuseSocket_red"), "item_fuse_red.png", "fuse picture")
-	# Bug from screenshot 2: the picture showed at its full 276 x 512 size over the whole box.
-	var socket := find(hall, "FuseSocket_red")
-	if socket != null:
-		assert_true(socket.size.x <= 60 and socket.size.y <= 110, "fuse fits its socket, size is %s" % socket.size)
-	assert_eq(is_shown(hall, "FuseSocket_green"), false, "green still empty")
+	assert_eq(is_shown(hall, "BreakerOn_red"), true, "red flipped up")
+	var breaker: TextureRect = find(hall, "BreakerOn_red")
+	assert_true(breaker.texture is AtlasTexture, "a piece of the 'all on' picture")
+	assert_eq(breaker.texture.atlas.resource_path.get_file(), "ui_fuse_box_on.webp", "from the 'on' picture")
+	assert_eq(is_shown(hall, "BreakerOn_green"), false, "green still down")
 
 
 func test_torn_label_and_order_show_pictures() -> void:
@@ -498,12 +505,12 @@ func test_wires_sit_over_the_cables_blue_yellow_white_black() -> void:
 	var sorted_xs := xs.duplicate()
 	sorted_xs.sort()
 	assert_eq(xs, sorted_xs, "left to right")
-	# Over the four cables of ui_fuse_box.webp: picture pixels x 550 to 810, y 420 to 725.
+	# Over the four cables of the modern ui_fuse_box.webp: picture pixels x 535 to 840, y 465 to 720.
 	for colour in ["blue", "yellow", "white", "black"]:
 		var wire := find(hall, "Wire_" + colour)
 		if wire != null:
 			var r := in_picture_pixels(hall, "FuseBoxPicture", wire)
-			assert_true(Rect2(550, 420, 260, 305).encloses(r), "%s over the cables, is %s" % [colour, r])
+			assert_true(Rect2(535, 465, 305, 255).encloses(r), "%s over the cables, is %s" % [colour, r])
 
 
 func test_keyboard_only_solves_a_fuse() -> void:
@@ -669,7 +676,7 @@ func test_the_order_is_framed_in_the_colour_of_its_fuse() -> void:
 		var frame := find(hall, "LabelFrame")
 		var border: Color = frame.get_theme_stylebox("panel").border_color if frame != null else Color.TRANSPARENT
 		assert_eq(border, HallScript.UI_COLOURS[fuse], "player %d: frame in %s" % [player + 1, fuse])
-		assert_eq(texture_file(hall, "LabelFuse"), "item_fuse_%s.png" % fuse, "player %d: small %s fuse" % [player + 1, fuse])
+		assert_true(hall.find_child("LabelFuse", true, false) == null, "no small fuse icon (it confused players)")
 		assert_true(not text_of(hall, "LabelHint").contains(fuse), "player %d: the fuse is not named" % [player + 1])
 		assert_contains(text_of(hall, "LabelHint"), "Not every order you see is meant for you", "the quiet hint")
 		assert_true(not text_of(hall, "LabelHint").to_lower().contains("torn"), "no torn label")
@@ -786,9 +793,8 @@ func test_the_figures_hide_while_a_close_up_is_open() -> void:
 	figures.free()
 
 
-func test_the_doll_on_the_stairs_turns_her_head_once() -> void:
+func test_the_doll_on_the_stairs_turns_her_head_every_time() -> void:
 	var hall := open_hall()
-	hall.forget_doll()
 	assert_eq(texture_file(hall, "Doll"), "prop_doll.png", "she sits on the stairs")
 	var stairs: Button = find(hall, "StairsButton")
 	var click := InputEventMouseButton.new()
@@ -797,10 +803,11 @@ func test_the_doll_on_the_stairs_turns_her_head_once() -> void:
 	stairs.gui_input.emit(click)
 	assert_contains(text_of(hall, "Message"), "pitch dark", "the stairs are dark")
 	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "she turns her head")
-	assert_true("sfx_creak.mp3" in hall.sounds_played, "with a creak")
-	var again := open_hall()
-	again.find_child("StairsButton", true, false).gui_input.emit(click)
-	assert_eq(texture_file(again, "Doll"), "prop_doll.png", "only once")
+	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 1, "with a creak")
+	hall._doll_turns_back()  # after a moment she looks away again
+	stairs.gui_input.emit(click)
+	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "and turns again on the next click")
+	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 2, "creaking again")
 
 
 # ---------- sound pack (spec 22) ----------
@@ -845,3 +852,26 @@ func test_the_fuse_click_is_a_short_real_click() -> void:
 	var length := click.get_length() if click != null else 0.0
 	assert_true(length > 0.1 and length < 0.5, "a short click, not the 0.52 s silent placeholder: %.2f s" % length)
 
+
+
+# ---------- the mission card (second test round) ----------
+
+func test_the_mission_card_shows_when_the_team_enters_the_hall() -> void:
+	HallScript.forget_mission()  # as at the start of a new game
+	var hall := open_hall()
+	assert_eq(is_shown(hall, "MissionCard"), true, "shown at first")
+	var text := text_of(hall, "MissionText")
+	for part in ["Your mission", "three presents", "one team", "every room first", "20 minutes"]:
+		assert_contains(text, part, "the card says: " + part)
+	press(hall, "MissionGo")
+	assert_eq(is_shown(hall, "MissionCard"), false, "closed with Let's go")
+	press(hall, "MissionButton")
+	assert_eq(is_shown(hall, "MissionCard"), true, "the ? opens it again")
+
+
+func test_the_mission_card_shows_only_on_the_first_visit() -> void:
+	HallScript.forget_mission()
+	var hall := open_hall()
+	press(hall, "MissionGo")
+	var again := open_hall()  # the team comes back from a room
+	assert_eq(is_shown(again, "MissionCard"), false, "not again")
