@@ -34,7 +34,19 @@ static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary
 		"inventory": [],                            # what the team carries (spec 14), e.g. ["gift_2"]
 		"seconds_played": 0,                        # the clock (spec 13): time left = 600 - this - penalties
 		"last_event": "",                           # shown to everyone, e.g. "Player 1: wrong order, -10 s"
+		"paused": false,                            # spec 26: the clock and everything else wait
+		"paused_by": -1,                            # who paused (player index), -1 if nobody
 	}
+
+
+# Spec 26: the game waits for everyone; the figures stop where they are.
+static func _pause(game: Dictionary, player: int) -> void:
+	game["paused"] = true
+	game["paused_by"] = player
+	game["last_event"] = "Player %d paused the game" % (player + 1)
+	for figure in game.get("figures", {}).values():
+		figure["dx"] = 0.0
+		figure["dy"] = 0.0
 
 
 # Host only: one player's action changes the game. Unknown actions change nothing.
@@ -44,6 +56,17 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 		CharacterRules.apply(game, player, action, data)
 		return
 	if game.get("phase") != "hall":
+		return
+	# Pause (spec 26): anyone pauses for everyone, anyone continues; while paused nothing else happens.
+	if action == "pause":
+		_pause(game, player)
+		return
+	if action == "resume":
+		game["paused"] = false
+		game["paused_by"] = -1
+		game["last_event"] = ""
+		return
+	if game.get("paused", false):
 		return
 
 	match action:
