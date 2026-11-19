@@ -17,6 +17,7 @@ const SCREENS := {
 	"lobby": preload("res://scenes/lobby.tscn"),
 	"select": preload("res://scenes/character_select.tscn"),  # choose your character (spec 18)
 	"hall": preload("res://scenes/hall.tscn"),
+	"living_room": preload("res://scenes/living_room.tscn"),  # Lara
 	"bathroom": preload("res://scenes/bathroom.tscn"),
 	"attic": preload("res://scenes/attic.tscn"),       # spec 16
 	"merry": preload("res://scenes/ending.tscn"),      # the three ways a game ends (spec 16)

@@ -30,7 +30,7 @@ const GIFT_RECT := Rect2(282, 300, 110, 110)  # the present, standing in the emp
 const DIGIT_POSITION := Vector2(232, 318)     # the digit scratched into the enamel
 const TURNS_POSITION := Vector2(650, 418)     # the turns so far, under the sink
 const HIGHLIGHT := Color("ffd76a")
-# Effects (spec 19)
+# Effects (spec 20)
 const SOUNDS := "res://assets/sounds/"
 const STEAM_RECT := Rect2(586, 92, 290, 226)  # over the mirror, a little larger
 const TAP_SOUND_SECONDS := 1.5                # a turn plays only the start of the faucet
@@ -218,7 +218,7 @@ func forget_face() -> void:
 	_face_seen = false
 
 
-# ---------- effects (spec 19): sounds and steam ----------
+# ---------- effects (spec 20): sounds and steam ----------
 
 func _what_happened_so_far() -> Dictionary:
 	return {"turns": _bathroom()["turns"].size(), "solved": _bathroom()["solved"],
@@ -328,7 +328,7 @@ func _build_ui() -> void:
 	_digit_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	_digit_label.add_theme_constant_override("outline_size", 8)
 
-	# Steam over the mirror once the taps are solved (spec 19).
+	# Steam over the mirror once the taps are solved (spec 20).
 	_steam = _picture("Steam", "prop_steam.png", STEAM_RECT)
 	_steam.modulate.a = 0.85
 

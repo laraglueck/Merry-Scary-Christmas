@@ -55,3 +55,11 @@ func test_note_reads_bathroom_answer_before_clock_is_solved() -> void:
 		"Again, cold as the winds that blow,",
 		"Last, warm as embers burning low.",
 	]), "note uses the bathroom answer")
+
+
+func test_back_to_the_hall() -> void:
+	var screen = RoomScene.instantiate()
+	screen.seed_value = 42
+	tree.root.add_child(screen)
+	screen.get_node("BackButton").pressed.emit()
+	assert_eq(screen.game["location"], "hall", "the team walks back to the hall")

@@ -64,7 +64,7 @@ func test_midnight_shows_no_time_left() -> void:
 	assert_true(not text_of(ending, "Result").contains("before midnight"), "no time line")
 
 
-# ---------- sounds (spec 19) ----------
+# ---------- sounds (spec 20) ----------
 
 func test_each_ending_plays_its_sounds() -> void:
 	assert_eq(open_ending("merry", []).sounds_played, ["sfx_win.mp3", "sfx_bells.mp3"], "merry")

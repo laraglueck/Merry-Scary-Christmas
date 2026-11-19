@@ -46,6 +46,7 @@ func _ready() -> void:
 	_build_clock_submission()
 	_build_reward()
 	_build_note_ui()
+	_build_back_button()
 	_refresh()
 
 
@@ -349,3 +350,22 @@ func _open_note() -> void:
 
 func _close_note() -> void:
 	_note_panel.hide()
+
+
+# The way back: the whole team walks to the hall (spec 07), like in the other rooms.
+func _build_back_button() -> void:
+	var back := Button.new()
+	back.name = "BackButton"
+	back.text = "Back to the hall"
+	back.position = Vector2(940, 16)
+	back.add_theme_font_size_override("font_size", 20)
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.1, 0.07, 0.07, 0.85)
+	box.border_color = Color("5c4a3a")
+	box.set_border_width_all(3)
+	box.set_corner_radius_all(12)
+	box.set_content_margin_all(12)
+	back.add_theme_stylebox_override("normal", box)
+	back.pressed.connect(func() -> void: _send("go_to", {"place": "hall"}))
+	add_child(back)
+

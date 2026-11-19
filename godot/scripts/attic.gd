@@ -24,7 +24,7 @@ const CHOICES := [
 	{"node": "ChoiceReconcile", "choice": "reconcile", "label": "Leave the photo and cookies"},
 ]
 const GREYED_OUT := 0.5  # the photo choice without the photo
-# Effects (spec 19)
+# Effects (spec 20)
 const SOUNDS := "res://assets/sounds/"
 const STIR_SECONDS := 1.0          # how long he is awake after a wrong code
 const SNORE_LOCKED_DB := -18.0     # heard through the locked door
@@ -180,7 +180,7 @@ func _go_to_hall() -> void:
 	_send("go_to", {"place": "hall"})  # the whole team walks back down (spec 07)
 
 
-# ---------- effects (spec 19): sounds, and he stirs ----------
+# ---------- effects (spec 20): sounds, and he stirs ----------
 
 # The picture Jingles shows right now (for tests too).
 func jingles_picture() -> String:
