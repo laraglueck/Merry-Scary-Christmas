@@ -54,7 +54,7 @@ var _highlight := START_SPOT  # index in SPOTS
 var _background: TextureRect
 var _spot_buttons: Array[Button] = []
 var _turns_label: Label
-var _gift: TextureRect
+var _gift: TextureButton  # the present itself can be clicked to take it
 var _digit_label: Label
 var _mirror_panel: PanelContainer
 var _mirror_dust: Label
@@ -204,7 +204,7 @@ func _open_mirror() -> void:
 		_play(_scare, "sfx_scare.mp3")
 		get_tree().create_timer(FACE_SECONDS).timeout.connect(func() -> void: _mirror_face.visible = false)
 	if not _bathroom()["solved"]:
-		_message.text = "Too much dust to see anything."
+		_message.text = "Too much dust to see anything... but something seems hidden underneath."
 	_refresh()
 
 
@@ -312,14 +312,16 @@ func _build_ui() -> void:
 	add_child(_background)
 
 	# The tub after solving: the present and the digit (the water is in the picture).
-	_gift = TextureRect.new()
+	_gift = TextureButton.new()
 	_gift.name = "Gift"
-	_gift.texture = load(IMAGES + "item_gift_2.png")
-	_gift.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_gift.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_gift.texture_normal = load(IMAGES + "item_gift_2.png")
+	_gift.ignore_texture_size = true
+	_gift.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	_gift.tooltip_text = "Take the present"
+	_gift.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_gift.pressed.connect(func() -> void: _send("take_gift", {"room": "bathroom"}))
 	_gift.position = GIFT_RECT.position
 	_gift.size = GIFT_RECT.size
-	_gift.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_gift)
 	_digit_label = _label(self, "", 44)
 	_digit_label.name = "DigitLabel"
@@ -387,7 +389,8 @@ func _build_ui() -> void:
 	var mirror_content := VBoxContainer.new()
 	mirror_content.alignment = BoxContainer.ALIGNMENT_CENTER
 	_mirror_panel.add_child(mirror_content)
-	_mirror_dust = _label(mirror_content, "Grey dust covers the glass.", 24)
+	# A hint that the mirror will matter later: the steam from the hot water clears it.
+	_mirror_dust = _label(mirror_content, "Grey dust covers the glass.\nFaint marks hide underneath...\nperhaps warm steam would bring them out.", 22)
 	_mirror_dust.name = "MirrorDust"
 	_mirror_dust.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mirror_dust.add_theme_color_override("font_color", Color("4a4a4a"))

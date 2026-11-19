@@ -53,11 +53,18 @@ const SOCKET_CENTRES := {"red": Vector2(575, 275), "green": Vector2(688, 275), "
 # inner part of the empty legend box.
 const PLAN_ROOMS := [Rect2(349, 317, 266, 231), Rect2(424, 140, 190, 164), Rect2(765, 262, 236, 205)]
 const LEGEND_BOX := Rect2(892, 530, 298, 111)
+# Hall polish (first full test round): the doll on the stairs, sounds.
+const DOLL_RECT := Rect2(872, 398, 72, 144)  # sitting on a lower step, on the right, under the stairs label
+const DOLL_DIMMED := Color(0.7, 0.65, 0.65)  # in the dim back of the hall
+const DOLL_TURN_SECONDS := 1.5
+const SOUNDS := "res://assets/sounds/"
 
 
 # -1 means: a new random puzzle at every start. Tests set a fixed seed.
 @export var seed_value := -1
 var net: Node = null  # set by main.gd for online play
+var walking: Control = null  # the walking figures (spec 19), only online; hidden behind close-ups
+var sounds_played: Array[String] = []  # sounds played (or, in the headless tests, that would have been)
 
 var puzzle: Dictionary
 var current_player := 0
@@ -92,6 +99,16 @@ var _flicker_rng := RandomNumberGenerator.new()
 var _flicker_steps: Array = []  # what is left of the current flicker cycle
 var _player_buttons: Array[Button] = []
 var _penalty_label: Label
+var _label_frame: PanelContainer   # the order's symbols, framed in the colour of their fuse
+var _label_fuse: TextureRect       # a small fuse in that colour
+var _fuse_hint: RichTextLabel      # hints that grow clearer after wrong tries
+var _wrong_tries := 0              # this player's wrong orders for their own fuse
+var _seen_penalty := 0             # online: to notice a wrong order by anyone (sparks)
+var _doll: TextureRect
+var _spark: AudioStreamPlayer
+var _creak: AudioStreamPlayer
+# The doll turns her head once per player and game run (the hall is made new on every visit).
+static var _doll_seen := false
 var _message: Label
 
 
@@ -99,6 +116,7 @@ func _ready() -> void:
 	if _online():
 		current_player = net.my_index
 		_take_game()
+		_seen_penalty = net.game.get("penalty_seconds", 0)
 		net.game_changed.connect(_on_game_changed)
 	else:
 		var rng := RandomNumberGenerator.new()
@@ -130,7 +148,19 @@ func _on_game_changed() -> void:
 		return  # game is over (host left); main.gd switches the screen
 	_take_game()
 	_message.text = net.game["last_event"]
+	_notice_wrong_order(net.game)
 	_refresh()
+
+
+# Online: a wrong order by anyone sparks on every device; our own counts for the hints.
+func _notice_wrong_order(game: Dictionary) -> void:
+	var penalty: int = game.get("penalty_seconds", 0)
+	var event: String = game.get("last_event", "")
+	if penalty > _seen_penalty and "wrong order" in event:
+		_play(_spark, "sfx_spark.mp3")
+		if event.begins_with("Player %d:" % (current_player + 1)):
+			_wrong_tries += 1
+	_seen_penalty = penalty
 
 
 # ---------- reacting to clicks ----------
@@ -138,17 +168,26 @@ func _on_game_changed() -> void:
 func _on_fuse_box_pressed() -> void:
 	_house_plan_panel.visible = false
 	_fuse_panel.visible = true
+	_show_figures(false)
 	_refresh()
 
 
 func _on_house_plan_pressed() -> void:
 	_fuse_panel.visible = false
 	_house_plan_panel.visible = true
+	_show_figures(false)
 
 
 func _close_close_ups() -> void:
 	_fuse_panel.visible = false
 	_house_plan_panel.visible = false
+	_show_figures(true)
+
+
+# The figures are drawn by depth and would cover a close-up, so they step aside.
+func _show_figures(shown: bool) -> void:
+	if walking != null:
+		walking.visible = shown
 
 
 func _on_player_pressed(player: int) -> void:
@@ -196,7 +235,9 @@ func _submit_attempt() -> void:
 		_message.text = "The %s fuse is on! The %s is lit." % [fuse["colour"], fuse["room"]]
 	else:
 		penalty_total += result["penalty_seconds"]
-		_message.text = "Wrong order: -%d s" % result["penalty_seconds"]
+		_message.text = "Sparks! -%d s" % result["penalty_seconds"]
+		_wrong_tries += 1
+		_play(_spark, "sfx_spark.mp3")
 
 
 # ---------- coloured symbols (spec 08b) ----------
@@ -297,9 +338,47 @@ func _use_spot(spot: String) -> void:
 		_:
 			if _spot_by_name[spot].disabled:
 				_message.text = _why_dark(spot)
+				if spot == "attic":
+					_doll_turns()
 			else:
 				_on_place_pressed(spot)
 	_refresh()
+
+
+# A dark door or the dark stairs are switched off, so a click would do nothing: here it
+# still explains why (like the keys do), and on the stairs the doll may turn her head.
+func _on_spot_input(event: InputEvent, index: int) -> void:
+	var button: Button = _spot_buttons[index]
+	if button.disabled and event is InputEventMouseButton \
+			and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		_on_spot_pressed(index)
+
+
+# The doll on the stairs turns her head towards the players, with a creak, then back.
+func _doll_turns() -> void:
+	if _doll_seen:
+		return
+	_doll_seen = true
+	_doll.texture = load(IMAGES + "prop_doll_turned.png")
+	_doll.modulate = Color.WHITE  # for a moment the lamp lights her up
+	_play(_creak, "sfx_creak.mp3")
+	get_tree().create_timer(DOLL_TURN_SECONDS).timeout.connect(_doll_turns_back)
+
+
+func _doll_turns_back() -> void:
+	_doll.texture = load(IMAGES + "prop_doll.png")
+	_doll.modulate = DOLL_DIMMED
+
+
+# For tests: the next click on the dark stairs makes her turn again.
+func forget_doll() -> void:
+	_doll_seen = false
+
+
+func _play(player: AudioStreamPlayer, file_name: String) -> void:
+	sounds_played.append(file_name)
+	if DisplayServer.get_name() != "headless":
+		player.play()  # not in the test run: no sound card
 
 
 func _why_dark(place: String) -> String:
@@ -355,10 +434,22 @@ func _refresh() -> void:
 	var seen := _fuse_seen_by(current_player)
 	var seen_colour: String = puzzle["fuses"][seen]["colour"]
 	var label := Rules.label_for(puzzle, seen)
-	var coloured_name := "[color=#%s]%s[/color]" % [UI_COLOURS[seen_colour].to_html(false), seen_colour]
-	_hint_label.text = "Torn label of the %s fuse. Read it out to its owner!" % coloured_name
+	var coloured_name := "[color=#%s]%s[/color]" % [UI_COLOURS[seen_colour].to_html(false), seen_colour.to_upper()]
+	# The order is shown as if it were the player's own; only its frame tells whose it is.
+	_hint_label.text = "Connect the four wires in the right order. [i]Not every order you see is meant for you.[/i]\n\n[b]The order:[/b]"
 	for i in _label_symbols.size():
 		_show_symbol(_label_symbols[i], label[i])
+	_label_frame.add_theme_stylebox_override("panel", _box(Color(0.05, 0.03, 0.03, 0.6), UI_COLOURS[seen_colour], 8))
+	_label_fuse.texture = load(IMAGES + "item_fuse_%s.png" % seen_colour)
+	# Hints that grow clearer: after one wrong try a question, after two the answer.
+	if fuse["solved"] and not puzzle["fuses"][seen]["solved"]:
+		_fuse_hint.text = "Your fuse is on. But these symbols are still here... someone else might need them."
+	elif _wrong_tries >= 2 and not fuse["solved"]:
+		_fuse_hint.text = "[b]Sparks![/b] Look at the frame: these symbols belong to the %s fuse. Who has it?" % coloured_name
+	elif _wrong_tries == 1 and not fuse["solved"]:
+		_fuse_hint.text = "[b]Sparks![/b] Are these symbols really meant for [i]your[/i] fuse?"
+	else:
+		_fuse_hint.text = ""
 	for i in Settings.FUSES.size():
 		var colour: String = puzzle["fuses"][i]["colour"]
 		_sockets[colour].visible = puzzle["fuses"][i]["solved"]
@@ -452,9 +543,15 @@ func _build_ui() -> void:
 	add_child(backdrop)
 	var hall_area := _picture_area(self, "Background", "room_hall.webp")
 	if _online():  # the figures walk here (spec 19); the spots are added after, so they stay on top
-		var walking := WalkLayer.new()
+		walking = WalkLayer.new()
 		walking.net = net
 		hall_area.add_child(walking)
+	# The doll on the stairs (hall polish): dimmed, under the spots so the stairs stay clickable.
+	_doll = _image("Doll", "prop_doll.png")
+	_doll.modulate = DOLL_DIMMED
+	_doll.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_place(_doll, DOLL_RECT)
+	hall_area.add_child(_doll)
 
 	# The spots: see-through buttons over the picture, with a name.
 	for i in SPOTS.size():
@@ -463,6 +560,7 @@ func _build_ui() -> void:
 		_style_spot(button, spot["node"], 16)
 		_place(button, spot["rect"])
 		button.pressed.connect(_on_spot_pressed.bind(i))
+		button.gui_input.connect(_on_spot_input.bind(i))
 		hall_area.add_child(button)
 		_spot_buttons.append(button)
 		_spot_by_name[spot["name"]] = button
@@ -531,6 +629,16 @@ func _build_ui() -> void:
 	_flicker_timer.timeout.connect(_on_flicker_tick)
 	add_child(_flicker_timer)
 
+	# Sounds (hall polish): sparks for a wrong order, a creak for the doll.
+	_spark = AudioStreamPlayer.new()
+	_spark.name = "SparkSound"
+	_spark.stream = load(SOUNDS + "sfx_spark.mp3")
+	add_child(_spark)
+	_creak = AudioStreamPlayer.new()
+	_creak.name = "CreakSound"
+	_creak.stream = load(SOUNDS + "sfx_creak.mp3")
+	add_child(_creak)
+
 
 # Fuse box close-up: the box picture, cables to click, fuses in their sockets, and a
 # side panel with the player's fuse, the torn label and the order so far.
@@ -583,15 +691,32 @@ func _build_fuse_box() -> void:
 	_hint_label.add_theme_font_size_override("normal_font_size", 17)
 	_hint_label.add_theme_color_override("default_color", Color("c9b8a0"))
 	box.add_child(_hint_label)
+	_label_frame = PanelContainer.new()
+	_label_frame.name = "LabelFrame"
+	box.add_child(_label_frame)
 	var symbols := HBoxContainer.new()
 	symbols.name = "LabelSymbols"
-	symbols.add_theme_constant_override("separation", 8)
-	box.add_child(symbols)
+	symbols.add_theme_constant_override("separation", 6)
+	_label_frame.add_child(symbols)
 	for i in 4:
 		var symbol := _image("LabelSymbol%d" % i, "")
-		symbol.custom_minimum_size = Vector2(64, 64)
+		symbol.custom_minimum_size = Vector2(56, 56)
 		symbols.add_child(symbol)
 		_label_symbols.append(symbol)
+	_label_fuse = _image("LabelFuse", "")
+	_label_fuse.custom_minimum_size = Vector2(28, 56)
+	symbols.add_child(_label_fuse)
+	_fuse_hint = RichTextLabel.new()
+	_fuse_hint.name = "FuseHint"
+	_fuse_hint.bbcode_enabled = true
+	_fuse_hint.fit_content = true
+	_fuse_hint.scroll_active = false
+	_fuse_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_fuse_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fuse_hint.add_theme_font_size_override("normal_font_size", 16)
+	_fuse_hint.add_theme_font_size_override("bold_font_size", 16)
+	_fuse_hint.add_theme_color_override("default_color", Color("ffd76a"))
+	box.add_child(_fuse_hint)
 	_chosen_label = _label(box, "", 18, true)
 	_chosen_label.name = "ChosenLabel"
 	var wires_row := HBoxContainer.new()
@@ -612,7 +737,7 @@ func _build_fuse_box() -> void:
 	box.add_child(buttons)
 	buttons.add_child(_plain_button("ResetButton", "Reset", _on_reset_pressed))
 	buttons.add_child(_plain_button("BackFromFuseBox", "Back to the hall", _close_close_ups))
-	var keys := _label(box, "Click the cables in the right order. Keys: left/right choose, Enter takes the cable, Esc goes back.", 14, true)
+	var keys := _label(box, "The house plan shows which symbol means which wire. Keys: left/right choose, Enter takes the cable, Esc goes back.", 14, true)
 	keys.add_theme_color_override("font_color", Color("9c8d7a"))
 
 
