@@ -2,6 +2,7 @@
 extends "res://tests/base_test.gd"
 
 const BathroomScene = preload("res://scenes/bathroom.tscn")
+const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 
 
 # Stands in for network.gd in the online test: records what the screen sends.
@@ -294,3 +295,17 @@ func test_online_a_teammates_turn_plays_the_tap() -> void:
 	net.game["bathroom"]["turns"] = ["cold"]  # a teammate turned the cold tap
 	net.game_changed.emit()
 	assert_eq(bathroom.sounds_played, ["sfx_faucet.mp3"], "heard here too")
+
+
+func test_the_present_itself_can_be_clicked() -> void:
+	var bathroom := open_bathroom()
+	click_taps(bathroom, right_taps(bathroom))
+	press(bathroom, "Gift")  # players click the present, not the tub around it
+	assert_eq(bathroom.game["bathroom"]["gift_taken"], true, "taken")
+	assert_true(InventoryRules.has(bathroom.game, "gift_2"), "in the inventory")
+
+
+func test_the_present_catches_mouse_clicks() -> void:
+	var bathroom := open_bathroom()
+	var gift: Control = find(bathroom, "Gift")
+	assert_true(gift.mouse_filter != Control.MOUSE_FILTER_IGNORE, "a real click lands on the present")
