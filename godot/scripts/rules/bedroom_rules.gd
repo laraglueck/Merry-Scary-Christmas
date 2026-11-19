@@ -14,7 +14,7 @@ static func create_room(rng: RandomNumberGenerator) -> Dictionary:
 	return {
 		"wheels": solution,
 		"selected_wheels": ["star", "star", "star"],
-		"digit": rng.randi_range(0, 9),
+		"digit": rng.randi_range(1, 9),
 		"solved": false,
 		"gift_taken": false,
 		"photo_taken": false
@@ -39,8 +39,8 @@ static func try_wheels(room: Dictionary, symbols: Array) -> Dictionary:
 		return {"error": "", "correct": true, "penalty_seconds": 0}
 
 	return {"error": "", "correct": false, "penalty_seconds": 20}
-	
-	
+
+
 # Take present 3 from the chest after solving the puzzle.
 static func take_gift(room: Dictionary) -> Dictionary:
 	if not room["solved"]:
@@ -71,3 +71,8 @@ static func photo_door(room: Dictionary, clue: Dictionary) -> int:
 		if door != int(clue.get("hour", 0)) and door != int(clue.get("minute", 0)):
 			candidates.append(door)
 	return candidates[posmod(int(room.get("digit", 0)), candidates.size())]
+
+
+# Older saves could contain zero, which would otherwise skip the attic's gold dial.
+static func gold_digit(room: Dictionary) -> int:
+	return maxi(1, int(room["digit"]))

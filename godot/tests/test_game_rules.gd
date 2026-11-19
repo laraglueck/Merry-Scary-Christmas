@@ -85,3 +85,35 @@ func test_refused_go_to_shows_the_reason_and_changes_nothing() -> void:
 	assert_contains(game["last_event"], "Player 1", "who")
 	assert_contains(game["last_event"], "still dark", "reason")
 	assert_eq(game["penalty_seconds"], 0, "no penalty for walking")
+
+
+# ---------- character selection (spec 18) ----------
+
+func test_selection_actions_pick_and_ready() -> void:
+	var game := {"phase": "select", "selection": {}, "last_event": ""}
+	GameRules.apply(game, 1, "pick_character", {"character": "snowman", "colour": "green"})
+	assert_eq(game["selection"][1], {"character": "snowman", "colour": "green", "accessory": "none", "ready": false}, "Player 2 picked")
+	GameRules.apply(game, 1, "ready", {})
+	assert_eq(game["selection"][1]["ready"], true, "Player 2 is ready")
+
+
+func test_a_refused_selection_action_explains_why() -> void:
+	var game := {"phase": "select", "selection": {}, "last_event": ""}
+	GameRules.apply(game, 0, "pick_character", {"character": "santa", "colour": "red"})
+	GameRules.apply(game, 1, "pick_character", {"character": "santa", "colour": "green"})
+	assert_eq(game["selection"].has(1), false, "refused")
+	assert_contains(game["last_event"], "Player 2", "names the player")
+	assert_contains(game["last_event"], "taken by Player 1", "says why")
+
+
+func test_selection_actions_do_nothing_in_a_running_game() -> void:
+	var game := new_game()
+	GameRules.apply(game, 0, "pick_character", {"character": "santa", "colour": "red"})
+	assert_eq(game.has("selection"), false, "the running game has no selection")
+
+
+func test_new_game_keeps_the_chosen_characters() -> void:
+	var rng := RandomNumberGenerator.new()
+	var chosen := {0: {"character": "santa", "colour": "red"}}
+	assert_eq(GameRules.new_game(rng, chosen)["characters"], chosen, "stored")
+	assert_eq(GameRules.new_game(rng)["characters"], {}, "empty by default")

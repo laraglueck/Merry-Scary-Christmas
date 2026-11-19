@@ -70,6 +70,29 @@ func test_main_switches_everyone_to_the_hall_when_the_game_starts() -> void:
 	assert_contains(text_of(mains[1], "FuseTitle"), "GREEN", "Player 2 plays the green fuse")
 
 
+func test_main_shows_the_character_selection_before_the_game() -> void:
+	var host := make_main_device("SelHost")
+	var a := make_main_device("SelA")
+	var b := make_main_device("SelB")
+	host.net.host_room(47553)
+	a.net.join_room("127.0.0.1", 47553)
+	await wait_until(func(): return a.net.connected)
+	b.net.join_room("127.0.0.1", 47553)
+	await wait_until(func(): return b.net.connected)
+	await wait_until(func(): return host.net.players.size() == 3)
+	var mains := [host, a, b]
+	host.net.begin_selection()
+	assert_true(await wait_until(func(): return mains.all(func(m): return m.screen_name == "select")), "all three choose")
+	await wait_frames(2)
+	assert_true(a.find_child("Card_santa", true, false) != null, "selection screen on Player 2")
+	assert_true(a.get_node("Music").playing or DisplayServer.get_name() == "headless", "the menu music goes on")
+	var picks := [["santa", "red"], ["snowman", "green"], ["nutcracker", "yellow"]]
+	for player in 3:
+		mains[player].net.send_action("pick_character", {"character": picks[player][0], "colour": picks[player][1]})
+		mains[player].net.send_action("ready", {})
+	assert_true(await wait_until(func(): return mains.all(func(m): return m.screen_name == "hall")), "then the hall")
+
+
 func test_main_back_to_lobby_when_host_leaves() -> void:
 	var mains: Array = await make_started_mains(47552)
 	var a = mains[1]
@@ -214,4 +237,59 @@ func test_inventory_bar_hidden_after_midnight() -> void:
 	await wait_until(screens_are(mains, "midnight"))
 	var bar: Node = mains[1].find_child("InventoryBar", true, false)
 	assert_true(bar != null and not bar.visible, "bar hidden after the game")
+
+
+# ---------- back to the lobby (spec 17) ----------
+
+func test_back_to_the_lobby_after_the_end_and_play_again() -> void:
+	var mains: Array = await make_started_mains(47602)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.advance_clock(600.0)
+	assert_true(await wait_until(screens_are(mains, "midnight")), "all three see the end")
+	await wait_frames(2)
+	var back: Node = mains[0].find_child("BackButton", true, false)
+	assert_true(back != null and back.is_visible_in_tree(), "the host sees Back to the lobby")
+	assert_contains(text_of(mains[0], "BackButton"), "Back to the lobby", "its text")
+	var player_back: Node = mains[1].find_child("BackButton", true, false)
+	assert_true(player_back == null or not player_back.is_visible_in_tree(), "Player 2 has no button")
+	var wait: Node = mains[1].find_child("WaitLabel", true, false)
+	assert_true(wait != null and wait.is_visible_in_tree(), "Player 2 waits")
+	assert_contains(text_of(mains[1], "WaitLabel"), "Waiting for Player 1", "for whom")
+	press(mains[0], "BackButton")
+	assert_true(await wait_until(screens_are(mains, "lobby")), "all three back in the lobby")
+	await wait_frames(2)
+	press(mains[0], "StartButton")
+	assert_true(await wait_until(screens_are(mains, "select")), "a new round starts with the character selection (spec 18)")
+	var picks := [["santa", "red"], ["snowman", "green"], ["nutcracker", "yellow"]]
+	for player in 3:
+		mains[player].net.send_action("pick_character", {"character": picks[player][0], "colour": picks[player][1]})
+		mains[player].net.send_action("ready", {})
+	assert_true(await wait_until(screens_are(mains, "hall")), "a new round in the hall")
+	assert_eq(ClockRules.time_left(mains[2].net.game) >= 598, true, "the clock starts again at 10:00")
+
+
+func test_end_screen_alone_shows_no_back_button() -> void:
+	var ending: Node = load("res://scenes/ending.tscn").instantiate()
+	ending.place = "merry"
+	tree.root.add_child(ending)
+	var back: Node = ending.find_child("BackButton", true, false)
+	assert_true(back == null or not back.visible, "no network: no button")
+	var wait: Node = ending.find_child("WaitLabel", true, false)
+	assert_true(wait == null or not wait.visible, "no network: no waiting")
+
+
+# After the manual test (spec 17): the button is red, so it looks clickable.
+func test_back_to_the_lobby_button_is_red() -> void:
+	var mains: Array = await make_started_mains(47603)
+	await wait_until(screens_are(mains, "hall"))
+	mains[0].net.advance_clock(600.0)
+	await wait_until(screens_are(mains, "midnight"))
+	await wait_frames(2)
+	var back: Button = mains[0].find_child("BackButton", true, false)
+	if back != null:
+		var style = back.get_theme_stylebox("normal")
+		assert_true(style is StyleBoxFlat, "its own style")
+		if style is StyleBoxFlat:
+			var colour: Color = style.bg_color
+			assert_true(colour.r > 0.6 and colour.g < 0.35 and colour.b < 0.35 and colour.a > 0.9, "red: %s" % colour)
 

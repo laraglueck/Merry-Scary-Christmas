@@ -12,16 +12,22 @@ const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
+const AtticRules = preload("res://scripts/rules/attic_rules.gd")
+const CharacterRules = preload("res://scripts/rules/character_rules.gd")
+const WalkRules = preload("res://scripts/rules/walk_rules.gd")
 
 
-static func new_game(rng: RandomNumberGenerator) -> Dictionary:
+static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary:
 	return {
 		"phase": "hall",                            # "hall" = the game runs inside the house
+		"characters": characters,                   # who plays whom (spec 18): {player: {character, colour}}
 		"location": "hall",                         # where the whole team is (spec 07)
+		"figures": WalkRules.new_figures(),         # where each figure stands and walks to (spec 19)
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
 		"living_room": LivingRoomRules.create_room(rng),  # clock lock (Lara)
-		"bedroom": BedroomRules.create_room(rng), # Mika
+		"bedroom": BedroomRules.create_room(rng),
+		"attic": AtticRules.create(),               # code lock and the final choice (spec 16)
 		"penalty_seconds": 0,                       # all penalties so far
 		"inventory": [],                            # what the team carries (spec 14), e.g. ["gift_2"]
 		"seconds_played": 0,                        # the clock (spec 13): time left = 600 - this - penalties
@@ -32,6 +38,9 @@ static func new_game(rng: RandomNumberGenerator) -> Dictionary:
 # Host only: one player's action changes the game. Unknown actions change nothing.
 # After midnight (or another end) nothing changes any more (spec 13).
 static func apply(game: Dictionary, player: int, action: String, data: Dictionary) -> void:
+	if game.get("phase") == "select":  # before the game: the characters are chosen (spec 18)
+		CharacterRules.apply(game, player, action, data)
+		return
 	if game.get("phase") != "hall":
 		return
 
@@ -44,6 +53,8 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 			_set_clock(game, player, data)
 		"set_wheels":
 			_set_wheels(game, player, data)
+		"take_photo":
+			_take_bedroom_photo(game, player)
 		"take_gift":
 			if data.get("room") == "bathroom":
 				_take_bathroom_gift(game, player)
@@ -51,11 +62,17 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 				_take_living_room_gift(game, player)
 			elif data.get("room") == "bedroom":
 				_take_bedroom_gift(game, player)
-					
-		"take_photo":
-			_take_bedroom_photo(game, player)
 		"go_to":
 			_go_to(game, player, data)
+		"move":
+			var dx = data.get("dx", null)
+			var dy = data.get("dy", null)
+			if typeof(dx) in [TYPE_FLOAT, TYPE_INT] and typeof(dy) in [TYPE_FLOAT, TYPE_INT]:
+				WalkRules.set_direction(game, player, float(dx), float(dy))
+		"try_attic_code":
+			_try_attic_code(game, player, data)
+		"choose_ending":
+			_choose_ending(game, player, data)
 
 	ClockRules.check_midnight(game)
 	
@@ -179,7 +196,52 @@ static func _take_living_room_gift(game: Dictionary, player: int) -> void:
 		game["last_event"] = "%s found the first present!" % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
-		
+
+
+# Attic (spec 16): the code lock and the final choice, only with the team upstairs.
+static func _in_attic(game: Dictionary, player: int) -> bool:
+	if not game.has("attic"):
+		game["attic"] = AtticRules.create()  # a game saved before spec 16
+	if game.get("location") != "attic":
+		game["last_event"] = "Player %d: climb up to the attic first" % (player + 1)
+		return false
+	return true
+
+
+static func _try_attic_code(game: Dictionary, player: int, data: Dictionary) -> void:
+	if not _in_attic(game, player):
+		return
+	var who := "Player %d" % (player + 1)
+	var dials = data.get("dials", [])
+	if typeof(dials) != TYPE_ARRAY:
+		dials = []
+	var result := AtticRules.try_code(game["attic"], dials, AtticRules.code(game))
+	if result["error"] != "":
+		game["last_event"] = "%s: %s" % [who, result["error"]]
+	elif result["correct"]:
+		game["last_event"] = "%s: the attic lock clicks open." % who
+	else:
+		game["penalty_seconds"] += result["penalty_seconds"]
+		game["last_event"] = "%s: wrong code, -%d s" % [who, result["penalty_seconds"]]
+
+
+static func _choose_ending(game: Dictionary, player: int, data: Dictionary) -> void:
+	if not _in_attic(game, player):
+		return
+	var who := "Player %d" % (player + 1)
+	var choice := str(data.get("choice", ""))
+	var result := AtticRules.choose(game["attic"], choice, InventoryRules.has(game, "photo"))
+	if result["error"] != "":
+		game["last_event"] = "%s: %s" % [who, result["error"]]
+		return
+	if choice == "lock_in":
+		InventoryRules.add(game, "key")
+		game["last_event"] = "%s took the key and locked Scary Jingles in." % who
+	else:
+		game["last_event"] = "%s left the photo and the cookies beside him." % who
+	game["phase"] = result["ending"]  # the game ends, like at midnight
+
+
 # Bedroom: check the three symbols on the toy chest.
 static func _set_wheels(game: Dictionary, player: int, data: Dictionary) -> void:
 	var who := "Player %d" % (player + 1)
@@ -209,8 +271,9 @@ static func _set_wheels(game: Dictionary, player: int, data: Dictionary) -> void
 		game["last_event"] = "%s: wrong symbols, -%d s" % [
 			who, result["penalty_seconds"]
 		]
-		
-		# Check whether the team can interact with bedroom objects.
+
+
+# Check whether the team can interact with bedroom objects.
 static func _can_use_bedroom(game: Dictionary, player: int) -> bool:
 	var who := "Player %d" % (player + 1)
 

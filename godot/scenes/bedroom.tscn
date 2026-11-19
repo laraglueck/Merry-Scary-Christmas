@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://458pwoheqlqd"]
 
-[ext_resource type="Script" uid="uid://dejf8l8o45fnu" path="res://scenes/bedroom.gd" id="1_2f21x"]
+[ext_resource type="Script" uid="uid://dejf8l8o45fnu" path="res://scripts/bedroom.gd" id="1_2f21x"]
 
 [node name="Bedroom" type="Control" unique_id=1251790280]
 layout_mode = 3

@@ -1,5 +1,6 @@
 extends Control
 
+const GameRules = preload("res://scripts/rules/game_rules.gd")
 const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const IMAGES := "res://assets/images/"
@@ -27,7 +28,10 @@ const CHEST_BOUNDS := Rect2(0.746, 0.688, 0.239, 0.285)
 const GOLD := Color("#e8c18c")
 const TEXT := Color("#f4e7d1")
 
+@export var seed_value := -1
+
 var net: Node
+var offline_game: Dictionary
 var room_view: Control
 var background_rect: TextureRect
 var modal: CenterContainer
@@ -75,6 +79,8 @@ func _ready() -> void:
 	_layout()
 	if is_instance_valid(net):
 		net.game_changed.connect(_update_room)
+	else:
+		offline_game = _new_offline_game()
 	_update_room()
 
 
@@ -386,7 +392,7 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 		match current_popup:
 			"chest":
 				popup_description.text = "The toy chest is open." if solved else "Three symbols guard the chest. Look for the combination elsewhere in the house."
-				digit_label.text = "GOLDEN DIGIT: %s" % room.get("digit", "?")
+				digit_label.text = "GOLDEN DIGIT: %s" % BedroomRules.gold_digit(room)
 				if gift_taken:
 					status_label.text = "The present has been collected."
 				elif not solved and "wrong symbols" in str(game.get("last_event", "")):
@@ -435,10 +441,33 @@ func _submit_wheels() -> void:
 	_send("set_wheels", {"symbols": symbols})
 
 
+func _new_offline_game() -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	if seed_value >= 0:
+		rng.seed = seed_value
+	else:
+		rng.randomize()
+	var game := GameRules.new_game(rng)
+	game["location"] = "bedroom"
+	for fuse in game["puzzle"]["fuses"]:
+		if fuse["room"] == "bedroom":
+			fuse["solved"] = true
+			break
+	return game
+
+
 func _game() -> Dictionary:
-	return net.game if is_instance_valid(net) else {}
+	return net.game if is_instance_valid(net) else offline_game
 
 
 func _send(action: String, data: Dictionary = {}) -> void:
-	if not _game().is_empty():
+	if _game().is_empty():
+		return
+	if is_instance_valid(net):
 		net.send_action(action, data)
+	else:
+		GameRules.apply(offline_game, 0, action, data)
+		if offline_game["location"] == "hall" and get_tree().current_scene == self:
+			get_tree().change_scene_to_file("res://scenes/hall.tscn")
+		else:
+			_update_room()

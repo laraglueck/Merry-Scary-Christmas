@@ -8,6 +8,8 @@ const Settings = preload("res://scripts/settings.gd")
 const RoomCode = preload("res://scripts/net/room_code.gd")
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
+const CharacterRules = preload("res://scripts/rules/character_rules.gd")
+const WalkRules = preload("res://scripts/rules/walk_rules.gd")
 const SaveGame = preload("res://scripts/save_game.gd")
 
 signal changed       # status, players or counter changed: the screen should update
@@ -19,6 +21,8 @@ var my_index := -1          # 0 = Player 1 (host), 1 = Player 2, 2 = Player 3
 var players: Array = []     # player indexes in the room, e.g. [0, 1, 2]
 var counter := 0
 var room_code := ""         # host: the code others type in, e.g. "KRTW"
+var _figure_wait := 0.0     # host: time since the figures were last sent (spec 19)
+var _figures_walking := false
 var _clock_rest := 0.0      # host: time since the last whole second (spec 13)
 var save_path := SaveGame.path()  # host: the save file (spec 15)
 var game := {}              # the shared game (spec 04): only the host changes it, everyone gets a copy
@@ -63,6 +67,7 @@ func _process(delta: float) -> void:
 	if _search_socket != null:
 		_listen_for_room(delta)
 	advance_clock(delta)
+	advance_figures(delta)
 
 
 # ---------- pure helpers ----------
@@ -225,6 +230,22 @@ func advance_clock(delta: float) -> void:
 		game_changed.emit()
 
 
+# Walking figures (spec 19), host only: everybody walks on; while someone walks (and once
+# more when the last one arrives) everybody gets the game about 10 times a second.
+func advance_figures(delta: float) -> void:
+	if game.get("phase") != "hall" or not multiplayer.is_server():
+		return
+	var moved := WalkRules.advance(game, delta)
+	if not moved and not _figures_walking:
+		return
+	_figure_wait += delta
+	if _figure_wait >= Settings.FIGURE_SYNC_SECONDS or (_figures_walking and not moved):
+		_figure_wait = 0.0
+		_send_game()
+		game_changed.emit()
+	_figures_walking = moved
+
+
 # ---------- save and resume (spec 15) ----------
 
 func has_saved_game() -> bool:
@@ -255,15 +276,49 @@ func _save_game() -> void:
 		SaveGame.remove(save_path)
 
 
+# ---------- back to the lobby (spec 17) ----------
+
+# Only the host, and only a finished game (merry, scary, midnight): a running game stays,
+# and so does the character selection before it (spec 18).
+func can_end_game() -> bool:
+	return connected and my_index == 0 and not game.is_empty() and game.get("phase") not in ["hall", "select"]
+
+
+# Host: clears the finished game for everyone. All are back in the lobby; the room stays
+# open with the same players, so "Start game" works at once.
+func end_game() -> void:
+	if not can_end_game():
+		return
+	game = {}
+	_send_game()
+	game_changed.emit()
+	changed.emit()
+
+
 func can_start() -> bool:
 	return connected and my_index == 0 and players.size() == Settings.MAX_PLAYERS and game.is_empty()
+
+
+# Host (spec 18): "Start game" in the lobby. Everyone chooses a character first; the real
+# game starts by itself when all three are ready (see _host_apply).
+func begin_selection() -> void:
+	if not can_start():
+		return
+	game = CharacterRules.new_selection_game()
+	_send_game()
+	game_changed.emit()
+	changed.emit()
 
 
 # Host: create the game and send it to everyone.
 func start_game() -> void:
 	if not can_start():
 		return
-	game = GameRules.new_game(_rng)
+	_create_game({})
+
+
+func _create_game(characters: Dictionary) -> void:
+	game = GameRules.new_game(_rng, characters)
 	_clock_rest = 0.0
 	_save_game()
 	_send_game()
@@ -291,9 +346,17 @@ func _host_apply(sender: int, action: String, data: Dictionary) -> void:
 	if not _peer_to_index.has(sender) or game.is_empty():
 		return
 	GameRules.apply(game, _peer_to_index[sender], action, data)
+	if game.get("phase") == "select" and CharacterRules.all_ready(game["selection"]):
+		_begin_game_from_selection()
+		return
 	_save_game()
 	_send_game()
 	game_changed.emit()
+
+
+# All three are ready: the real game starts with the chosen characters, for everyone.
+func _begin_game_from_selection() -> void:
+	_create_game(CharacterRules.final_characters(game["selection"]))
 
 
 func _send_game() -> void:
@@ -327,7 +390,12 @@ func _on_peer_connected(id: int) -> void:
 func _on_peer_disconnected(id: int) -> void:
 	if not multiplayer.is_server():
 		return
+	var index: int = _peer_to_index.get(id, -1)
 	if _peer_to_index.erase(id):
+		if game.get("phase") == "select":  # whoever leaves while choosing loses their pick (spec 18)
+			game["selection"].erase(index)
+			_send_game()
+			game_changed.emit()
 		players = _sorted_players()
 		_send_state()
 		changed.emit()
@@ -418,3 +486,5 @@ func _close() -> void:
 	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+
+

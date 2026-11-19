@@ -42,12 +42,12 @@ func _on_start_pressed() -> void:
 	if net.has_saved_game():
 		_confirm_box.visible = true  # ask first: the save would be lost
 	else:
-		net.start_game()
+		net.begin_selection()
 
 
 func _on_yes_new_game_pressed() -> void:
 	_confirm_box.visible = false
-	net.start_game()
+	net.begin_selection()
 
 
 func _on_cancel_new_game_pressed() -> void:

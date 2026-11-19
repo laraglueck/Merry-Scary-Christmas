@@ -179,6 +179,7 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
-# Godot - automatically generated cache files
-godot/.godot/
+.DS_Store
 
+# Godot cache
+godot/.godot/

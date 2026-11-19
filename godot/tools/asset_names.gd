@@ -67,6 +67,9 @@ static func images() -> Dictionary:
 	list["prop_note.png"] = SIZE_PART
 	list["prop_wheel.png"] = SIZE_PART  # one symbol wheel of the bedroom chest
 	list["prop_doll.png"] = SIZE_CHARACTER
+	list["prop_doll_turned.png"] = SIZE_CHARACTER  # the same doll, head turned (jumpscare, later)
+	list["prop_moon_full.png"] = SIZE_PART      # the moon in the garden sky (later)
+	list["prop_mirror_face.png"] = SIZE_ITEM    # the face in the bathroom mirror (later)
 
 	# Symbols and wires of the fuse puzzle (same names as in settings.gd)
 	for symbol in ["star", "bell", "tree", "snowflake"]:
@@ -82,7 +85,9 @@ static func images() -> Dictionary:
 	list["ui_lose.webp"] = SIZE_SCREEN
 	list["ui_fuse_box.webp"] = SIZE_SCREEN  # close-up shown when the fuse box is opened
 	list["ui_house_plan.webp"] = SIZE_SCREEN  # close-up of the house plan, with an empty box for the legend
-	list["ui_clock.png"] = SIZE_BOARD
+	list["ui_clock.png"] = SIZE_PART       # the pocket watch, top right
+	list["ui_clock_hand.png"] = SIZE_PART  # its hand, turned by the game
+	list["ui_scare_face.webp"] = SIZE_SCREEN  # jumpscare (later)
 	list["ui_inventory.png"] = SIZE_BAR
 	list["ui_noise_meter.png"] = SIZE_BAR
 	return list
