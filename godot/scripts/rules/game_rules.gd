@@ -11,6 +11,7 @@ const HouseRules = preload("res://scripts/rules/house_rules.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
+const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
 const AtticRules = preload("res://scripts/rules/attic_rules.gd")
 const CharacterRules = preload("res://scripts/rules/character_rules.gd")
 const WalkRules = preload("res://scripts/rules/walk_rules.gd")
@@ -25,6 +26,7 @@ static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary
 		"puzzle": FuseRules.create_puzzle(rng),     # fuses (spec 01)
 		"bathroom": BathroomRules.create(rng),      # tap lock (spec 10)
 		"living_room": LivingRoomRules.create_room(rng),  # clock lock (Lara)
+		"bedroom": BedroomRules.create_room(rng),
 		"attic": AtticRules.create(),               # code lock and the final choice (spec 16)
 		"penalty_seconds": 0,                       # all penalties so far
 		"inventory": [],                            # what the team carries (spec 14), e.g. ["gift_2"]
@@ -49,11 +51,17 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 			_turn_tap(game, player, data)
 		"set_clock":
 			_set_clock(game, player, data)
+		"set_wheels":
+			_set_wheels(game, player, data)
+		"take_photo":
+			_take_bedroom_photo(game, player)
 		"take_gift":
 			if data.get("room") == "bathroom":
 				_take_bathroom_gift(game, player)
 			elif data.get("room") == "living_room":
 				_take_living_room_gift(game, player)
+			elif data.get("room") == "bedroom":
+				_take_bedroom_gift(game, player)
 		"go_to":
 			_go_to(game, player, data)
 		"move":
@@ -232,3 +240,79 @@ static func _choose_ending(game: Dictionary, player: int, data: Dictionary) -> v
 	else:
 		game["last_event"] = "%s left the photo and the cookies beside him." % who
 	game["phase"] = result["ending"]  # the game ends, like at midnight
+
+
+# Bedroom: check the three symbols on the toy chest.
+static func _set_wheels(game: Dictionary, player: int, data: Dictionary) -> void:
+	var who := "Player %d" % (player + 1)
+
+	if game.get("location") != "bedroom":
+		game["last_event"] = "%s: enter the bedroom first" % who
+		return
+
+	if "bedroom" not in FuseRules.lit_rooms(game["puzzle"]):
+		game["last_event"] = "%s: the bedroom is too dark" % who
+		return
+
+	var symbols = data.get("symbols", [])
+
+	if typeof(symbols) != TYPE_ARRAY:
+		game["last_event"] = "%s: invalid symbols" % who
+		return
+
+	var result := BedroomRules.try_wheels(game["bedroom"], symbols)
+
+	if result["error"] != "":
+		game["last_event"] = "%s: %s" % [who, result["error"]]
+	elif result["correct"]:
+		game["last_event"] = "%s opened the toy chest!" % who
+	else:
+		game["penalty_seconds"] += result["penalty_seconds"]
+		game["last_event"] = "%s: wrong symbols, -%d s" % [
+			who, result["penalty_seconds"]
+		]
+
+
+# Check whether the team can interact with bedroom objects.
+static func _can_use_bedroom(game: Dictionary, player: int) -> bool:
+	var who := "Player %d" % (player + 1)
+
+	if game.get("location") != "bedroom":
+		game["last_event"] = "%s: enter the bedroom first" % who
+		return false
+
+	if "bedroom" not in FuseRules.lit_rooms(game["puzzle"]):
+		game["last_event"] = "%s: the bedroom is too dark" % who
+		return false
+
+	return true
+
+
+# Take present 3 from the opened chest.
+static func _take_bedroom_gift(game: Dictionary, player: int) -> void:
+	if not _can_use_bedroom(game, player):
+		return
+
+	var who := "Player %d" % (player + 1)
+	var result := BedroomRules.take_gift(game["bedroom"])
+
+	if result["ok"]:
+		InventoryRules.add(game, "gift_3")
+		game["last_event"] = "%s found the third present!" % who
+	else:
+		game["last_event"] = "%s: %s" % [who, result["error"]]
+
+
+# Take the old photograph from the Advent calendar.
+static func _take_bedroom_photo(game: Dictionary, player: int) -> void:
+	if not _can_use_bedroom(game, player):
+		return
+
+	var who := "Player %d" % (player + 1)
+	var result := BedroomRules.take_photo(game["bedroom"])
+
+	if result["ok"]:
+		InventoryRules.add(game, "photo")
+		game["last_event"] = "%s found an old photograph!" % who
+	else:
+		game["last_event"] = "%s: %s" % [who, result["error"]]

@@ -4,6 +4,8 @@
 # comes back as an error text (GDScript has no exceptions).
 extends RefCounted
 
+const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
+
 const Settings = preload("res://scripts/settings.gd")
 
 const CHOICES := {"lock_in": "scary", "reconcile": "merry"}  # choice -> ending
@@ -19,10 +21,11 @@ static func create() -> Dictionary:
 # The digits the lock wants, in dial order red, green, gold. Until the bedroom
 # exists, the gold digit is 0: "not checked yet", any gold digit counts.
 static func code(game: Dictionary) -> Array:
+	var bedroom: Dictionary = game.get("bedroom", {})
 	return [
 		game["living_room"]["digit"],
 		game["bathroom"]["digit"],
-		game.get("bedroom", {}).get("digit", 0),
+		BedroomRules.gold_digit(bedroom) if bedroom.has("digit") else 0,
 	]
 
 
