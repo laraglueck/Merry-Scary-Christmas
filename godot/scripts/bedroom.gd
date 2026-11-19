@@ -25,6 +25,7 @@ const GIFT_SOUND = preload("res://assets/sounds/sfx_gift.mp3")
 # Bounds measured in the screenshot's 1152 × 648 game viewport.
 const CALENDAR_BOUNDS := Rect2(0.347, 0.204, 0.181, 0.296)
 const CHEST_BOUNDS := Rect2(0.746, 0.688, 0.239, 0.285)
+const DOOR_BOUNDS := Rect2(0.035, 0.13, 0.215, 0.65)  # the open door on the left (spec 24)
 const GOLD := Color("#e8c18c")
 const TEXT := Color("#f4e7d1")
 
@@ -50,7 +51,7 @@ var had_room_state := false
 var was_gift_taken := false
 var calendar_doors: Array[Button] = []
 var close_button: Button
-var back_button: Button
+var door_hall: Button  # the way back: the open door on the left (spec 24)
 var popup_opener: Button
 var current_popup := ""
 var inspected_door := 0
@@ -115,12 +116,19 @@ func _build_room() -> void:
 	_add_hotspot("CalendarHotspot", "Examine Advent Calendar", CALENDAR_BOUNDS, "calendar")
 	_add_hotspot("ChestHotspot", "Examine Toy Chest", CHEST_BOUNDS, "chest")
 
-	back_button = Button.new()
-	back_button.text = "Back to the Hall"
-	_style_button(back_button)
-	room_view.add_child(back_button)
-	_anchor_to_bounds(back_button, Rect2(0.02, 0.88, 0.21, 0.09))
-	back_button.pressed.connect(func(): _send("go_to", {"place": "hall"}))
+	# Spec 24: back to the hall through the door, like in the bathroom (no button any more).
+	door_hall = Button.new()
+	door_hall.name = "DoorHall"
+	door_hall.tooltip_text = "Back to the hall"
+	door_hall.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	door_hall.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	var door_outline := _box(Color.TRANSPARENT, Color("ffd76a"), 3, 10, 0)  # gold, as in the other rooms (spec 24)
+	door_outline.draw_center = false
+	for state in ["hover", "pressed", "focus"]:
+		door_hall.add_theme_stylebox_override(state, door_outline)
+	room_view.add_child(door_hall)
+	_anchor_to_bounds(door_hall, DOOR_BOUNDS)
+	door_hall.pressed.connect(func(): _send("go_to", {"place": "hall"}))
 
 
 func _layout() -> void:
@@ -137,7 +145,7 @@ func _add_hotspot(node_name: String, hint: String, bounds: Rect2, page: String) 
 	button.tooltip_text = hint
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	var outline := _box(Color.TRANSPARENT, Color("#d4a35b"), 2, 10, 0)
+	var outline := _box(Color.TRANSPARENT, Color("ffd76a"), 3, 10, 0)  # gold, as in the other rooms (spec 24)
 	outline.draw_center = false
 	for state in ["hover", "pressed", "focus"]:
 		button.add_theme_stylebox_override(state, outline)
@@ -334,7 +342,7 @@ func _update_room() -> void:
 	var room: Dictionary = game.get("bedroom", {})
 	bedroom_is_lit = puzzle.has("fuses") and "bedroom" in FuseRules.lit_rooms(puzzle)
 	background_rect.texture = BACKGROUND_LIT if bedroom_is_lit else BACKGROUND_DARK
-	back_button.disabled = game.is_empty()
+	door_hall.disabled = game.is_empty()
 
 	var solved: bool = room.get("solved", false)
 	var gift_taken: bool = room.get("gift_taken", false)

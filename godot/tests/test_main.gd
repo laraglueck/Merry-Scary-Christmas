@@ -138,7 +138,7 @@ func test_everyone_walks_into_the_living_room_and_back() -> void:
 	assert_true(await wait_until(screens_are(mains, "living_room")), "all three in the living room")
 	assert_eq(mains[1].screen.scene_file_path, "res://scenes/living_room.tscn", "Lara's living room screen")
 	await wait_frames(2)
-	press(mains[1], "BackButton")
+	press(mains[1], "DoorHall")  # through the door (spec 24)
 	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
 
 
@@ -151,7 +151,7 @@ func test_everyone_walks_into_the_bedroom_and_back() -> void:
 	assert_true(await wait_until(screens_are(mains, "bedroom")), "all three in the bedroom")
 	assert_eq(mains[1].screen.scene_file_path, "res://scenes/bedroom.tscn", "Mika's bedroom screen")
 	await wait_frames(2)
-	mains[1].screen.back_button.pressed.emit()
+	press(mains[1], "DoorHall")  # through the door (spec 24)
 	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
 
 

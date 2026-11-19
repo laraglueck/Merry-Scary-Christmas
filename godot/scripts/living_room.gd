@@ -49,7 +49,7 @@ func _ready() -> void:
 	_build_clock_submission()
 	_build_reward()
 	_build_note_ui()
-	_build_back_button()
+	_build_door()
 	_refresh()
 	RoomStage.put_on_stage(self)  # click areas stay on their objects when the window changes (spec 21)
 
@@ -102,11 +102,10 @@ func _build_clock_ui() -> void:
 	var clock_button := Button.new()
 	clock_button.name = "ClockButton"
 	clock_button.text = ""
-	clock_button.position = Vector2(190, 130)
-	clock_button.size = Vector2(140, 390)
+	clock_button.position = Vector2(234, 112)  # the grandfather clock, crown to feet (spec 24)
+	clock_button.size = Vector2(118, 395)
 
-	for state in ["normal", "hover", "pressed"]:
-		clock_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	_frame_on_hover(clock_button)
 
 	clock_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	clock_button.pressed.connect(_open_clock)
@@ -117,7 +116,7 @@ func _build_clock_ui() -> void:
 	clock_button.tooltip_text = "Inspect the clock"
 	clock_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	clock_label.position = Vector2(0, 12)
-	clock_label.size = Vector2(140, 30)
+	clock_label.size = Vector2(118, 30)
 	clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	clock_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clock_button.add_child(clock_label)
@@ -268,6 +267,10 @@ func _send(action: String, data: Dictionary) -> void:
 		net.send_action(action, data)
 	else:
 		GameRules.apply(game, 0, action, data)
+		# Started on its own (Cmd R): the door leads to the hall scene, like in the bedroom (spec 24).
+		if game.get("location") == "hall" and get_tree().current_scene == self:
+			get_tree().change_scene_to_file("res://scenes/hall.tscn")
+			return
 		_refresh()
 func _build_reward() -> void:
 	_gift_button = TextureButton.new()
@@ -315,12 +318,11 @@ func _build_note_ui() -> void:
 	note_button.text = ""  # spec 21: no names on the objects; the name shows on hover
 	note_button.tooltip_text = "Read the note"
 	note_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	note_button.position = Vector2(1000, 260)
-	note_button.size = Vector2(130, 120)
+	note_button.position = Vector2(986, 260)  # the poem on the mantelpiece (spec 24)
+	note_button.size = Vector2(66, 32)
 	note_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
-	for state in ["normal", "hover", "pressed"]:
-		note_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	_frame_on_hover(note_button)
 
 	note_button.pressed.connect(_open_note)
 	add_child(note_button)
@@ -376,20 +378,29 @@ func _close_note() -> void:
 	_note_panel.hide()
 
 
-# The way back: the whole team walks to the hall (spec 07), like in the other rooms.
-func _build_back_button() -> void:
-	var back := Button.new()
-	back.name = "BackButton"
-	back.text = "Back to the hall"
-	back.position = Vector2(940, 16)
-	back.add_theme_font_size_override("font_size", 20)
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color(0.1, 0.07, 0.07, 0.85)
-	box.border_color = Color("5c4a3a")
-	box.set_border_width_all(3)
-	box.set_corner_radius_all(12)
-	box.set_content_margin_all(12)
-	back.add_theme_stylebox_override("normal", box)
-	back.pressed.connect(func() -> void: _send("go_to", {"place": "hall"}))
-	add_child(back)
+# The way back (spec 24): the open door in the picture, like in the bathroom. A click walks
+# the whole team to the hall (spec 07). Invisible until the mouse is over it.
+func _build_door() -> void:
+	var door := Button.new()
+	door.name = "DoorHall"
+	door.position = Vector2(726, 150)
+	door.size = Vector2(178, 280)
+	door.tooltip_text = "Back to the hall"
+	door.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_frame_on_hover(door)
+	door.pressed.connect(func() -> void: _send("go_to", {"place": "hall"}))
+	add_child(door)
+
+
+# Spec 24: like in the other rooms, an object is invisible until the mouse is over it,
+# then it shows a gold frame.
+func _frame_on_hover(button: Button) -> void:
+	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	var frame := StyleBoxFlat.new()
+	frame.draw_center = false
+	frame.border_color = Color("ffd76a")
+	frame.set_border_width_all(3)
+	frame.set_corner_radius_all(8)
+	for state in ["hover", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state, frame)
 
