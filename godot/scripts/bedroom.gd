@@ -41,6 +41,7 @@ var popup_title: Label
 var popup_description: Label
 var status_label: Label
 var digit_label: Label
+var room_digit_label: Label
 var wheel_row: HBoxContainer
 var wheel_symbols: Array[TextureRect] = []
 var calendar_grid: GridContainer
@@ -115,6 +116,15 @@ func _build_room() -> void:
 
 	_add_hotspot("CalendarHotspot", "Examine Advent Calendar", CALENDAR_BOUNDS, "calendar")
 	_add_hotspot("ChestHotspot", "Examine Toy Chest", CHEST_BOUNDS, "chest")
+	room_digit_label = Label.new()
+	room_digit_label.name = "RoomGoldDigit"
+	room_digit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	room_digit_label.add_theme_color_override("font_color", Color("ffd76a"))
+	room_digit_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	room_digit_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	room_digit_label.hide()
+	room_view.add_child(room_digit_label)
+	_anchor_to_bounds(room_digit_label, Rect2(0.83, 0.64, 0.08, 0.08))
 
 	# Spec 24: back to the hall through the door, like in the bathroom (no button any more).
 	door_hall = Button.new()
@@ -136,6 +146,13 @@ func _layout() -> void:
 	var scale_factor := minf(size.x / artwork.x, size.y / artwork.y)
 	room_view.size = artwork * scale_factor
 	room_view.position = (size - room_view.size) * 0.5
+	var digit_scale := room_view.size.x / 1152.0
+	room_digit_label.add_theme_font_size_override(
+		"font_size", maxi(1, roundi(32.0 * digit_scale))
+	)
+	room_digit_label.add_theme_constant_override(
+		"outline_size", maxi(1, roundi(5.0 * digit_scale))
+	)
 	popup_panel.custom_minimum_size.x = clampf(size.x - 24.0, 260.0, 470.0)
 
 
@@ -345,6 +362,8 @@ func _update_room() -> void:
 	door_hall.disabled = game.is_empty()
 
 	var solved: bool = room.get("solved", false)
+	room_digit_label.visible = bedroom_is_lit and solved
+	room_digit_label.text = str(BedroomRules.gold_digit(room)) if solved else ""
 	var gift_taken: bool = room.get("gift_taken", false)
 	if had_room_state and DisplayServer.get_name() != "headless":
 		if gift_taken and not was_gift_taken:
@@ -371,7 +390,6 @@ func _update_room() -> void:
 	if modal.visible:
 		_update_popup(game, room)
 
-
 func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	var solved: bool = room.get("solved", false)
 	var gift_taken: bool = room.get("gift_taken", false)
@@ -381,6 +399,7 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	var chest := current_popup == "chest"
 	var calendar := current_popup == "calendar"
 	var photo := current_popup == "photo"
+
 	wheel_row.visible = chest and interactive and not solved
 	photo_picture.visible = photo and interactive and solved and not photo_taken
 	clue_picture.hide()
@@ -391,31 +410,51 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	digit_label.visible = chest and interactive and solved
 	close_button.text = "Back to Calendar" if photo else "Close"
 
-	popup_title.text = {"chest": "THE TOY CHEST", "calendar": "ADVENT CALENDAR", "photo": "OLD PHOTOGRAPH"}[current_popup]
+	popup_title.text = {
+		"chest": "THE TOY CHEST",
+		"calendar": "ADVENT CALENDAR",
+		"photo": "OLD PHOTOGRAPH",
+	}[current_popup]
+
 	popup_description.text = ""
 	status_label.text = ""
+
 	if not interactive:
 		status_label.text = "No active game." if game.is_empty() else "The room is too dark. Restore power with the gold fuse."
 	else:
 		match current_popup:
 			"chest":
-				popup_description.text = "The toy chest is open." if solved else "Three symbols guard the chest. Look for the combination elsewhere in the house."
+				if solved and not photo_taken:
+					popup_description.text = "The chest is open. The remaining calendar doors can now be opened. Perhaps they hide something else."
+				elif solved:
+					popup_description.text = "The toy chest is open."
+				else:
+					popup_description.text = "Three symbols guard the chest. Look for the combination elsewhere in the house."
+
 				digit_label.text = "GOLDEN DIGIT: %s" % BedroomRules.gold_digit(room)
+
 				if gift_taken:
 					status_label.text = "The present has been collected."
 				elif not solved and "wrong symbols" in str(game.get("last_event", "")):
 					status_label.text = str(game["last_event"])
+
 			"calendar":
-				_update_calendar(game.get("living_room", {}), solved)
+				_update_calendar(game.get("living_room", {}), solved, photo_taken)
+
 			"photo":
 				popup_description.text = "A torn piece of an old photograph: Santa's red coat... and a sleigh. Where is the rest?"
 				if photo_taken:
 					status_label.text = "The torn piece has been collected."
+
 	status_label.visible = not status_label.text.is_empty()
 	popup_description.visible = not popup_description.text.is_empty()
 
 
-func _update_calendar(clue: Dictionary, solved: bool) -> void:
+
+
+
+
+func _update_calendar(clue: Dictionary, solved: bool, photo_taken: bool = false) -> void:
 	var hour := int(clue.get("hour", 0))
 	var minute := int(clue.get("minute", 0))
 	for i in calendar_doors.size():
@@ -428,6 +467,8 @@ func _update_calendar(clue: Dictionary, solved: bool) -> void:
 		button.tooltip_text = "Short hand" if door == hour else ("Long hand" if door == minute else "")
 
 	popup_description.text = "The open doors show where the clock hands point."
+	if solved and not photo_taken:
+		popup_description.text += "\nThe remaining doors can now be opened. Something has been tucked away behind one of them."
 	if inspected_door == hour and hour > 0:
 		clue_picture.texture = SHORT_HAND
 		clue_picture.show()
