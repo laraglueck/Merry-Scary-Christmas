@@ -1,6 +1,6 @@
 # Makes music_merry.mp3 (spec 29): "Silent Night" (Franz Xaver Gruber, 1818, public domain)
 # played softly as a music box, for the Merry Christmas ending. Own work: every note is
-# synthesised here from sine waves. 5 s of silence first, so the win fanfare can ring out.
+# synthesised here from sine waves. Starts after 1 s of quiet.
 # Needs python3 with numpy and the program ffmpeg. Start from the repo folder:
 #   python3 godot/tools/make_music_merry.py
 import os
@@ -11,7 +11,7 @@ import numpy as np
 
 RATE = 44100
 BEAT = 60 / 66          # quarter note at 66 beats per minute: calm
-LEAD_IN = 5.0           # seconds of silence before the first note
+LEAD_IN = 1.0           # seconds of silence before the first note
 NOTE = {"C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23, "G4": 392.00, "A4": 440.00,
         "B4": 493.88, "C5": 523.25, "D5": 587.33, "E5": 659.25, "F5": 698.46, "G3": 196.00,
         "C3": 130.81, "F3": 174.61, "G2": 98.00}

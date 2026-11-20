@@ -67,8 +67,8 @@ func test_midnight_shows_no_time_left() -> void:
 # ---------- sounds (spec 20) ----------
 
 func test_each_ending_plays_its_sounds() -> void:
-	assert_eq(open_ending("merry", []).sounds_played, ["sfx_win.mp3", "music_merry.mp3"], "merry: the fanfare, then soft Christmas music (spec 29)")
-	assert_eq(open_ending("scary", []).sounds_played, ["sfx_win.mp3", "music_scary.mp3"], "scary: the fanfare, then the broken music box (spec 29)")
+	assert_eq(open_ending("merry", []).sounds_played, ["music_merry.mp3"], "merry: only the soft Christmas music, no drum fanfare (spec 29)")
+	assert_eq(open_ending("scary", []).sounds_played, ["music_scary.mp3"], "scary: only the broken music box, no drum fanfare (spec 29)")
 	# Midnight: first the clock strikes and Jingles wakes; the lose music comes after (spec 21).
 	assert_eq(open_ending("midnight", [], Settings.GAME_SECONDS).sounds_played, ["sfx_clock_chime.mp3"], "midnight")
 
