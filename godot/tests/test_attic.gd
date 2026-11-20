@@ -133,6 +133,10 @@ func test_photo_choice_is_greyed_out_and_explains_without_the_photo() -> void:
 func test_lock_in_ends_the_game_as_scary_christmas() -> void:
 	var attic := open_attic()
 	open_and_take_the_key(attic)
+
+	for gift in ["gift_1", "gift_2", "gift_3"]:
+		attic.game["inventory"].append(gift)
+
 	press(attic, "ChoiceLockIn")
 	assert_eq(attic.game["phase"], "scary", "phase")
 	assert_contains(text_of(attic, "Message"), "locked Scary Jingles in", "message")

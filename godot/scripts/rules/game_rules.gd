@@ -235,17 +235,32 @@ static func _try_attic_code(game: Dictionary, player: int, data: Dictionary) -> 
 static func _choose_ending(game: Dictionary, player: int, data: Dictionary) -> void:
 	if not _in_attic(game, player):
 		return
+
 	var who := "Player %d" % (player + 1)
 	var choice := str(data.get("choice", ""))
-	var result := AtticRules.choose(game["attic"], choice, InventoryRules.has(game, "photo"))
+
+	if choice == "lock_in" and game["attic"].get("key_taken", false):
+		for gift in ["gift_1", "gift_2", "gift_3"]:
+			if not InventoryRules.has(game, gift):
+				game["last_event"] = "%s: collect all three presents before locking Jingles in." % who
+				return
+
+	var result := AtticRules.choose(
+		game["attic"],
+		choice,
+		InventoryRules.has(game, "photo")
+	)
+
 	if result["error"] != "":
 		game["last_event"] = "%s: %s" % [who, result["error"]]
 		return
+
 	if choice == "lock_in":
 		game["last_event"] = "%s locked Scary Jingles in." % who
 	else:
 		game["last_event"] = "%s left the photo and the cookies beside him." % who
-	game["phase"] = result["ending"]  # the game ends, like at midnight
+
+	game["phase"] = result["ending"]
 
 
 # Bedroom: check the three symbols on the toy chest.
@@ -362,4 +377,3 @@ static func _assemble_photo(game: Dictionary, player: int, data: Dictionary) -> 
 		game["last_event"] = "%s put the photo together: Santa and a young, laughing Jingles." % who
 	else:
 		game["last_event"] = "%s: %s" % [who, error]
-
