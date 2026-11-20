@@ -11,9 +11,9 @@ const IMAGES := "res://assets/images/"
 const GIFTS := ["gift_1", "gift_2", "gift_3"]
 const ENDINGS := {
 	"merry": {"picture": "ui_win_merry.webp", "title": "Merry Christmas!", "colour": Color("ffd76a"),
-			"line": "Scary Jingles remembered who he was.", "sounds": ["sfx_win.mp3", "music_merry.mp3"]},
+			"line": "Scary Jingles remembered who he was.", "sounds": ["music_merry.mp3"]},
 	"scary": {"picture": "ui_win_scary.webp", "title": "Scary Christmas!", "colour": Color("e05a4a"),
-			"line": "Scary Jingles is locked in. The presents are safe.", "sounds": ["sfx_win.mp3", "music_scary.mp3"]},
+			"line": "Scary Jingles is locked in. The presents are safe.", "sounds": ["music_scary.mp3"]},
 	"midnight": {"picture": "ui_lose.webp", "title": "Midnight", "colour": Color("a9c4e8"),
 			"line": "The clock struck twelve. Scary Jingles has won.", "sounds": ["sfx_lose.mp3"]},
 }
@@ -72,7 +72,7 @@ func show_ending() -> void:
 		_play(file_name)
 
 
-# Each ending's sounds at once (the Merry and Scary music waits 5 s, then plays over the fanfare's end).
+# Each ending's sounds (Merry and Scary: only their music box, no drum fanfare since spec 29).
 func _play(file_name: String) -> void:
 	sounds_played.append(file_name)
 	if DisplayServer.get_name() == "headless":

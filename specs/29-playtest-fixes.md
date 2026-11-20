@@ -24,13 +24,15 @@ Full playtest (20.11.) with seven findings in the hall, the living room window a
    when the view closes. Only on that device.
 7. Merry Christmas ending: soft Christmas music, `music_merry.mp3`: "Silent Night" (Gruber, 1818,
    public domain) as a music box, made by `tools/make_music_merry.py` (own work), starting after
-   5 s so the win fanfare can ring out, then repeating. It replaces the silent placeholder
+   1 s, then repeating. It replaces the silent placeholder
    `sfx_bells.mp3` there. Gentle snow falls over the picture (behind the words).
    The picture (Christmas Eve at night, decorated house and tree) comes from Gloria (Gemini);
    the end screen loads `ui_win_merry.webp`, so only the file needs to be replaced.
 8. Scary Christmas ending: its own music, `music_scary.mp3`, made by `tools/make_music_scary.py`:
    the same "Silent Night" as a broken music box (minor key, out of tune, wobbling, a note that
-   hangs, slowing down like a spring running out). Starts after 5 s like the Merry music, then repeats.
+   hangs, slowing down like a spring running out). Starts after 1 s like the Merry music, then repeats.
+9. No drum fanfare (`sfx_win.mp3`) at the Merry and Scary endings any more: only their music
+   (playtest 20.11.: it came first and did not fit).
 
 ## Out of scope
 Sounds of the midnight ending, moving the clock.

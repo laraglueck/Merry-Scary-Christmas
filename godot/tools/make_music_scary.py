@@ -1,7 +1,7 @@
 # Makes music_scary.mp3 (spec 29): the same "Silent Night" (Gruber, 1818, public domain) as in
 # make_music_merry.py, but as a broken music box for the Scary Christmas ending: in a minor key,
 # out of tune, wobbling, one note hangs, and it slows down and sags like a spring running out.
-# Own work: every note is synthesised here. 5 s of silence first, for the win fanfare.
+# Own work: every note is synthesised here. Starts after 1 s of quiet.
 # Needs python3 with numpy and the program ffmpeg. Start from the repo folder:
 #   python3 godot/tools/make_music_scary.py
 import os
@@ -13,7 +13,7 @@ import numpy as np
 
 from make_music_merry import BASS, MELODY, NOTE, RATE
 
-LEAD_IN = 5.0
+LEAD_IN = 1.0
 BEAT = 60 / 52           # slower than the Merry version (66)
 SLOW_DOWN = 0.7          # at the end each beat is 70 % longer: the spring runs out
 SAG = 0.05               # and the pitch sinks by up to 5 %
