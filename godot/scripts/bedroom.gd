@@ -371,7 +371,6 @@ func _update_room() -> void:
 	if modal.visible:
 		_update_popup(game, room)
 
-
 func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	var solved: bool = room.get("solved", false)
 	var gift_taken: bool = room.get("gift_taken", false)
@@ -381,6 +380,7 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	var chest := current_popup == "chest"
 	var calendar := current_popup == "calendar"
 	var photo := current_popup == "photo"
+
 	wheel_row.visible = chest and interactive and not solved
 	photo_picture.visible = photo and interactive and solved and not photo_taken
 	clue_picture.hide()
@@ -391,31 +391,51 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	digit_label.visible = chest and interactive and solved
 	close_button.text = "Back to Calendar" if photo else "Close"
 
-	popup_title.text = {"chest": "THE TOY CHEST", "calendar": "ADVENT CALENDAR", "photo": "OLD PHOTOGRAPH"}[current_popup]
+	popup_title.text = {
+		"chest": "THE TOY CHEST",
+		"calendar": "ADVENT CALENDAR",
+		"photo": "OLD PHOTOGRAPH",
+	}[current_popup]
+
 	popup_description.text = ""
 	status_label.text = ""
+
 	if not interactive:
 		status_label.text = "No active game." if game.is_empty() else "The room is too dark. Restore power with the gold fuse."
 	else:
 		match current_popup:
 			"chest":
-				popup_description.text = "The toy chest is open." if solved else "Three symbols guard the chest. Look for the combination elsewhere in the house."
+				if solved and not photo_taken:
+					popup_description.text = "The chest is open. The remaining calendar doors can now be opened. Perhaps they hide something else."
+				elif solved:
+					popup_description.text = "The toy chest is open."
+				else:
+					popup_description.text = "Three symbols guard the chest. Look for the combination elsewhere in the house."
+
 				digit_label.text = "GOLDEN DIGIT: %s" % BedroomRules.gold_digit(room)
+
 				if gift_taken:
 					status_label.text = "The present has been collected."
 				elif not solved and "wrong symbols" in str(game.get("last_event", "")):
 					status_label.text = str(game["last_event"])
+
 			"calendar":
-				_update_calendar(game.get("living_room", {}), solved)
+				_update_calendar(game.get("living_room", {}), solved, photo_taken)
+
 			"photo":
 				popup_description.text = "A torn piece of an old photograph: Santa's red coat... and a sleigh. Where is the rest?"
 				if photo_taken:
 					status_label.text = "The torn piece has been collected."
+
 	status_label.visible = not status_label.text.is_empty()
 	popup_description.visible = not popup_description.text.is_empty()
 
 
-func _update_calendar(clue: Dictionary, solved: bool) -> void:
+
+
+
+
+func _update_calendar(clue: Dictionary, solved: bool, photo_taken: bool = false) -> void:
 	var hour := int(clue.get("hour", 0))
 	var minute := int(clue.get("minute", 0))
 	for i in calendar_doors.size():
@@ -428,6 +448,8 @@ func _update_calendar(clue: Dictionary, solved: bool) -> void:
 		button.tooltip_text = "Short hand" if door == hour else ("Long hand" if door == minute else "")
 
 	popup_description.text = "The open doors show where the clock hands point."
+	if solved and not photo_taken:
+		popup_description.text += "\nThe remaining doors can now be opened. Something has been tucked away behind one of them."
 	if inspected_door == hour and hour > 0:
 		clue_picture.texture = SHORT_HAND
 		clue_picture.show()
