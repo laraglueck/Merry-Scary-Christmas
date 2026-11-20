@@ -21,6 +21,14 @@ const GIFT_ART = preload(IMAGES + "item_gift_3.png")
 const PHOTO_ART = preload(IMAGES + "item_photo_piece_3.png")  # one torn piece (spec 21)
 const CHEST_OPEN_SOUND = preload("res://assets/sounds/sfx_creak.mp3")
 const GIFT_SOUND = preload("res://assets/sounds/sfx_gift.mp3")
+# Spec 28: Easter eggs behind four calendar doors; each screams when first opened.
+const EGG_ART: Array[Texture2D] = [
+	preload(IMAGES + "egg_calendar_1.png"), preload(IMAGES + "egg_calendar_2.png"),
+	preload(IMAGES + "egg_calendar_3.png"), preload(IMAGES + "egg_calendar_4.png"),
+]
+const SCARE_SOUND = preload("res://assets/sounds/sfx_scare.mp3")
+const DOOR_ICON_SIZE := 28
+const EGG_ICON_SIZE := 80
 
 # Bounds measured in the screenshot's 1152 × 648 game viewport.
 const CALENDAR_BOUNDS := Rect2(0.347, 0.204, 0.181, 0.296)
@@ -59,6 +67,11 @@ var inspected_door := 0
 var bedroom_is_lit := false
 var shared_selection: Array = []
 var was_solved := false
+
+# Egg doors this player opened (only on this screen, spec 28). Static, so they stay open when
+# the room is built again; a new game (another key) starts with all closed.
+static var _opened_eggs: Array[int] = []
+static var _eggs_game := ""
 
 @onready var old_ui: VBoxContainer = $VBoxContainer
 @onready var chest_button: Button = $VBoxContainer/ToyChestButton
@@ -347,6 +360,14 @@ func _inspect_door(door: int) -> void:
 	var room: Dictionary = game.get("bedroom", {})
 	var clue: Dictionary = game.get("living_room", {})
 	inspected_door = door
+	var eggs := BedroomRules.egg_doors(room, clue)
+	if room.get("solved", false) and door in eggs:
+		_remember_eggs_of(game)
+		if door not in _opened_eggs:
+			_opened_eggs.append(door)
+			room_sound.stream = SCARE_SOUND
+			if DisplayServer.get_name() != "headless":
+				room_sound.play()
 	if room.get("solved", false) and door == BedroomRules.photo_door(room, clue):
 		_open_popup("photo")
 	else:
@@ -439,7 +460,8 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 					status_label.text = str(game["last_event"])
 
 			"calendar":
-				_update_calendar(game.get("living_room", {}), solved, photo_taken)
+				_remember_eggs_of(game)
+				_update_calendar(game.get("living_room", {}), solved, photo_taken, BedroomRules.egg_doors(room, game.get("living_room", {})))
 
 			"photo":
 				popup_description.text = "A torn piece of an old photograph: Santa's red coat... and a sleigh. Where is the rest?"
@@ -454,7 +476,7 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 
 
 
-func _update_calendar(clue: Dictionary, solved: bool, photo_taken: bool = false) -> void:
+func _update_calendar(clue: Dictionary, solved: bool, photo_taken: bool = false, eggs: Array[int] = []) -> void:
 	var hour := int(clue.get("hour", 0))
 	var minute := int(clue.get("minute", 0))
 	for i in calendar_doors.size():
@@ -464,6 +486,11 @@ func _update_calendar(clue: Dictionary, solved: bool, photo_taken: bool = false)
 		var is_clue := door == hour or door == minute
 		button.disabled = not solved and not is_clue
 		button.icon = CALENDAR_OPEN if is_clue or door == inspected_door else CALENDAR_CLOSED
+		var egg := eggs.find(door)
+		var egg_open := solved and egg != -1 and door in _opened_eggs
+		if egg_open:
+			button.icon = EGG_ART[egg]  # the picture inside the door (spec 28)
+		button.add_theme_constant_override("icon_max_width", EGG_ICON_SIZE if egg_open else DOOR_ICON_SIZE)
 		button.tooltip_text = "Short hand" if door == hour else ("Long hand" if door == minute else "")
 
 	popup_description.text = "The open doors show where the clock hands point."
@@ -477,8 +504,23 @@ func _update_calendar(clue: Dictionary, solved: bool, photo_taken: bool = false)
 		clue_picture.texture = LONG_HAND
 		clue_picture.show()
 		status_label.text = "The long hand points to %d." % minute
-	elif inspected_door > 0:
+	elif inspected_door > 0 and inspected_door not in eggs:
 		status_label.text = "Door %d is empty." % inspected_door
+
+
+# Opened eggs belong to one game: another game's key forgets them.
+func _remember_eggs_of(game: Dictionary) -> void:
+	var key := str(game.get("bedroom", {}).get("wheels", [])) + str(game.get("bedroom", {}).get("digit", 0)) \
+			+ str(game.get("living_room", {}).get("hour", 0)) + str(game.get("living_room", {}).get("minute", 0))
+	if key != _eggs_game:
+		_eggs_game = key
+		_opened_eggs.clear()
+
+
+# For tests: as at the start of a new game.
+static func forget_eggs() -> void:
+	_eggs_game = ""
+	_opened_eggs.clear()
 
 
 func _submit_wheels() -> void:

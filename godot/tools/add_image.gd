@@ -24,7 +24,8 @@ const NIGHT_BLACK := 0.1        # on black: darker than this is background
 const NIGHT_SOFTNESS := 0.25    # ... and the edge fades in over this range
 # Cut-outs whose white holes inside (between bars, in a handle) become see-through too.
 const WITH_HOLES := ["prop_clock_hand_short.png", "prop_clock_hand_long.png", "prop_doll.png",
-		"item_key.png", "prop_doll_turned.png", "ui_clock.png", "ui_clock_hand.png", "ui_noise_meter.png"]
+		"item_key.png", "prop_doll_turned.png", "ui_clock.png", "ui_clock_hand.png", "ui_noise_meter.png",
+		"egg_calendar_1.png", "egg_calendar_2.png", "egg_calendar_3.png", "egg_calendar_4.png"]  # spec 28
 # Interface parts drawn on white that sit on top of the screen.
 const UI_CUT_OUTS := ["ui_inventory.png", "ui_noise_meter.png", "ui_clock.png", "ui_clock_hand.png"]
 # Light things on black that keep their colours.

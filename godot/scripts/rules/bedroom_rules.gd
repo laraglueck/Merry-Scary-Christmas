@@ -73,6 +73,25 @@ static func photo_door(room: Dictionary, clue: Dictionary) -> int:
 	return candidates[posmod(int(room.get("digit", 0)), candidates.size())]
 
 
+# Spec 28: the four doors with an Easter-egg picture (index i = egg i + 1). Like photo_door,
+# derived from the saved state (wheels and digit), so it is random per game but stays the same
+# after save/resume. Never a clock-hand door, never the photo door.
+static func egg_doors(room: Dictionary, clue: Dictionary) -> Array[int]:
+	var taken := [int(clue.get("hour", 0)), int(clue.get("minute", 0)), photo_door(room, clue)]
+	var candidates: Array[int] = []
+	for door in range(1, 13):
+		if door not in taken:
+			candidates.append(door)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(str(room.get("wheels", [])) + str(room.get("digit", 0)))
+	for i in range(candidates.size() - 1, 0, -1):  # shuffle with our own seed, not the global one
+		var j := rng.randi_range(0, i)
+		var swap := candidates[i]
+		candidates[i] = candidates[j]
+		candidates[j] = swap
+	return candidates.slice(0, 4)
+
+
 # Older saves could contain zero, which would otherwise skip the attic's gold dial.
 static func gold_digit(room: Dictionary) -> int:
 	return maxi(1, int(room["digit"]))
