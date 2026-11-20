@@ -121,7 +121,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | wire_black.png | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
 | ui_title.webp | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | house in the snow, background of the title screen |
 | ui_win.webp | images | `godot/tools/make_placeholders.gd` | team script | own work | No | placeholder |
-| ui_win_merry.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | Merry Christmas ending |
+| ui_win_merry.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | Merry Christmas ending; Christmas Eve night version since spec 29 (made from the old picture as reference) |
 | ui_win_scary.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | Scary Christmas ending |
 | ui_lose.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | midnight ending; edit of ui_win_scary |
 | ui_fuse_box.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | modern box (19 Nov): ui_fuse_box_on with each breaker flipped down by `godot/tools/make_fuse_box.gd` |
@@ -161,3 +161,5 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | music_lobby.mp3 | sounds | Pixabay, original file `audioatlant-evil-jingle-christmas-horror-trailer-version-635742.mp3` | audioatlant | Pixabay Content License | No | 2.4 MB, above the 2 MB guideline |
 | music_house.mp3 | sounds | Pixabay, original file `cinematic-soul-dark-ambient-background-music-617907.mp3` | check on Pixabay | Pixabay Content License | No |  |
 | voice_title.mp3 | sounds | ElevenLabs (elevenlabs.io), generated voice | Leon | check ElevenLabs plan terms | Yes (ElevenLabs) | spoken intro for the title screen |
+| music_merry.mp3 | sounds | made by `godot/tools/make_music_merry.py` (sine-wave music box) | Mathies; melody "Silent Night" by Franz Xaver Gruber (1818) | own work; the melody is public domain | No | Merry Christmas ending, starts after 5 s, loops |
+| music_scary.mp3 | sounds | made by `godot/tools/make_music_scary.py` (sine-wave music box, out of tune) | Mathies; melody "Silent Night" by Franz Xaver Gruber (1818) | own work; the melody is public domain | No | Scary Christmas ending, a broken music box, starts after 5 s, loops |

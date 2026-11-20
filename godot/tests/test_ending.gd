@@ -67,8 +67,8 @@ func test_midnight_shows_no_time_left() -> void:
 # ---------- sounds (spec 20) ----------
 
 func test_each_ending_plays_its_sounds() -> void:
-	assert_eq(open_ending("merry", []).sounds_played, ["sfx_win.mp3", "sfx_bells.mp3"], "merry")
-	assert_eq(open_ending("scary", []).sounds_played, ["sfx_win.mp3"], "scary")
+	assert_eq(open_ending("merry", []).sounds_played, ["sfx_win.mp3", "music_merry.mp3"], "merry: the fanfare, then soft Christmas music (spec 29)")
+	assert_eq(open_ending("scary", []).sounds_played, ["sfx_win.mp3", "music_scary.mp3"], "scary: the fanfare, then the broken music box (spec 29)")
 	# Midnight: first the clock strikes and Jingles wakes; the lose music comes after (spec 21).
 	assert_eq(open_ending("midnight", [], Settings.GAME_SECONDS).sounds_played, ["sfx_clock_chime.mp3"], "midnight")
 
@@ -88,3 +88,30 @@ func test_at_midnight_jingles_wakes_up_first() -> void:
 func test_a_win_has_no_wake_up() -> void:
 	var ending := open_ending("merry", [])
 	assert_true(ending.find_child("WakeUp", true, false) == null, "no wake-up for a win")
+
+
+
+# Spec 29: the Merry ending plays "Silent Night" as a music box (tools/make_music_merry.py).
+func test_merry_music_is_a_real_song() -> void:
+	var music: AudioStreamMP3 = load("res://assets/sounds/music_merry.mp3") if ResourceLoader.exists("res://assets/sounds/music_merry.mp3") else null
+	assert_true(music != null, "music_merry.mp3 is there")
+	assert_true(music != null and music.get_length() > 60.0, "a whole song, not a placeholder")
+
+
+# Spec 29: gentle snow falls over the Merry picture, not over the other endings.
+func test_snow_falls_only_at_the_merry_ending() -> void:
+	var merry := open_ending("merry", [])
+	var snow: CPUParticles2D = merry.find_child("MerrySnow", true, false)
+	assert_true(snow != null and snow.emitting, "it snows at Merry Christmas")
+	if snow != null:
+		var words: Node = merry.find_child("PlaceTitle", true, false)
+		assert_true(snow.get_index() < words.get_parent().get_index(), "behind the words")
+	assert_true(open_ending("scary", []).find_child("MerrySnow", true, false) == null, "not at Scary Christmas")
+
+
+# Spec 29: Scary Christmas plays "Silent Night" as a broken music box (tools/make_music_scary.py).
+func test_scary_music_is_a_real_song() -> void:
+	var music: AudioStreamMP3 = load("res://assets/sounds/music_scary.mp3") if ResourceLoader.exists("res://assets/sounds/music_scary.mp3") else null
+	assert_true(music != null, "music_scary.mp3 is there")
+	assert_true(music != null and music.get_length() > 40.0, "a whole song, not a placeholder")
+

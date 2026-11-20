@@ -438,3 +438,82 @@ func test_no_pause_button_before_the_game() -> void:
 	var main := make_main_device("NoPause")
 	var pause: Node = main.find_child("PauseButton", true, false)
 	assert_true(pause == null or not pause.is_visible_in_tree(), "no Pause on the story or the title")
+
+
+# ---------- playtest fixes (spec 29) ----------
+
+func test_pause_and_help_sit_together_next_to_the_penalty() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var mains: Array = await make_started_mains(47673)
+	await wait_until(screens_are(mains, "hall"))
+	await wait_frames(3)
+	var m: Node = mains[1]
+	var pause: Button = m.find_child("PauseButton", true, false)
+	var help: Button = m.find_child("MissionButton", true, false)
+	var penalty: Control = m.find_child("PenaltyLabel", true, false)
+	assert_true(pause != null and help != null and penalty != null, "all three there")
+	if pause == null or help == null or penalty == null:
+		return
+	var p := pause.get_global_rect()
+	var h := help.get_global_rect()
+	var pen := penalty.get_global_rect()
+	assert_true(absf(p.get_center().y - h.get_center().y) < 4 and absf(pen.get_center().y - h.get_center().y) < 6, "one row: %s %s %s" % [pen, h, p])
+	assert_true(pen.end.x <= h.position.x and h.end.x <= p.position.x, "penalty, then ?, then Pause")
+	assert_true(h.position.x - pen.end.x < 30 and p.position.x - h.end.x < 20, "close together")
+	assert_true(p.end.x > 1152 - 40 and p.position.y < 30, "top right")
+	for button in [pause, help]:
+		assert_true(button.get_global_rect().size.y >= 40, button.name + " big enough to click")
+		var normal = button.get_theme_stylebox("normal")
+		var hover = button.get_theme_stylebox("hover")
+		assert_true(normal is StyleBoxFlat and normal.border_width_top >= 2, button.name + " has a frame")
+		assert_true(hover is StyleBoxFlat and hover.bg_color != normal.bg_color, button.name + " lights up on hover")
+		assert_eq(button.mouse_default_cursor_shape, Control.CURSOR_POINTING_HAND, button.name + " shows the hand")
+
+
+func test_the_inventory_steps_aside_for_the_window() -> void:
+	var mains: Array = await make_started_mains(47674)
+	await wait_until(screens_are(mains, "hall"))
+	light_fuse(mains[0].net, 0)
+	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"][0]["solved"])
+	mains[0].net.send_action("go_to", {"place": "living_room"})
+	assert_true(await wait_until(screens_are(mains, "living_room")), "in the living room")
+	await wait_frames(2)
+	var bar: Control = mains[1].find_child("InventoryBar", true, false)
+	assert_true(bar != null and bar.visible, "the inventory is there")
+	press(mains[1], "WindowButton")
+	assert_eq(bar.visible, false, "hidden while Player 2 looks out of the window")
+	var played: int = mains[1].net.game.get("seconds_played", 0)
+	mains[0].net.advance_clock(1.0)
+	await wait_until(func(): return mains[1].net.game.get("seconds_played", 0) > played)
+	assert_eq(bar.visible, false, "still hidden when the game changes")
+	var other: Control = mains[2].find_child("InventoryBar", true, false)
+	assert_true(other != null and other.visible, "only on that device")
+	for down in [true, false]:
+		var esc := InputEventAction.new()
+		esc.action = "ui_cancel"
+		esc.pressed = down
+		tree.root.push_input(esc)
+	await wait_frames(2)
+	assert_eq(bar.visible, true, "back when the view closes")
+
+
+# Spec 29: Pause moved to the top right; in no room may it cover a button of that room.
+func test_pause_covers_no_button_in_any_room() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var mains: Array = await make_started_mains(47675)
+	await wait_until(screens_are(mains, "hall"))
+	for i in 3:
+		light_fuse(mains[i].net, i)
+	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"].all(func(f): return f["solved"]))
+	for place in ["living_room", "bathroom", "bedroom", "attic"]:
+		mains[0].net.send_action("go_to", {"place": "hall"})
+		await wait_until(screens_are(mains, "hall"))
+		mains[0].net.send_action("go_to", {"place": place})
+		assert_true(await wait_until(screens_are(mains, place)), "in the " + place)
+		await wait_frames(3)
+		var pause: Button = mains[0].find_child("PauseButton", true, false)
+		var p := pause.get_global_rect()
+		for button in mains[0].screen.find_children("*", "BaseButton", true, false):
+			if button.is_visible_in_tree():
+				assert_true(not p.intersects(button.get_global_rect()), "%s: Pause covers %s" % [place, button.name])
+

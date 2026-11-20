@@ -985,3 +985,55 @@ func test_real_clicks_wreath_note_and_door() -> void:
 	assert_eq(is_shown(hall, "StoryCard"), false, "the door is not the wreath")
 	assert_contains(text_of(hall, "Message"), "red fuse", "the door below the wreath is still the door")
 
+
+# ---------- playtest fixes (spec 29) ----------
+
+func test_the_order_symbols_spread_evenly_over_the_frame() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	await wait_frames(3)
+	var frame: Control = hall.find_child("LabelFrame", true, false)
+	var centres := []
+	for i in 4:
+		var symbol: Control = hall.find_child("LabelSymbol%d" % i, true, false)
+		centres.append(symbol.get_global_rect().get_center().x)
+	var r := frame.get_global_rect()
+	var gap: float = centres[1] - centres[0]
+	for i in range(1, 3):
+		assert_true(absf((centres[i + 1] - centres[i]) - gap) < 2, "even gaps")
+	var left: float = centres[0] - r.position.x
+	var right: float = r.end.x - centres[3]
+	assert_true(absf(left - right) < 4, "as much room left as right: %d / %d" % [left, right])
+	assert_true(gap > 70, "spread over the frame, not packed at the left: gap %d" % gap)
+
+
+func test_the_wreath_greeting_has_its_own_line() -> void:
+	var hall := open_hall()
+	press(hall, "StoryWreath")
+	assert_contains(text_of(hall, "StoryText"), "my best little elf.\nMerry Christmas! – S.", "a new line before the greeting")
+
+
+func test_the_mission_card_stays_away_after_a_fuse_is_solved() -> void:
+	HallScript.forget_mission()
+	var room: Array = await make_started_room(47671)
+	var hall := open_online_hall(room[1])
+	assert_eq(is_shown(hall, "MissionCard"), true, "shown at the first visit")
+	press(hall, "MissionGo")
+	room[1].send_action("try_fuse", {"wires": room[1].game["puzzle"]["fuses"][1]["order"].duplicate()})
+	await wait_until(func(): return room[1].game["puzzle"]["fuses"][1]["solved"])
+	hall.free()
+	var again := open_online_hall(room[1])  # the team comes back from a room
+	assert_eq(is_shown(again, "MissionCard"), false, "not again, even with a fuse solved")
+
+
+func test_figures_step_aside_while_the_wreath_note_is_open() -> void:
+	var room: Array = await make_started_room(47672)
+	var hall := open_online_hall(room[1])
+	press(hall, "MissionGo")
+	var walking: Node = hall.get("walking")
+	assert_true(walking != null and walking.visible, "the figures are in the hall")
+	press(hall, "StoryWreath")
+	assert_eq(walking.visible if walking != null else true, false, "they step aside for the note")
+	key(hall, "ui_cancel")
+	assert_eq(walking.visible if walking != null else false, true, "and come back")
+

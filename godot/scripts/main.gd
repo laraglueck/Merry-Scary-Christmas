@@ -30,6 +30,7 @@ const PLACEHOLDER = preload("res://scenes/placeholder_room.tscn")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const PhotoRules = preload("res://scripts/rules/photo_rules.gd")
+const ButtonStyle = preload("res://scripts/button_style.gd")
 const PhotoPuzzle = preload("res://scenes/photo_puzzle.tscn")
 const IMAGES := "res://assets/images/"
 const Settings = preload("res://scripts/settings.gd")
@@ -56,6 +57,7 @@ var _piece_pictures := {} # torn photo piece -> its small picture in the photo's
 
 
 func _ready() -> void:
+	add_to_group("hud_owner")  # a window view asks for refresh_hud() (spec 29)
 	net = NetworkScript.new()
 	net.name = "Network"
 	add_child(net)
@@ -281,9 +283,25 @@ func open_photo_puzzle() -> void:
 
 
 # A found item shows its picture and name; an empty slot stays dark (no spoiler).
+# Only a window view on this screen counts (in the tests three players share one tree).
+func _window_is_open() -> bool:
+	if not is_inside_tree():
+		return false
+	for view in get_tree().get_nodes_in_group("hides_inventory"):
+		if is_ancestor_of(view):
+			return true
+	return false
+
+
+# Something on this device asks the HUD to look again, e.g. the window view (spec 29).
+func refresh_hud() -> void:
+	_update_inventory()
+
+
 func _update_inventory() -> void:
 	var running: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
-	inventory_bar.visible = running
+	# While someone looks out of the window, their bar steps aside (it covered the lines there).
+	inventory_bar.visible = running and not _window_is_open()
 	if not running:
 		return
 	for item in Settings.ITEMS:
@@ -345,12 +363,14 @@ func _build_pause() -> void:
 	pause_button = Button.new()
 	pause_button.name = "PauseButton"
 	pause_button.text = "Pause"
-	pause_button.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	pause_button.offset_left = 170
-	pause_button.offset_right = 270
+	# Top right, next to the hall's penalty and "?" (spec 29).
+	pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	pause_button.offset_left = -136
+	pause_button.offset_right = -24
 	pause_button.offset_top = 12
-	pause_button.offset_bottom = 52
+	pause_button.offset_bottom = 56
 	pause_button.add_theme_font_size_override("font_size", 20)
+	ButtonStyle.make_clickable(pause_button)
 	pause_button.pressed.connect(func(): net.send_action("pause", {}))
 	pause_button.visible = false
 	get_node("ClockLayer").add_child(pause_button)

@@ -8,6 +8,7 @@
 # The rules live in fuse_rules.gd and house_rules.gd. This script only shows them.
 extends Control
 
+const ButtonStyle = preload("res://scripts/button_style.gd")
 const Rules = preload("res://scripts/rules/fuse_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
@@ -61,7 +62,7 @@ const LEGEND_BOX := Rect2(892, 530, 298, 111)
 # Story objects (spec 25): not part of a puzzle, they tell who Scary Jingles was.
 const STORIES := {
 	"wreath": {"hint": "A dried-up wreath", "sound": "sfx_easter_egg.mp3",
-		"text": "A dried-up wreath. A faded tag still hangs from the bow:\n\n[i]\"For Jingles, my best little elf. Merry Christmas! – S.\"[/i]"},
+		"text": "A dried-up wreath. A faded tag still hangs from the bow:\n\n[i]\"For Jingles, my best little elf.\nMerry Christmas! – S.\"[/i]"},
 }
 const STORY_SOUND_SECONDS := 2.0  # only the start of the bells
 const DOLL_RECT := Rect2(872, 398, 72, 144)  # sitting on a lower step, on the right, under the stairs label
@@ -441,6 +442,7 @@ func _show_story(spot: String) -> void:
 	var story: Dictionary = STORIES[spot]
 	_story_text.text = story["text"]
 	_story_card.visible = true
+	_show_figures(false)  # the figures stood in front of the note (spec 29)
 	_story_sound.stream = load(SOUNDS + story["sound"])
 	sounds_played.append(story["sound"])
 	if DisplayServer.get_name() != "headless":  # not in the test run: no sound card
@@ -450,6 +452,7 @@ func _show_story(spot: String) -> void:
 
 func _close_story() -> void:
 	_story_card.visible = false
+	_show_figures(not _mission_card.visible and not _fuse_panel.visible and not _house_plan_panel.visible)
 
 
 # A click anywhere closes the note.
@@ -509,8 +512,13 @@ func _build_story_card() -> void:
 	paper.add_child(hint)
 
 
+# What stays the same during one game: the legend and the fuses' orders. Not their
+# "solved" state, else the card came back after each fuse (playtest, spec 29).
 func _mission_key() -> String:
-	return str(puzzle.get("legend", {})) + str(puzzle.get("fuses", []))
+	var orders := []
+	for fuse in puzzle.get("fuses", []):
+		orders.append(fuse.get("order", []))
+	return str(puzzle.get("legend", {})) + str(orders)
 
 
 func _show_mission(shown: bool) -> void:
@@ -574,20 +582,17 @@ func _build_mission_card() -> void:
 	go.offset_bottom = -45
 	go.pressed.connect(_close_mission)
 	paper.add_child(go)
-	# The "?" (top right, under the player buttons) opens the card again.
+	# The "?" (top right, after the penalty, next to Pause) opens the card again (spec 29).
 	var again := Button.new()
 	again.name = "MissionButton"
 	again.text = "?"
 	again.tooltip_text = "Your mission"
 	again.add_theme_font_size_override("font_size", 22)
-	again.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	again.offset_left = -64
-	again.offset_right = -24
-	again.offset_top = 62
-	again.offset_bottom = 102
+	again.custom_minimum_size = Vector2(44, 44)
+	again.focus_mode = Control.FOCUS_NONE
+	ButtonStyle.make_clickable(again)
 	again.pressed.connect(_show_mission.bind(true))
-	add_child(again)
-	move_child(again, _mission_card.get_index())  # under the card, over the hall
+	get_node("Hud").add_child(again)
 
 
 func _why_dark(place: String) -> String:
@@ -795,8 +800,8 @@ func _build_ui() -> void:
 	var hud := HBoxContainer.new()
 	hud.name = "Hud"
 	hud.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	hud.offset_left = -452
-	hud.offset_right = -24
+	hud.offset_left = -620
+	hud.offset_right = -144  # room for Pause (main.gd) at the right edge, spec 29
 	hud.offset_top = 12
 	hud.offset_bottom = 56
 	hud.alignment = BoxContainer.ALIGNMENT_END
@@ -925,11 +930,12 @@ func _build_fuse_box() -> void:
 	box.add_child(_label_frame)
 	var symbols := HBoxContainer.new()
 	symbols.name = "LabelSymbols"
-	symbols.add_theme_constant_override("separation", 6)
+	symbols.add_theme_constant_override("separation", 0)
 	_label_frame.add_child(symbols)
 	for i in 4:
 		var symbol := _image("LabelSymbol%d" % i, "")
 		symbol.custom_minimum_size = Vector2(56, 56)
+		symbol.size_flags_horizontal = Control.SIZE_EXPAND_FILL  # evenly over the frame (spec 29)
 		symbols.add_child(symbol)
 		_label_symbols.append(symbol)
 	_fuse_hint = RichTextLabel.new()
