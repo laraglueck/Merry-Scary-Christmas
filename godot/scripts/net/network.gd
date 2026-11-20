@@ -234,8 +234,8 @@ func advance_clock(delta: float) -> void:
 # Walking figures (spec 19), host only: everybody walks on; while someone walks (and once
 # more when the last one arrives) everybody gets the game about 10 times a second.
 func advance_figures(delta: float) -> void:
-	if game.get("phase") != "hall" or not multiplayer.is_server():
-		return
+	if game.get("phase") != "hall" or game.get("paused", false) or not multiplayer.is_server():
+		return  # paused (spec 26): nobody walks
 	var moved := WalkRules.advance(game, delta)
 	if not moved and not _figures_walking:
 		return
@@ -356,7 +356,8 @@ func _host_apply(sender: int, action: String, data: Dictionary) -> void:
 	game_changed.emit()
 
 
-# All three are ready: the real game starts with the chosen characters, for everyone.
+# All three are ready: the real game starts with the chosen characters, for everyone,
+# straight in the hall (spec 25: the story came before the lobby).
 func _begin_game_from_selection() -> void:
 	_create_game(CharacterRules.final_characters(game["selection"]))
 

@@ -77,10 +77,38 @@ func test_colour_arrows_page_through_the_colours() -> void:
 	assert_eq(screen.selection()[0]["colour"], "yellow", "and back")
 
 
-func test_accessory_arrows_are_a_placeholder() -> void:
+# Spec 27: the accessory arrows switch the accessory, and the big figure shows it.
+func test_accessory_arrows_change_the_big_figure() -> void:
 	var screen := open_select()
 	press(screen, "AccessoryNext")
-	assert_eq(screen.selection()[0]["accessory"], "none", "nothing to choose yet")
+	assert_eq(screen.selection()[0]["accessory"], "bow", "none -> bow")
+	assert_eq(big_picture(screen), "char_santa_bow.png", "Santa wears the bow")
+	assert_contains(text_of(screen, "AccessoryLabel"), "Bow", "label")
+	press(screen, "AccessoryPrev")
+	press(screen, "AccessoryPrev")
+	assert_eq(screen.selection()[0]["accessory"], "antlers", "none <- antlers")
+	assert_eq(big_picture(screen), "char_santa_antlers.png", "Santa wears antlers")
+
+
+func test_accessory_stays_when_colour_or_figure_changes() -> void:
+	var screen := open_select()
+	press(screen, "AccessoryNext")
+	press(screen, "AccessoryNext")
+	press(screen, "ColourNext")
+	assert_eq(big_picture(screen), "char_santa_green_nose.png", "green Santa, still the red nose")
+	press(screen, "Card_snowman")
+	assert_eq(big_picture(screen), "char_snowman_green_nose.png", "the snowman takes over colour and nose")
+	assert_eq(card_picture(screen, "snowman"), "char_snowman_green_nose.png", "the card shows it too")
+
+
+func big_picture(screen: Node) -> String:
+	var big: TextureRect = find(screen, "Picture_big")
+	return big.texture.resource_path.get_file() if big != null and big.texture != null else ""
+
+
+func card_picture(screen: Node, character: String) -> String:
+	var picture: TextureRect = find(screen, "Picture_" + character)
+	return picture.texture.resource_path.get_file() if picture != null and picture.texture != null else ""
 
 
 func test_next_button_fits_on_the_screen() -> void:
@@ -92,7 +120,7 @@ func test_next_button_fits_on_the_screen() -> void:
 		assert_true(screen.get_viewport().get_visible_rect().encloses(next.get_global_rect()), "Next fits: %s" % next.get_global_rect())
 
 
-func test_taken_figure_and_colour_are_blocked_for_the_next_player() -> void:
+func test_taken_figure_is_blocked_but_colours_are_shared() -> void:
 	var screen := open_select()
 	press(screen, "ColourNext")  # Player 1: red santa -> green santa
 	press(screen, "Player2Button")
@@ -101,8 +129,20 @@ func test_taken_figure_and_colour_are_blocked_for_the_next_player() -> void:
 	assert_eq(is_disabled(screen, "Card_santa"), true, "santa is taken")
 	assert_eq(is_disabled(screen, "Card_snowman"), false, "own figure stays free")
 	assert_contains(text_of(screen, "Owner_santa"), "Player 1", "says who has it")
-	press(screen, "ColourNext")  # red -> green is taken -> yellow
-	assert_eq(screen.selection()[1]["colour"], "yellow", "green is skipped")
+	press(screen, "ColourNext")  # red -> green, even though Player 1 is green
+	assert_eq(screen.selection()[1]["colour"], "green", "green twice is fine")
+	assert_contains(text_of(screen, "ColourLabel"), "Green", "shows the colour")
+
+
+# With all three players on screen, the colour arrows still change the colour.
+func test_colour_arrows_work_with_three_players() -> void:
+	var screen := open_select()
+	press(screen, "Player2Button")
+	press(screen, "Player3Button")
+	assert_eq(screen.selection().size(), 3, "all three have a figure")
+	var before: String = screen.selection()[2]["colour"]
+	press(screen, "ColourNext")
+	assert_true(screen.selection()[2]["colour"] != before, "the colour changed: %s" % screen.selection()[2]["colour"])
 
 
 func test_waits_for_the_others_after_next() -> void:

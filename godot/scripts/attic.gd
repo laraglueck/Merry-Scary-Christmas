@@ -51,6 +51,7 @@ var _jingles: TextureRect
 var _key: TextureButton  # click to take it (spec 21)
 var _choice_buttons: Array[Button] = []
 var _message: Label
+var _ending_hint: Label
 var _snore: AudioStreamPlayer
 var _lock_sound: AudioStreamPlayer
 var _stirring := false
@@ -256,6 +257,11 @@ func _refresh() -> void:
 	_snore.volume_db = SNORE_LOCKED_DB if locked else SNORE_OPEN_DB
 	_key.visible = not locked and not _key_taken()
 	var photo := InventoryRules.has(game, "photo")
+	_ending_hint.visible = not locked and _key_taken()
+	if photo:
+		_ending_hint.text = "The photo shows Jingles laughing with Santa, before everything went wrong.\n\nLeave it beside him with the cookies. Perhaps a reminder of happier times can change his mind."
+	else:
+		_ending_hint.text = "Could a memory of happier times change his mind?\n\nFind all three photo pieces and put them together in your inventory first."
 	for i in _choice_buttons.size():
 		var button := _choice_buttons[i]
 		button.visible = not locked and _key_taken()  # the choice comes with the key (spec 21)
@@ -336,7 +342,14 @@ func _build_ui() -> void:
 	_message.add_theme_color_override("font_color", Color("ffd76a"))
 	_message.add_theme_color_override("font_outline_color", Color.BLACK)
 	_message.add_theme_constant_override("outline_size", 6)
-
+	_ending_hint = _label(self, "", 20)
+	_ending_hint.name = "EndingHint"
+	_ending_hint.position = Vector2(24, 160)
+	_ending_hint.size = Vector2(420, 280)
+	_ending_hint.autowrap_mode = TextServer.AUTOWRAP_WORD
+	_ending_hint.add_theme_color_override("font_color", Color("e8d9c0"))
+	_ending_hint.add_theme_color_override("font_outline_color", Color.BLACK)
+	_ending_hint.add_theme_constant_override("outline_size", 5)
 	_build_lock()
 
 	# Snoring that goes on and on, and the lock opening.

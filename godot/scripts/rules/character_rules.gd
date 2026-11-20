@@ -1,5 +1,5 @@
 # Character selection (spec 18). Pure functions: no network, no screens.
-# `selection` maps a player index to {"character", "colour", "ready"}; it lives in
+# `selection` maps a player index to {"character", "colour", "accessory", "ready"}; it lives in
 # game["selection"] while game["phase"] is "select".
 # First check, then change: a refused action changes nothing and returns the reason.
 extends RefCounted
@@ -19,15 +19,12 @@ static func accessory_ids() -> Array:
 	return Settings.ACCESSORIES.map(func(info): return info["id"])
 
 
-# The next colour in the given direction (+1 or -1) that no other player has; goes round.
+# The next colour in the given direction (+1 or -1); goes round. Colours can be shared
+# (spec 18, change), so none is skipped.
 static func next_colour(selection: Dictionary, player: int, direction: int) -> String:
 	var colours := colour_ids()
 	var current := colours.find(selection.get(player, {}).get("colour", colours[0]))
-	for step in range(1, colours.size() + 1):
-		var candidate: String = colours[posmod(current + direction * step, colours.size())]
-		if owner_of(selection, "colour", candidate, player) == -1:
-			return candidate
-	return colours[current]
+	return colours[posmod(current + direction, colours.size())]
 
 
 # The next accessory in the given direction (+1 or -1); goes round.
@@ -38,6 +35,7 @@ static func next_accessory(current: String, direction: int) -> String:
 
 
 # Sets (or changes) the player's character and colour. A new pick is not "ready" any more.
+# Each character belongs to one player; a colour may be shared (spec 18, change).
 static func pick(selection: Dictionary, player: int, character: String, colour: String, accessory := "none") -> String:
 	# 1. Check ...
 	if player < 0 or player >= Settings.MAX_PLAYERS:
@@ -51,9 +49,6 @@ static func pick(selection: Dictionary, player: int, character: String, colour: 
 	var owner_of_character := owner_of(selection, "character", character, player)
 	if owner_of_character != -1:
 		return "The %s is taken by Player %d" % [character, owner_of_character + 1]
-	var owner_of_colour := owner_of(selection, "colour", colour, player)
-	if owner_of_colour != -1:
-		return "The colour %s is taken by Player %d" % [colour, owner_of_colour + 1]
 	# 2. ... then change.
 	selection[player] = {"character": character, "colour": colour, "accessory": accessory, "ready": false}
 	return ""
@@ -81,7 +76,8 @@ static func owner_of(selection: Dictionary, key: String, value: String, except :
 	return -1
 
 
-# The colour a clicked character gets: the first one nobody else has.
+# The colour a player starts with: the first one nobody else has (so the start looks
+# different for everyone; the arrows may still pick a shared one).
 static func first_free_colour(selection: Dictionary, player: int) -> String:
 	for colour in colour_ids():
 		if owner_of(selection, "colour", colour, player) == -1:
@@ -89,8 +85,15 @@ static func first_free_colour(selection: Dictionary, player: int) -> String:
 	return ""
 
 
-static func picture_file(character: String, colour: String) -> String:
-	return "char_%s.png" % character if colour == "red" else "char_%s_%s.png" % [character, colour]
+# The picture of a figure: char_santa.png (red), char_santa_green.png, and with an accessory
+# (spec 27) char_santa_bow.png, char_santa_green_bow.png.
+static func picture_file(character: String, colour: String, accessory := "none") -> String:
+	var name := "char_" + character
+	if colour != "red":
+		name += "_" + colour
+	if accessory != "none":
+		name += "_" + accessory
+	return name + ".png"
 
 
 # What the running game remembers: the choices without the "ready" flags.

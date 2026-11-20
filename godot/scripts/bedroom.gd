@@ -25,6 +25,7 @@ const GIFT_SOUND = preload("res://assets/sounds/sfx_gift.mp3")
 # Bounds measured in the screenshot's 1152 × 648 game viewport.
 const CALENDAR_BOUNDS := Rect2(0.347, 0.204, 0.181, 0.296)
 const CHEST_BOUNDS := Rect2(0.746, 0.688, 0.239, 0.285)
+const DOOR_BOUNDS := Rect2(0.035, 0.13, 0.215, 0.65)  # the open door on the left (spec 24)
 const GOLD := Color("#e8c18c")
 const TEXT := Color("#f4e7d1")
 
@@ -40,6 +41,7 @@ var popup_title: Label
 var popup_description: Label
 var status_label: Label
 var digit_label: Label
+var room_digit_label: Label
 var wheel_row: HBoxContainer
 var wheel_symbols: Array[TextureRect] = []
 var calendar_grid: GridContainer
@@ -50,7 +52,7 @@ var had_room_state := false
 var was_gift_taken := false
 var calendar_doors: Array[Button] = []
 var close_button: Button
-var back_button: Button
+var door_hall: Button  # the way back: the open door on the left (spec 24)
 var popup_opener: Button
 var current_popup := ""
 var inspected_door := 0
@@ -114,13 +116,29 @@ func _build_room() -> void:
 
 	_add_hotspot("CalendarHotspot", "Examine Advent Calendar", CALENDAR_BOUNDS, "calendar")
 	_add_hotspot("ChestHotspot", "Examine Toy Chest", CHEST_BOUNDS, "chest")
+	room_digit_label = Label.new()
+	room_digit_label.name = "RoomGoldDigit"
+	room_digit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	room_digit_label.add_theme_color_override("font_color", Color("ffd76a"))
+	room_digit_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	room_digit_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	room_digit_label.hide()
+	room_view.add_child(room_digit_label)
+	_anchor_to_bounds(room_digit_label, Rect2(0.83, 0.64, 0.08, 0.08))
 
-	back_button = Button.new()
-	back_button.text = "Back to the Hall"
-	_style_button(back_button)
-	room_view.add_child(back_button)
-	_anchor_to_bounds(back_button, Rect2(0.02, 0.88, 0.21, 0.09))
-	back_button.pressed.connect(func(): _send("go_to", {"place": "hall"}))
+	# Spec 24: back to the hall through the door, like in the bathroom (no button any more).
+	door_hall = Button.new()
+	door_hall.name = "DoorHall"
+	door_hall.tooltip_text = "Back to the hall"
+	door_hall.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	door_hall.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	var door_outline := _box(Color.TRANSPARENT, Color("ffd76a"), 3, 10, 0)  # gold, as in the other rooms (spec 24)
+	door_outline.draw_center = false
+	for state in ["hover", "pressed", "focus"]:
+		door_hall.add_theme_stylebox_override(state, door_outline)
+	room_view.add_child(door_hall)
+	_anchor_to_bounds(door_hall, DOOR_BOUNDS)
+	door_hall.pressed.connect(func(): _send("go_to", {"place": "hall"}))
 
 
 func _layout() -> void:
@@ -128,6 +146,13 @@ func _layout() -> void:
 	var scale_factor := minf(size.x / artwork.x, size.y / artwork.y)
 	room_view.size = artwork * scale_factor
 	room_view.position = (size - room_view.size) * 0.5
+	var digit_scale := room_view.size.x / 1152.0
+	room_digit_label.add_theme_font_size_override(
+		"font_size", maxi(1, roundi(32.0 * digit_scale))
+	)
+	room_digit_label.add_theme_constant_override(
+		"outline_size", maxi(1, roundi(5.0 * digit_scale))
+	)
 	popup_panel.custom_minimum_size.x = clampf(size.x - 24.0, 260.0, 470.0)
 
 
@@ -137,7 +162,7 @@ func _add_hotspot(node_name: String, hint: String, bounds: Rect2, page: String) 
 	button.tooltip_text = hint
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	var outline := _box(Color.TRANSPARENT, Color("#d4a35b"), 2, 10, 0)
+	var outline := _box(Color.TRANSPARENT, Color("ffd76a"), 3, 10, 0)  # gold, as in the other rooms (spec 24)
 	outline.draw_center = false
 	for state in ["hover", "pressed", "focus"]:
 		button.add_theme_stylebox_override(state, outline)
@@ -334,9 +359,11 @@ func _update_room() -> void:
 	var room: Dictionary = game.get("bedroom", {})
 	bedroom_is_lit = puzzle.has("fuses") and "bedroom" in FuseRules.lit_rooms(puzzle)
 	background_rect.texture = BACKGROUND_LIT if bedroom_is_lit else BACKGROUND_DARK
-	back_button.disabled = game.is_empty()
+	door_hall.disabled = game.is_empty()
 
 	var solved: bool = room.get("solved", false)
+	room_digit_label.visible = bedroom_is_lit and solved
+	room_digit_label.text = str(BedroomRules.gold_digit(room)) if solved else ""
 	var gift_taken: bool = room.get("gift_taken", false)
 	if had_room_state and DisplayServer.get_name() != "headless":
 		if gift_taken and not was_gift_taken:
@@ -363,7 +390,6 @@ func _update_room() -> void:
 	if modal.visible:
 		_update_popup(game, room)
 
-
 func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	var solved: bool = room.get("solved", false)
 	var gift_taken: bool = room.get("gift_taken", false)
@@ -373,6 +399,7 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	var chest := current_popup == "chest"
 	var calendar := current_popup == "calendar"
 	var photo := current_popup == "photo"
+
 	wheel_row.visible = chest and interactive and not solved
 	photo_picture.visible = photo and interactive and solved and not photo_taken
 	clue_picture.hide()
@@ -383,31 +410,51 @@ func _update_popup(game: Dictionary, room: Dictionary) -> void:
 	digit_label.visible = chest and interactive and solved
 	close_button.text = "Back to Calendar" if photo else "Close"
 
-	popup_title.text = {"chest": "THE TOY CHEST", "calendar": "ADVENT CALENDAR", "photo": "OLD PHOTOGRAPH"}[current_popup]
+	popup_title.text = {
+		"chest": "THE TOY CHEST",
+		"calendar": "ADVENT CALENDAR",
+		"photo": "OLD PHOTOGRAPH",
+	}[current_popup]
+
 	popup_description.text = ""
 	status_label.text = ""
+
 	if not interactive:
 		status_label.text = "No active game." if game.is_empty() else "The room is too dark. Restore power with the gold fuse."
 	else:
 		match current_popup:
 			"chest":
-				popup_description.text = "The toy chest is open." if solved else "Three symbols guard the chest. Look for the combination elsewhere in the house."
+				if solved and not photo_taken:
+					popup_description.text = "The chest is open. The remaining calendar doors can now be opened. Perhaps they hide something else."
+				elif solved:
+					popup_description.text = "The toy chest is open."
+				else:
+					popup_description.text = "Three symbols guard the chest. Look for the combination elsewhere in the house."
+
 				digit_label.text = "GOLDEN DIGIT: %s" % BedroomRules.gold_digit(room)
+
 				if gift_taken:
 					status_label.text = "The present has been collected."
 				elif not solved and "wrong symbols" in str(game.get("last_event", "")):
 					status_label.text = str(game["last_event"])
+
 			"calendar":
-				_update_calendar(game.get("living_room", {}), solved)
+				_update_calendar(game.get("living_room", {}), solved, photo_taken)
+
 			"photo":
 				popup_description.text = "A torn piece of an old photograph: Santa's red coat... and a sleigh. Where is the rest?"
 				if photo_taken:
 					status_label.text = "The torn piece has been collected."
+
 	status_label.visible = not status_label.text.is_empty()
 	popup_description.visible = not popup_description.text.is_empty()
 
 
-func _update_calendar(clue: Dictionary, solved: bool) -> void:
+
+
+
+
+func _update_calendar(clue: Dictionary, solved: bool, photo_taken: bool = false) -> void:
 	var hour := int(clue.get("hour", 0))
 	var minute := int(clue.get("minute", 0))
 	for i in calendar_doors.size():
@@ -420,6 +467,8 @@ func _update_calendar(clue: Dictionary, solved: bool) -> void:
 		button.tooltip_text = "Short hand" if door == hour else ("Long hand" if door == minute else "")
 
 	popup_description.text = "The open doors show where the clock hands point."
+	if solved and not photo_taken:
+		popup_description.text += "\nThe remaining doors can now be opened. Something has been tucked away behind one of them."
 	if inspected_door == hour and hour > 0:
 		clue_picture.texture = SHORT_HAND
 		clue_picture.show()

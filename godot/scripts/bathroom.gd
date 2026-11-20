@@ -38,7 +38,6 @@ const SOUNDS := "res://assets/sounds/"
 const STEAM_RECT := Rect2(586, 92, 290, 226)  # over the mirror, a little larger
 const MIRROR_SYMBOLS_RECT := Rect2(636, 176, 190, 70)  # the symbols, seen in the steamed mirror in the room
 const TAP_SOUND_SECONDS := 1.5                # a turn plays only the start of the faucet
-const DRAIN_PITCH := 0.7                      # lower and slower: the tub gurgles
 const FACE_SECONDS := 1.8  # long enough to be scary (second test round)
 
 # The face in the mirror shows once per player and game run, not on every visit
@@ -71,6 +70,8 @@ var _mirror_steam: TextureRect
 var _mirror_face: TextureRect
 var _faucet: AudioStreamPlayer
 var _scare: AudioStreamPlayer
+var _drain: AudioStreamPlayer
+var _steam_hiss: AudioStreamPlayer
 
 # Sounds this screen played (or would have played in the headless test run).
 var sounds_played: Array[String] = []
@@ -248,8 +249,8 @@ func _what_happened_so_far() -> Dictionary:
 func _react() -> void:
 	var now := _what_happened_so_far()
 	if now["solved"] and not _seen["solved"]:
-		_play(_faucet, "sfx_faucet.mp3", DRAIN_PITCH)
-		sounds_played[-1] = "sfx_faucet.mp3 (drain)"
+		_play(_drain, "sfx_drain.mp3")      # the tub drains ...
+		_play(_steam_hiss, "sfx_steam.mp3") # ... and the steam hisses up the mirror
 		_rise_steam()
 	elif now["turns"] != _seen["turns"] or now["penalty"] > _seen["penalty"]:
 		_play(_faucet, "sfx_faucet.mp3", 1.0, TAP_SOUND_SECONDS)
@@ -510,6 +511,8 @@ func _build_ui() -> void:
 
 	_faucet = _sound("Faucet", "sfx_faucet.mp3")
 	_scare = _sound("Scare", "sfx_scare.mp3")
+	_drain = _sound("Drain", "sfx_drain.mp3")
+	_steam_hiss = _sound("SteamHiss", "sfx_steam.mp3")
 
 
 func _picture(node_name: String, file: String, rect: Rect2) -> TextureRect:

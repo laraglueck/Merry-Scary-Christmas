@@ -2,6 +2,7 @@
 extends "res://tests/base_test.gd"
 
 const GameRules = preload("res://scripts/rules/game_rules.gd")
+const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 
 
 func new_game() -> Dictionary:
@@ -117,3 +118,45 @@ func test_new_game_keeps_the_chosen_characters() -> void:
 	var chosen := {0: {"character": "santa", "colour": "red"}}
 	assert_eq(GameRules.new_game(rng, chosen)["characters"], chosen, "stored")
 	assert_eq(GameRules.new_game(rng)["characters"], {}, "empty by default")
+
+
+# ---------- pause (spec 26) ----------
+
+func test_a_new_game_is_not_paused() -> void:
+	var game := new_game()
+	assert_eq(game.get("paused"), false, "runs")
+	assert_eq(game.get("paused_by"), -1, "nobody paused")
+
+
+func test_any_player_pauses_and_any_player_continues() -> void:
+	var game := new_game()
+	GameRules.apply(game, 1, "pause", {})
+	assert_eq(game.get("paused"), true, "paused")
+	assert_eq(game.get("paused_by"), 1, "by Player 2")
+	assert_contains(game.get("last_event", ""), "Player 2 paused", "everyone sees who")
+	GameRules.apply(game, 2, "resume", {})
+	assert_eq(game.get("paused"), false, "Player 3 continues")
+	assert_eq(game.get("paused_by"), -1, "nobody any more")
+
+
+func test_nothing_else_happens_while_paused() -> void:
+	var game := new_game()
+	GameRules.apply(game, 0, "pause", {})
+	GameRules.apply(game, 0, "try_fuse", {"wires": right_order(game, 0)})
+	assert_eq(game["puzzle"]["fuses"][0]["solved"], false, "no fuse while paused")
+	GameRules.apply(game, 1, "move", {"dx": 1.0, "dy": 0.0})
+	assert_eq(game["figures"][1]["dx"], 0.0, "nobody starts walking")
+
+
+func test_pausing_stops_the_figures() -> void:
+	var game := new_game()
+	GameRules.apply(game, 0, "move", {"dx": 1.0, "dy": 0.0})
+	GameRules.apply(game, 2, "pause", {})
+	assert_eq(game["figures"][0]["dx"], 0.0, "Player 1 stands still")
+
+
+func test_no_pause_after_the_game_ended() -> void:
+	var game := new_game()
+	game["phase"] = "midnight"
+	GameRules.apply(game, 0, "pause", {})
+	assert_eq(game.get("paused"), false, "nothing to pause")

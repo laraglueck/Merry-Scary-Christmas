@@ -55,7 +55,7 @@ func _refresh() -> void:
 	var game: Dictionary = net.game
 	for player in _figures:
 		var look := _look(game, player)
-		_figures[player].texture = load(IMAGES + CharacterRules.picture_file(look["character"], look["colour"]))
+		_figures[player].texture = load(IMAGES + CharacterRules.picture_file(look["character"], look["colour"], look.get("accessory", "none")))
 	_place_figures(0.0)
 
 

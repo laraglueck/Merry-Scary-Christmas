@@ -8,6 +8,7 @@ extends RefCounted
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
+const Settings = preload("res://scripts/settings.gd")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
@@ -33,7 +34,19 @@ static func new_game(rng: RandomNumberGenerator, characters := {}) -> Dictionary
 		"inventory": [],                            # what the team carries (spec 14), e.g. ["gift_2"]
 		"seconds_played": 0,                        # the clock (spec 13): time left = 600 - this - penalties
 		"last_event": "",                           # shown to everyone, e.g. "Player 1: wrong order, -10 s"
+		"paused": false,                            # spec 26: the clock and everything else wait
+		"paused_by": -1,                            # who paused (player index), -1 if nobody
 	}
+
+
+# Spec 26: the game waits for everyone; the figures stop where they are.
+static func _pause(game: Dictionary, player: int) -> void:
+	game["paused"] = true
+	game["paused_by"] = player
+	game["last_event"] = "Player %d paused the game" % (player + 1)
+	for figure in game.get("figures", {}).values():
+		figure["dx"] = 0.0
+		figure["dy"] = 0.0
 
 
 # Host only: one player's action changes the game. Unknown actions change nothing.
@@ -43,6 +56,17 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 		CharacterRules.apply(game, player, action, data)
 		return
 	if game.get("phase") != "hall":
+		return
+	# Pause (spec 26): anyone pauses for everyone, anyone continues; while paused nothing else happens.
+	if action == "pause":
+		_pause(game, player)
+		return
+	if action == "resume":
+		game["paused"] = false
+		game["paused_by"] = -1
+		game["last_event"] = ""
+		return
+	if game.get("paused", false):
 		return
 
 	match action:
@@ -334,7 +358,7 @@ static func _take_bedroom_photo(game: Dictionary, player: int) -> void:
 
 	if result["ok"]:
 		InventoryRules.add(game, "photo_piece_3")  # the photo is torn in three (spec 21)
-		game["last_event"] = "%s found a torn piece of a photo!" % who
+		game["last_event"] = _photo_piece_message(game, who)
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
 
@@ -361,7 +385,7 @@ static func _take_piece(game: Dictionary, player: int, data: Dictionary) -> void
 		return
 	var error := PhotoRules.take_piece(game, room)
 	if error == "":
-		game["last_event"] = "%s found a torn piece of a photo!" % who
+		game["last_event"] = _photo_piece_message(game, who)
 	else:
 		game["last_event"] = "%s: %s" % [who, error]
 
@@ -374,6 +398,17 @@ static func _assemble_photo(game: Dictionary, player: int, data: Dictionary) -> 
 		order = []
 	var error := PhotoRules.assemble(game, order)
 	if error == "":
-		game["last_event"] = "%s put the photo together: Santa and a young, laughing Jingles." % who
+		game["last_event"] = "%s put the photo together: Santa and a young, laughing Jingles. Perhaps this memory of happier times could change his mind." % who
 	else:
 		game["last_event"] = "%s: %s" % [who, error]
+
+static func _photo_piece_message(game: Dictionary, who: String) -> String:
+	var all_pieces := true
+	for piece in ["photo_piece_1", "photo_piece_2", "photo_piece_3"]:
+		if not InventoryRules.has(game, piece):
+			all_pieces = false
+
+	if all_pieces:
+		return "%s found a torn piece of a photo! You have all three photo pieces. Click the photo slot in your inventory to put them together." % who
+
+	return "%s found a torn piece of a photo!" % who

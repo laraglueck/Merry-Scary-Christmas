@@ -19,6 +19,8 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
+| view_window_garden.png | images | made by `godot/tools/make_window_view.gd` from room_garden.webp and prop_moon_full.png | Mathies (from Gloria's pictures) | own work from AI pictures | Yes (the two source pictures) | the moon only shows where the picture is sky |
+| view_window_garden_cloudy.png | images | made by `godot/tools/make_window_view.gd` from room_garden.webp and prop_moon_full.png | Mathies (from Gloria's pictures) | own work from AI pictures | Yes (the two source pictures) | the same with a pale moon behind clouds |
 | room_garden.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_hall.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_attic.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | stairs come up at the front left |
@@ -41,6 +43,33 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | char_snowman_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, white background removed with add_image.gd |
 | char_nutcracker_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, white background removed with add_image.gd |
 | char_nutcracker_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, white background removed with add_image.gd |
+| char_santa_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, bow (spec 27), white background removed with add_image.gd |
+| char_santa_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_santa_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_santa_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, bow (spec 27), white background removed with add_image.gd |
+| char_santa_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_santa_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_santa_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, bow (spec 27), white background removed with add_image.gd |
+| char_santa_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_santa_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_snowman_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, bow (spec 27), white background removed with add_image.gd |
+| char_snowman_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_snowman_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_snowman_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, bow (spec 27), white background removed with add_image.gd |
+| char_snowman_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_snowman_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_snowman_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, bow (spec 27), white background removed with add_image.gd |
+| char_snowman_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_snowman_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_nutcracker_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, bow (spec 27), white background removed with add_image.gd |
+| char_nutcracker_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, red nose (spec 27), white background removed with add_image.gd |
+| char_nutcracker_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_nutcracker_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, bow (spec 27), white background removed with add_image.gd |
+| char_nutcracker_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, red nose (spec 27), white background removed with add_image.gd |
+| char_nutcracker_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_nutcracker_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, bow (spec 27), white background removed with add_image.gd |
+| char_nutcracker_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, red nose (spec 27), white background removed with add_image.gd |
+| char_nutcracker_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
 | item_fuse_red.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_green.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_gold.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
@@ -115,6 +144,8 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | sfx_win.mp3 | sounds | Pixabay, original file `emand_edroff-victory-bell-success-fanfare-576275.mp3` | emand_edroff | Pixabay Content License | No |  |
 | sfx_lose.mp3 | sounds | Pixabay, original file `emand_edroff-comedic-trombone-disappointment-576276.mp3` | emand_edroff | Pixabay Content License | No |  |
 | sfx_faucet.mp3 | sounds | Pixabay, original file `alex_jauk-squeaky-old-faucet-197041.mp3` | alex_jauk | Pixabay Content License | No |  |
+| sfx_drain.mp3 | sounds | original file `vsx-bathtub-water-draining.mp3`, website to confirm | to confirm | to confirm | to confirm | the tub drains when the taps are solved |
+| sfx_steam.mp3 | sounds | original file `vsx-steam-hissing.mp3`, website to confirm | to confirm | to confirm | to confirm | the steam rises over the mirror |
 | sfx_clock_tick.mp3 | sounds | Pixabay, original file `dragon-studio-slow-cinematic-clock-ticking-357979.mp3` | DRAGON-STUDIO | Pixabay Content License | No |  |
 | sfx_clock_wrong.mp3 | sounds | Pixabay, original file `freesound_community-metal-scraping-47621.mp3` | freesound_community | Pixabay Content License | No |  |
 | sfx_clock_chime.mp3 | sounds | Pixabay, original file `freesound_community-clock-chime-88027.mp3` | freesound_community | Pixabay Content License | No |  |

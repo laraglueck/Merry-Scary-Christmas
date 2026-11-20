@@ -34,16 +34,20 @@ func make_started_mains(port: int) -> Array:
 	return [host, a, b]
 
 
-func test_main_starts_with_the_loading_screen() -> void:
+func test_main_starts_with_the_story() -> void:
 	var main := make_main_device("Solo")
-	assert_eq(main.screen_name, "intro", "loading screen first (spec 12)")
+	assert_eq(main.screen_name, "intro", "the story first, before the title (spec 25)")
+	await wait_frames(2)
 	assert_true(main.find_child("SubtitleLabel", true, false) != null, "story shown")
+	assert_true(main.find_child("StartButton", true, false) == null, "no title yet")
 
 
-func test_main_loading_screen_then_title_then_lobby() -> void:
+func test_main_story_then_title_then_lobby() -> void:
 	var main := make_main_device("Solo2")
-	main.screen.finished.emit()
-	assert_eq(main.screen_name, "title", "title after the story")
+	main.screen.finished.emit()  # voice over, click or key
+	assert_eq(main.screen_name, "title", "the title after the story")
+	await wait_frames(2)
+	assert_true(main.find_child("SubtitleLabel", true, false) == null, "story gone")
 	press(main, "StartButton")
 	assert_eq(main.screen_name, "lobby", "lobby after Start")
 	await wait_frames(2)  # the old screens are removed at the end of a frame
@@ -52,14 +56,16 @@ func test_main_loading_screen_then_title_then_lobby() -> void:
 	assert_true(main.find_child("SubtitleLabel", true, false) == null, "story gone")
 
 
-func test_main_music_loops_through_the_screens() -> void:
+func test_menu_music_only_on_the_title() -> void:
 	var main := make_main_device("Solo3")
 	var music: AudioStreamPlayer = main.get_node_or_null("Music")
 	assert_true(music != null and music.stream != null, "music in main")
 	assert_true(music != null and music.stream.loop, "music loops")
+	assert_eq(main.get("menu_music_on"), false, "no music under the story")
 	main.screen.finished.emit()
-	await wait_frames(2)
-	assert_true(main.get_node_or_null("Music") == music, "same music on the title")
+	assert_eq(main.get("menu_music_on"), true, "music on the title")
+	press(main, "StartButton")
+	assert_eq(main.get("menu_music_on"), false, "quiet from the lobby on (spec 23)")
 
 
 func test_main_switches_everyone_to_the_hall_when_the_game_starts() -> void:
@@ -86,12 +92,12 @@ func test_main_shows_the_character_selection_before_the_game() -> void:
 	assert_true(await wait_until(func(): return mains.all(func(m): return m.screen_name == "select")), "all three choose")
 	await wait_frames(2)
 	assert_true(a.find_child("Card_santa", true, false) != null, "selection screen on Player 2")
-	assert_true(a.get_node("Music").playing or DisplayServer.get_name() == "headless", "the menu music goes on")
+	assert_eq(a.get("menu_music_on"), false, "no menu music after the title (spec 23)")
 	var picks := [["santa", "red"], ["snowman", "green"], ["nutcracker", "yellow"]]
 	for player in 3:
 		mains[player].net.send_action("pick_character", {"character": picks[player][0], "colour": picks[player][1]})
 		mains[player].net.send_action("ready", {})
-	assert_true(await wait_until(func(): return mains.all(func(m): return m.screen_name == "hall")), "then the hall")
+	assert_true(await wait_until(func(): return mains.all(func(m): return m.screen_name == "hall")), "then straight into the hall (spec 25)")
 
 
 func test_main_back_to_lobby_when_host_leaves() -> void:
@@ -136,7 +142,7 @@ func test_everyone_walks_into_the_living_room_and_back() -> void:
 	assert_true(await wait_until(screens_are(mains, "living_room")), "all three in the living room")
 	assert_eq(mains[1].screen.scene_file_path, "res://scenes/living_room.tscn", "Lara's living room screen")
 	await wait_frames(2)
-	press(mains[1], "BackButton")
+	press(mains[1], "DoorHall")  # through the door (spec 24)
 	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
 
 
@@ -149,7 +155,7 @@ func test_everyone_walks_into_the_bedroom_and_back() -> void:
 	assert_true(await wait_until(screens_are(mains, "bedroom")), "all three in the bedroom")
 	assert_eq(mains[1].screen.scene_file_path, "res://scenes/bedroom.tscn", "Mika's bedroom screen")
 	await wait_frames(2)
-	mains[1].screen.back_button.pressed.emit()
+	press(mains[1], "DoorHall")  # through the door (spec 24)
 	assert_true(await wait_until(screens_are(mains, "hall")), "back in the hall")
 
 
@@ -282,7 +288,7 @@ func test_back_to_the_lobby_after_the_end_and_play_again() -> void:
 	for player in 3:
 		mains[player].net.send_action("pick_character", {"character": picks[player][0], "colour": picks[player][1]})
 		mains[player].net.send_action("ready", {})
-	assert_true(await wait_until(screens_are(mains, "hall")), "a new round in the hall")
+	assert_true(await wait_until(screens_are(mains, "hall")), "a new round in the hall, no story again (spec 25)")
 	assert_eq(ClockRules.time_left(mains[2].net.game) >= 598, true, "the clock starts again at 10:00")
 
 
@@ -334,3 +340,101 @@ func test_house_music_plays_quietly_while_the_game_runs() -> void:
 	await wait_until(screens_are(mains, "midnight"))
 	assert_true(mains.all(func(m): return m.get("house_music_on") == false), "stops at the end")
 
+
+# ---------- the story before the hall (spec 23) ----------
+
+# Spec 25: the story comes first on each device, before the title, on its own.
+func test_the_story_at_the_start_fades_in_without_music() -> void:
+	var main := make_main_device("Story25")
+	await wait_frames(2)
+	assert_eq(main.screen_name, "intro", "the story")
+	assert_true(main.screen.get("lead_in") != null and main.screen.lead_in >= 1.5, "the story fades in first")
+	assert_eq(main.get("menu_music_on"), false, "no menu music under the story")
+	var clock: Node = main.find_child("ClockLabel", true, false)
+	assert_true(clock != null and not clock.visible, "no clock during the story")
+
+
+func test_the_game_starts_in_the_hall_at_ten_minutes() -> void:
+	var host := make_main_device("StoryHost")
+	var a := make_main_device("StoryA")
+	var b := make_main_device("StoryB")
+	host.net.host_room(47651)
+	a.net.join_room("127.0.0.1", 47651)
+	await wait_until(func(): return a.net.connected)
+	b.net.join_room("127.0.0.1", 47651)
+	await wait_until(func(): return host.net.players.size() == 3)
+	var mains := [host, a, b]
+	host.net.begin_selection()
+	await wait_until(screens_are(mains, "select"))
+	var picks := [["santa", "red"], ["snowman", "green"], ["nutcracker", "yellow"]]
+	for player in 3:
+		mains[player].net.send_action("pick_character", {"character": picks[player][0], "colour": picks[player][1]})
+		mains[player].net.send_action("ready", {})
+	assert_true(await wait_until(screens_are(mains, "hall")), "all three in the hall, no story in between")
+	assert_eq(ClockRules.time_left(b.net.game) >= 598, true, "10:00 on the clock")
+
+
+# Spec 23: who skips waits on a quiet screen (no voice, no line, no "Click to skip").
+func test_a_skipped_story_goes_quiet_while_waiting() -> void:
+	var intro: Node = load("res://scenes/intro.tscn").instantiate()
+	tree.root.add_child(intro)
+	var key := InputEventKey.new()
+	key.keycode = KEY_SPACE
+	key.pressed = true
+	tree.root.push_input(key)
+	var subtitle: Node = intro.find_child("SubtitleLabel", true, false)
+	var hint: Node = intro.find_child("SkipHint", true, false)
+	assert_true(subtitle != null and not subtitle.visible, "the line is gone")
+	assert_true(hint != null and not hint.visible, "no Click to skip any more")
+	var voice: AudioStreamPlayer = intro.find_child("Voice", true, false)
+	assert_true(voice != null and not voice.playing, "the voice is quiet")
+
+
+# Spec 23, after the manual test: the story fades in, then the voice starts.
+func test_the_story_fades_in_before_the_voice() -> void:
+	var intro: Node = load("res://scenes/intro.tscn").instantiate()
+	intro.lead_in = 2.0
+	tree.root.add_child(intro)
+	var fade: Node = intro.find_child("FadeIn", true, false)
+	assert_true(fade != null and fade.color.a > 0.9, "starts dark")
+	assert_eq(intro.get("voice_started"), false, "no voice yet")
+	var subtitle: Node = intro.find_child("SubtitleLabel", true, false)
+	assert_true(subtitle != null and subtitle.modulate.a < 0.1, "no line yet")
+	intro.advance(1.0)
+	assert_true(fade != null and fade.color.a > 0.3 and fade.color.a < 0.7, "half way: %s" % (fade.color.a if fade != null else -1.0))
+	intro.advance(1.5)
+	assert_true(fade != null and fade.color.a < 0.05, "fully faded in")
+	assert_eq(intro.get("voice_started"), true, "now the voice starts")
+	assert_eq(text_of(intro, "SubtitleLabel"), "Once I was Santa's most loyal helper.", "the first line")
+
+
+# ---------- pause (spec 26) ----------
+
+func test_anyone_pauses_for_everyone_and_anyone_continues() -> void:
+	var mains: Array = await make_started_mains(47660)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	await wait_frames(2)
+	var pause: Node = mains[1].find_child("PauseButton", true, false)
+	assert_true(pause != null and pause.is_visible_in_tree(), "Pause button while the game runs")
+	press(mains[1], "PauseButton")  # Player 2 pauses
+	var all_paused := func(): return mains.all(func(m):
+		var overlay: Node = m.find_child("PauseOverlay", true, false)
+		return overlay != null and overlay.is_visible_in_tree())
+	assert_true(await wait_until(all_paused), "all three see the pause")
+	assert_contains(text_of(mains[0], "PauseLabel"), "Paused by Player 2", "says who")
+	var played: int = mains[0].net.game["seconds_played"]
+	mains[0].net.advance_clock(30.0)
+	assert_eq(mains[0].net.game["seconds_played"], played, "the clock stands still")
+	press(mains[2], "ContinueButton")  # Player 3 continues
+	var all_running := func(): return mains.all(func(m):
+		var overlay: Node = m.find_child("PauseOverlay", true, false)
+		return overlay != null and not overlay.visible)
+	assert_true(await wait_until(all_running), "the game runs again for all three")
+	mains[0].net.advance_clock(2.0)
+	assert_eq(mains[0].net.game["seconds_played"], played + 2, "the clock runs again")
+
+
+func test_no_pause_button_before_the_game() -> void:
+	var main := make_main_device("NoPause")
+	var pause: Node = main.find_child("PauseButton", true, false)
+	assert_true(pause == null or not pause.is_visible_in_tree(), "no Pause on the story or the title")

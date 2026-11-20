@@ -38,6 +38,7 @@ const PICTURE_SIZE := Vector2(1376, 768)
 const SPOTS := [
 	{"name": "fuse_box", "node": "FuseBoxButton", "rect": Rect2(0, 85, 100, 245)},
 	{"name": "living_room", "node": "Door_living_room", "rect": Rect2(175, 40, 150, 650)},
+	{"name": "wreath", "node": "StoryWreath", "rect": Rect2(198, 146, 112, 250)},   # story (spec 25), on the door
 	{"name": "bathroom", "node": "Door_bathroom", "rect": Rect2(356, 180, 108, 375)},
 	{"name": "attic", "node": "StairsButton", "rect": Rect2(690, 178, 300, 392)},
 	{"name": "bedroom", "node": "Door_bedroom", "rect": Rect2(1018, 40, 162, 650)},
@@ -57,6 +58,12 @@ const BREAKER_RECTS := {"red": Rect2(560, 238, 62, 92), "green": Rect2(660, 238,
 const PLAN_ROOMS := [Rect2(349, 317, 266, 231), Rect2(424, 140, 190, 164), Rect2(765, 262, 236, 205)]
 const LEGEND_BOX := Rect2(892, 530, 298, 111)
 # Hall polish (first full test round): the doll on the stairs, sounds.
+# Story objects (spec 25): not part of a puzzle, they tell who Scary Jingles was.
+const STORIES := {
+	"wreath": {"hint": "A dried-up wreath", "sound": "sfx_easter_egg.mp3",
+		"text": "A dried-up wreath. A faded tag still hangs from the bow:\n\n[i]\"For Jingles, my best little elf. Merry Christmas! – S.\"[/i]"},
+}
+const STORY_SOUND_SECONDS := 2.0  # only the start of the bells
 const DOLL_RECT := Rect2(872, 398, 72, 144)  # sitting on a lower step, on the right, under the stairs label
 const DOLL_DIMMED := Color(0.7, 0.65, 0.65)  # in the dim back of the hall
 const DOLL_TURN_SECONDS := 1.5
@@ -113,6 +120,9 @@ var _creak: AudioStreamPlayer
 var _click: AudioStreamPlayer      # a fuse snaps in (spec 22)
 var _doll_turned := false  # she is looking at the players right now
 var _mission_card: Control
+var _story_card: Control        # a story note (spec 25), on this device only
+var _story_text: RichTextLabel
+var _story_sound: AudioStreamPlayer
 # The mission card shows once per game: the first time the team stands in the hall.
 # Remembered by the game's own random puzzle, so a new game shows it again.
 static var _mission_seen_for := ""
@@ -296,7 +306,12 @@ func _average_colour(file: String) -> Color:
 # ---------- keys (like the bathroom, spec 10) ----------
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _fuse_panel.visible:
+	if _story_card.visible:
+		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept"):
+			_close_story()
+		else:
+			return
+	elif _fuse_panel.visible:
 		if event.is_action_pressed("ui_cancel"):
 			_close_close_ups()
 		elif event.is_action_pressed("ui_left"):
@@ -356,6 +371,8 @@ func _use_spot(spot: String) -> void:
 			_on_fuse_box_pressed()
 		"house_plan":
 			_on_house_plan_pressed()
+		"wreath":
+			_show_story(spot)
 		_:
 			if _spot_by_name[spot].disabled:
 				_message.text = _why_dark(spot)
@@ -416,6 +433,81 @@ func _play(player: AudioStreamPlayer, file_name: String) -> void:
 
 
 # ---------- the mission card (second test round) ----------
+
+# ---------- story objects (spec 25) ----------
+
+# Shows the object's note on this device. Nothing goes to the host, nothing changes.
+func _show_story(spot: String) -> void:
+	var story: Dictionary = STORIES[spot]
+	_story_text.text = story["text"]
+	_story_card.visible = true
+	_story_sound.stream = load(SOUNDS + story["sound"])
+	sounds_played.append(story["sound"])
+	if DisplayServer.get_name() != "headless":  # not in the test run: no sound card
+		_story_sound.play()
+		get_tree().create_timer(STORY_SOUND_SECONDS).timeout.connect(_story_sound.stop)
+
+
+func _close_story() -> void:
+	_story_card.visible = false
+
+
+# A click anywhere closes the note.
+func _on_story_card_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed:
+		_close_story()
+
+
+func _build_story_card() -> void:
+	_story_card = Control.new()
+	_story_card.name = "StoryCard"
+	_story_card.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_story_card.visible = false
+	_story_card.gui_input.connect(_on_story_card_input)
+	add_child(_story_card)
+	var shade := ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.5)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_PASS  # the click reaches the card, which closes
+	_story_card.add_child(shade)
+	var paper := TextureRect.new()  # the same paper as the mission note
+	paper.texture = load(IMAGES + "prop_note.png")
+	paper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	paper.stretch_mode = TextureRect.STRETCH_SCALE
+	paper.mouse_filter = Control.MOUSE_FILTER_PASS
+	paper.set_anchors_preset(Control.PRESET_CENTER)
+	paper.offset_left = -270
+	paper.offset_right = 270
+	paper.offset_top = -170
+	paper.offset_bottom = 170
+	_story_card.add_child(paper)
+	_story_text = RichTextLabel.new()
+	_story_text.name = "StoryText"
+	_story_text.bbcode_enabled = true
+	_story_text.scroll_active = false
+	_story_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_story_text.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_story_text.offset_left = 60
+	_story_text.offset_right = -50
+	_story_text.offset_top = 60
+	_story_text.offset_bottom = -60
+	_story_text.add_theme_font_size_override("normal_font_size", 22)
+	_story_text.add_theme_font_size_override("italics_font_size", 22)
+	_story_text.add_theme_color_override("default_color", Color("3b2a1a"))
+	paper.add_child(_story_text)
+	var hint := Label.new()
+	hint.text = "Click to close"
+	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_color_override("font_color", Color(0.23, 0.16, 0.1, 0.6))
+	hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	hint.offset_left = -60
+	hint.offset_right = 60
+	hint.offset_top = -48
+	hint.offset_bottom = -26
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	paper.add_child(hint)
+
 
 func _mission_key() -> String:
 	return str(puzzle.get("legend", {})) + str(puzzle.get("fuses", []))
@@ -686,6 +778,11 @@ func _build_ui() -> void:
 			_doors[spot["name"]] = button
 	_spot_by_name["fuse_box"].text = "Fuse box"
 	_spot_by_name["house_plan"].text = "House plan"
+	for story in STORIES:
+		_spot_by_name[story].tooltip_text = STORIES[story]["hint"]  # no name on it, a hint on hover
+	_story_sound = AudioStreamPlayer.new()
+	_story_sound.name = "StorySound"
+	add_child(_story_sound)
 
 	_build_fuse_box()
 	_build_house_plan()
@@ -756,6 +853,7 @@ func _build_ui() -> void:
 	_creak.pitch_scale = 0.8  # slower and lower: creepier for the doll
 	add_child(_creak)
 
+	_build_story_card()    # over the hall and the flicker, under the mission card (spec 25)
 	_build_mission_card()  # on top of everything, also the flicker
 	_click = AudioStreamPlayer.new()
 	_click.name = "FuseClickSound"
@@ -1002,6 +1100,7 @@ func _style_spot(button: Button, node_name: String, font_size: int) -> void:
 	button.add_theme_stylebox_override("hover", _spot_style(HIGHLIGHT))
 	button.add_theme_stylebox_override("pressed", _spot_style(HIGHLIGHT))
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND  # like in every room (spec 25)
 
 
 func _plain_button(node_name: String, text: String, action: Callable) -> Button:

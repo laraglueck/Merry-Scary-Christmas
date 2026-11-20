@@ -1,8 +1,8 @@
-# Main scene (spec 04, 07, 11, 12): keeps the network connection and shows the right
-# screen: on this device only, the loading screen with the story, then the title (until
-# "Start"); the lobby before the game starts, then the character selection (spec 18), then
-# the place where the team is (hall, a room, the attic). If the host leaves, everyone is back in the lobby.
-# The music plays here, so it goes on from screen to screen until the game starts.
+# Main scene (spec 04, 07, 11, 12, 23, 25): keeps the network connection and shows the right
+# screen: on this device first the story (spec 12, until it ends or is skipped: spec 25),
+# then the title (until "Start"), then the lobby; for the whole team the character selection (spec 18),
+# then the place where the team is (hall, a room, the attic). If the host leaves, everyone is back in the lobby.
+# The menu music plays here, on the title only (spec 23).
 # While the game runs in the house, quiet house music plays instead (spec 22).
 # The clock (spec 13) and the inventory bar (spec 14) are shown here too, on top of
 # every screen while the game runs.
@@ -39,12 +39,16 @@ const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
 var net: Node
 var screen: Node
 var screen_name := ""
-var intro_done := false  # story finished or skipped, or a game already started here
 var title_done := false  # "Start" pressed, or a game already started on this device
+var story_done := false  # the story ended or was skipped on this device (spec 25)
 var music: AudioStreamPlayer
+var menu_music_on := false   # spec 23: true while the menu music plays, only on the title (the tests read this)
 var house_music: AudioStreamPlayer
 var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
 var clock_label: Label
+var pause_button: Button   # spec 26: next to the clock while the game runs
+var pause_overlay: Control # spec 26: over every screen while the game is paused
+var pause_label: Label
 var inventory_bar: PanelContainer
 var _item_pictures := {}  # item id -> its picture in the bar
 var _item_names := {}     # item id -> its name under the picture
@@ -59,16 +63,17 @@ func _ready() -> void:
 	_build_house_music()
 	_build_clock()
 	_build_inventory()
+	_build_pause()
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
 
 
-# First the story, then before "Start" -> title; no game yet (or game over) -> lobby; in the house -> where
+# First the story; then before "Start" -> title; no game yet (or game over) -> lobby; in the house -> where
 # the team is; later phases (e.g. an end screen) -> that phase.
 func current_screen() -> String:
 	if net.game.is_empty():
-		if not intro_done:
+		if not story_done:
 			return "intro"
 		return "lobby" if title_done else "title"
 	var phase: String = net.game.get("phase", "hall")
@@ -77,8 +82,9 @@ func current_screen() -> String:
 	return phase
 
 
+# The story is over on this device (voice ended, click or key): on to the title (spec 25).
 func _on_intro_finished() -> void:
-	intro_done = true
+	story_done = true
 	_update_screen()
 
 
@@ -91,12 +97,12 @@ func _update_screen() -> void:
 	_update_clock()
 	_update_house_music()
 	_update_inventory()
+	_update_pause()
 	if not net.game.is_empty():
-		intro_done = true  # once a game ran here, game over leads back to the lobby
 		title_done = true
-		if net.game.get("phase") != "select":
-			music.stop()  # the music belongs to the screens before the game (the selection is one of them)
+		story_done = true
 	var wanted := current_screen()
+	_set_menu_music(wanted == "title")
 	if wanted == screen_name:
 		return
 	if screen != null:
@@ -105,6 +111,8 @@ func _update_screen() -> void:
 	screen.net = net
 	if "place" in screen:
 		screen.place = wanted
+	if wanted == "intro":
+		screen.lead_in = Settings.STORY_LEAD_IN_SECONDS  # fade in, then the voice (spec 23)
 	if screen.has_signal("finished"):
 		screen.finished.connect(_on_intro_finished)
 	if screen.has_signal("start_pressed"):
@@ -121,10 +129,22 @@ func _start_music() -> void:
 	stream.loop = true
 	music.stream = stream
 	music.volume_db = Settings.MENU_MUSIC_DB  # the trailer gets loud after its quiet start (spec 22)
+	add_child(music)
+
+
+# Spec 23: the menu music belongs to the title only.
+func _set_menu_music(on: bool) -> void:
+	if on == menu_music_on:
+		return
+	menu_music_on = on
 	# Not in the headless test run: no sound card there, and a sound still playing at
 	# the end shows up as a leak warning.
-	music.autoplay = DisplayServer.get_name() != "headless"
-	add_child(music)
+	if DisplayServer.get_name() == "headless":
+		return
+	if on:
+		music.play()
+	else:
+		music.stop()
 
 
 # "Midnight in 09:58" at the top centre, above every screen (its own canvas layer).
@@ -317,3 +337,66 @@ func _update_house_music() -> void:
 	else:
 		house_music.stop()
 
+
+# ---------- pause (spec 26) ----------
+
+# "Pause" right of the clock; while paused a dark layer over everything with "Continue".
+func _build_pause() -> void:
+	pause_button = Button.new()
+	pause_button.name = "PauseButton"
+	pause_button.text = "Pause"
+	pause_button.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	pause_button.offset_left = 170
+	pause_button.offset_right = 270
+	pause_button.offset_top = 12
+	pause_button.offset_bottom = 52
+	pause_button.add_theme_font_size_override("font_size", 20)
+	pause_button.pressed.connect(func(): net.send_action("pause", {}))
+	pause_button.visible = false
+	get_node("ClockLayer").add_child(pause_button)
+
+	var layer := CanvasLayer.new()  # above the clock, the inventory and the photo puzzle
+	layer.name = "PauseLayer"
+	layer.layer = 10
+	add_child(layer)
+	pause_overlay = ColorRect.new()
+	pause_overlay.name = "PauseOverlay"
+	pause_overlay.color = Color(0, 0, 0, 0.7)
+	pause_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pause_overlay.mouse_filter = Control.MOUSE_FILTER_STOP  # no clicks on the game below
+	pause_overlay.visible = false
+	layer.add_child(pause_overlay)
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_CENTER)
+	box.offset_left = -220
+	box.offset_right = 220
+	box.offset_top = -80
+	box.offset_bottom = 80
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 24)
+	pause_overlay.add_child(box)
+	pause_label = Label.new()
+	pause_label.name = "PauseLabel"
+	pause_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pause_label.add_theme_font_size_override("font_size", 36)
+	pause_label.add_theme_color_override("font_color", CLOCK_COLOUR)
+	pause_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	pause_label.add_theme_constant_override("outline_size", 6)
+	box.add_child(pause_label)
+	var go_on := Button.new()
+	go_on.name = "ContinueButton"
+	go_on.text = "Continue"
+	go_on.custom_minimum_size = Vector2(240, 58)
+	go_on.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	go_on.add_theme_font_size_override("font_size", 28)
+	go_on.pressed.connect(func(): net.send_action("resume", {}))
+	box.add_child(go_on)
+
+
+func _update_pause() -> void:
+	var running: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
+	var paused: bool = running and net.game.get("paused", false)
+	pause_button.visible = running and not paused
+	pause_overlay.visible = paused
+	if paused:
+		pause_label.text = "Paused by Player %d" % (int(net.game.get("paused_by", 0)) + 1)

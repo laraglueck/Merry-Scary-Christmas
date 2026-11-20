@@ -19,6 +19,8 @@ static func tick(game: Dictionary, seconds: int) -> String:
 		return "Seconds must be 1 or more, got %d" % seconds
 	if game.get("phase") != "hall":
 		return "The game is over"
+	if game.get("paused", false):
+		return "The game is paused"  # spec 26
 	# 2. ... then change.
 	game["seconds_played"] = game.get("seconds_played", 0) + seconds
 	check_midnight(game)

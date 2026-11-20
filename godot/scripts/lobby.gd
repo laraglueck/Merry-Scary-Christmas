@@ -224,4 +224,3 @@ func _paint_button(button: Button, colour: Color) -> void:
 		button.add_theme_stylebox_override(state, box)
 	button.add_theme_color_override("font_color", Color.WHITE)
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
-

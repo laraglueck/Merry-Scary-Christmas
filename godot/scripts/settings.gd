@@ -27,6 +27,7 @@ const ATTIC_PENALTY_SECONDS := 20
 # Music volumes (spec 22), in decibels: 0 = as loud as the file, -6 = about half as loud.
 const MENU_MUSIC_DB := -10.0    # music_lobby.mp3: intro, title, lobby
 const HOUSE_MUSIC_DB := -18.0   # music_house.mp3: quietly under the rooms while the game runs
+const STORY_LEAD_IN_SECONDS := 2.0  # the story fades in from black before the voice starts (spec 23)
 
 # The clock (spec 13)
 const GAME_SECONDS := 1200           # 20 minutes until midnight (second test round: 10 were too short)
@@ -59,8 +60,11 @@ const CHARACTER_COLOURS := [
 
 # Accessories (spec 18): a placeholder until the pictures are drawn. Add entries here, with
 # a "picture" (shown on the figure), and the arrows on the selection screen page through them.
-const ACCESSORIES := [
-	{"id": "none", "name": "None (coming soon)"},
+const ACCESSORIES := [  # spec 27: one picture per figure, colour and accessory
+	{"id": "none", "name": "None"},
+	{"id": "bow", "name": "Bow"},
+	{"id": "nose", "name": "Red nose"},
+	{"id": "antlers", "name": "Antlers"},
 ]
 
 # Walking figures (spec 19): WASD, in pixels of the room picture per second.
@@ -81,6 +85,13 @@ const FAR_SCALE := 0.7             # a figure at the far edge is drawn this big 
 # Save and resume (spec 15): the host's save file, in Godot's data folder (not the repo).
 # Tests use another file: the environment variable MERRY_SCARY_SAVE (see run_tests.gd).
 const SAVE_PATH := "user://saved_game.save"
+
+# The real weather (spec 26): the elf's house is in Greenland. Open-Meteo, free, no key.
+const WEATHER_PLACE := "Nuuk, Greenland"
+const WEATHER_LATITUDE := 64.18
+const WEATHER_LONGITUDE := -51.69
+const WEATHER_TIMEOUT_SECONDS := 4.0
+const WINDOW_WIPE_SECONDS := 3.5  # the frost is wiped off the window this slowly, then the weather shows
 
 # Network
 const NETWORK_PORT := 47411

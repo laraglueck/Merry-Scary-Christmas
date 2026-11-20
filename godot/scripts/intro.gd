@@ -1,7 +1,8 @@
 # The loading screen (spec 12): a dark night with falling snow, the story read out
 # (voice_title.mp3) and shown as subtitles, one line after the other. When the voice
-# ends, or on a click or key, it sends `finished` and main.gd shows the title.
-# The music is played by main.gd, so it keeps going into the title without a break.
+# ends, or on a click or key, it sends `finished`; main.gd then shows the title
+# (spec 25: the story comes first on each device, before the title).
+# Spec 23: no music under the story any more (main.gd plays it on the title only).
 extends Control
 
 signal finished
@@ -34,6 +35,12 @@ const SUBTITLE_WIDTH := 1060.0    # fixed width, so the label can wrap (see TEAM
 
 var net: Node = null  # main.gd hands this in like for every screen; the intro doesn't need it
 var elapsed := 0.0
+# Spec 23: seconds of fading in from black before the voice starts (main.gd sets it for the
+# story in the game, so it does not start too suddenly). 0 = start at once, as before.
+var lead_in := 0.0
+var voice_started := false
+
+var _fade: ColorRect
 
 var _voice: AudioStreamPlayer
 var _subtitle: Label
@@ -51,7 +58,9 @@ func _ready() -> void:
 	_voice.stream = stream
 	# Plays by itself in the real game. Not in the headless test run: there is no sound
 	# card there, and a sound still playing at the end shows up as a leak warning.
-	_voice.autoplay = DisplayServer.get_name() != "headless"
+	_voice.autoplay = DisplayServer.get_name() != "headless" and lead_in <= 0.0
+	voice_started = lead_in <= 0.0
+	elapsed = -lead_in  # below 0: still fading in, the story starts at 0
 	_voice.finished.connect(_finish)
 	add_child(_voice)
 	_length = stream.get_length()
@@ -67,6 +76,12 @@ func advance(seconds: float) -> void:
 	if _done:
 		return
 	elapsed += seconds
+	if lead_in > 0.0:
+		_fade.color.a = clampf(-elapsed / lead_in, 0.0, 1.0)
+	if not voice_started and elapsed >= 0.0:
+		voice_started = true
+		if DisplayServer.get_name() != "headless":
+			_voice.play()  # not in the test run: no sound card
 	_show_subtitle()
 	if elapsed > _length + EXTRA_WAIT_SECONDS:
 		_finish()
@@ -86,11 +101,20 @@ func _finish() -> void:
 	if _done:
 		return
 	_done = true
+	# Spec 23: the screen stays while the others still listen, so it goes quiet.
+	_voice.stop()
+	_subtitle.visible = false
+	var hint := find_child("SkipHint", true, false)
+	if hint != null:
+		hint.visible = false
 	finished.emit()
 
 
 # The line for the current time, fading in after it starts and out before the next.
 func _show_subtitle() -> void:
+	if elapsed < 0.0:
+		_subtitle.modulate.a = 0.0  # still fading in (spec 23)
+		return
 	var index := 0
 	for i in LINE_START_SECONDS.size():
 		if elapsed >= LINE_START_SECONDS[i]:
@@ -154,3 +178,11 @@ func _build_ui() -> void:
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hint)
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
+
+	# Spec 23: black on top at first, fading away during the lead-in.
+	_fade = ColorRect.new()
+	_fade.name = "FadeIn"
+	_fade.color = Color(0, 0, 0, 1.0 if lead_in > 0.0 else 0.0)
+	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_fade)
