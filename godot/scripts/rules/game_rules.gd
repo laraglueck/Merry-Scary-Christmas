@@ -343,7 +343,7 @@ static func _take_bedroom_photo(game: Dictionary, player: int) -> void:
 
 	if result["ok"]:
 		InventoryRules.add(game, "photo_piece_3")  # the photo is torn in three (spec 21)
-		game["last_event"] = "%s found a torn piece of a photo!" % who
+		game["last_event"] = _photo_piece_message(game, who)
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
 
@@ -370,7 +370,7 @@ static func _take_piece(game: Dictionary, player: int, data: Dictionary) -> void
 		return
 	var error := PhotoRules.take_piece(game, room)
 	if error == "":
-		game["last_event"] = "%s found a torn piece of a photo!" % who
+		game["last_event"] = _photo_piece_message(game, who)
 	else:
 		game["last_event"] = "%s: %s" % [who, error]
 
@@ -383,7 +383,17 @@ static func _assemble_photo(game: Dictionary, player: int, data: Dictionary) -> 
 		order = []
 	var error := PhotoRules.assemble(game, order)
 	if error == "":
-		game["last_event"] = "%s put the photo together: Santa and a young, laughing Jingles." % who
+		game["last_event"] = "%s put the photo together: Santa and a young, laughing Jingles. Perhaps this memory of happier times could change his mind." % who
 	else:
 		game["last_event"] = "%s: %s" % [who, error]
 
+static func _photo_piece_message(game: Dictionary, who: String) -> String:
+	var all_pieces := true
+	for piece in ["photo_piece_1", "photo_piece_2", "photo_piece_3"]:
+		if not InventoryRules.has(game, piece):
+			all_pieces = false
+
+	if all_pieces:
+		return "%s found a torn piece of a photo! You have all three photo pieces. Click the photo slot in your inventory to put them together." % who
+
+	return "%s found a torn piece of a photo!" % who
