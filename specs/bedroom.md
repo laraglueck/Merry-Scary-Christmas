@@ -537,7 +537,7 @@ Run the game with three connected players.
 - Implementing a separate save system.
 - Implementing the attic ending choice.
 - Hero designer.
-- Additional Easter eggs behind calendar doors.
+- Additional Easter eggs behind calendar doors. (Done: spec 28.)
 - Optional jumpscares and under-bed effects.
 
 ### 15. Later: optional under-bed scare
