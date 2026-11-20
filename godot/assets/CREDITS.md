@@ -19,6 +19,8 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 
 | File | Folder | Source | Author | Licence | AI used | Notes |
 |------|--------|--------|--------|---------|---------|-------|
+| view_window_garden.png | images | made by `godot/tools/make_window_view.gd` from room_garden.webp and prop_moon_full.png | Mathies (from Gloria's pictures) | own work from AI pictures | Yes (the two source pictures) | the moon only shows where the picture is sky |
+| view_window_garden_cloudy.png | images | made by `godot/tools/make_window_view.gd` from room_garden.webp and prop_moon_full.png | Mathies (from Gloria's pictures) | own work from AI pictures | Yes (the two source pictures) | the same with a pale moon behind clouds |
 | room_garden.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_hall.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | 1376 x 768 |
 | room_attic.webp | images | generated with Google Gemini from our own text prompt | Gloria | AI-generated, own prompt | Yes (Google Gemini, Nano Banana 2.1) | stairs come up at the front left |

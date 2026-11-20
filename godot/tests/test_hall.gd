@@ -354,8 +354,8 @@ func test_online_door_walks_the_team() -> void:
 
 # ---------- artwork, spots and close-ups (spec 08) ----------
 
-const SPOT_ORDER := ["fuse_box", "living_room", "bathroom", "attic", "bedroom", "house_plan"]
-const SPOT_NODES := ["FuseBoxButton", "Door_living_room", "Door_bathroom", "StairsButton", "Door_bedroom", "HousePlanButton"]
+const SPOT_ORDER := ["fuse_box", "living_room", "wreath", "bathroom", "attic", "bedroom", "house_plan"]
+const SPOT_NODES := ["FuseBoxButton", "Door_living_room", "StoryWreath", "Door_bathroom", "StairsButton", "Door_bedroom", "HousePlanButton"]
 
 
 # Like a real key press: through the viewport, so focused buttons get the chance
@@ -412,7 +412,7 @@ func test_hall_picture_is_the_background() -> void:
 	assert_eq(texture_file(open_hall(), "Background"), "room_hall.webp", "background")
 
 
-func test_six_spots_inside_the_picture() -> void:
+func test_all_spots_inside_the_picture() -> void:
 	var hall := open_hall()
 	var window := Rect2(Vector2.ZERO, Vector2(1152, 648))
 	for node_name in SPOT_NODES:
@@ -424,7 +424,7 @@ func test_six_spots_inside_the_picture() -> void:
 func test_arrows_move_the_highlight_from_spot_to_spot() -> void:
 	var hall := open_hall()
 	var seen := [hall.highlighted_spot()]
-	for i in 5:
+	for i in SPOT_ORDER.size() - 1:
 		key(hall, "ui_right")
 		seen.append(hall.highlighted_spot())
 	assert_eq(seen, SPOT_ORDER, "left to right")
@@ -457,8 +457,8 @@ func test_house_plan_opens_and_closes() -> void:
 
 func test_dark_door_by_key_explains_which_fuse() -> void:
 	var hall := open_hall()
-	key(hall, "ui_right")
-	key(hall, "ui_right")  # bathroom door
+	for i in 3:
+		key(hall, "ui_right")  # living room, wreath, bathroom door (spec 25)
 	key(hall, "ui_accept")
 	assert_contains(text_of(hall, "Message"), "green fuse", "explanation")
 
@@ -885,3 +885,103 @@ func test_the_mission_card_shows_only_on_the_first_visit() -> void:
 	press(hall, "MissionGo")
 	var again := open_hall()  # the team comes back from a room
 	assert_eq(is_shown(again, "MissionCard"), false, "not again")
+
+
+# ---------- story objects (spec 25) ----------
+
+func story_spot(name: String) -> Dictionary:
+	for spot in HallScript.SPOTS:
+		if spot["name"] == name:
+			return spot
+	return {}
+
+
+func test_story_object_sits_on_the_wreath() -> void:
+	var hall := open_hall()
+	await wait_frames(2)
+	assert_eq(story_spot("lantern"), {}, "only the wreath (the lantern was dropped)")
+	for pair in [["wreath", "StoryWreath", Rect2(198, 146, 112, 250)]]:
+		var spot := story_spot(pair[0])
+		assert_eq(spot.get("rect"), pair[2], pair[0] + " measured on the picture")
+		var button: Button = hall.find_child(pair[1], true, false)
+		assert_true(button != null, pair[1] + " exists")
+		if button != null:
+			assert_true(near(in_picture_pixels(hall, "Background", button), pair[2]), pair[1] + " on its object")
+			assert_eq(button.text, "", "no name on the object")
+			assert_true(button.tooltip_text != "", "a hint on hover")
+			assert_eq(button.mouse_default_cursor_shape, Control.CURSOR_POINTING_HAND, "the hand cursor")
+	var door: Button = hall.find_child("Door_living_room", true, false)
+	assert_eq(door.mouse_default_cursor_shape if door != null else -1, Control.CURSOR_POINTING_HAND, "every spot shows the hand")
+	var wreath: Node = hall.find_child("StoryWreath", true, false)
+	if wreath != null and door != null:
+		assert_true(wreath.get_index() > door.get_index(), "the wreath lies on top of the door")
+
+
+func test_the_wreath_tells_who_jingles_was() -> void:
+	var hall := open_hall()
+	var before: Dictionary = hall.puzzle.duplicate(true)
+	var message_before := text_of(hall, "Message")
+	press(hall, "StoryWreath")
+	assert_eq(is_shown(hall, "StoryCard"), true, "a note appears")
+	assert_contains(text_of(hall, "StoryText"), "For Jingles, my best little elf", "the tag")
+	assert_true(hall.sounds_played.has("sfx_easter_egg.mp3"), "faint bells")
+	assert_eq(hall.puzzle, before, "nothing changes in the puzzle")
+	assert_eq(hall.penalty_total, 0, "it costs no time")
+	assert_eq(text_of(hall, "Message"), message_before, "the door underneath was not used")
+
+
+func test_the_story_note_closes_with_keys() -> void:
+	var hall := open_hall()
+	press(hall, "StoryWreath")
+	key(hall, "ui_cancel")
+	assert_eq(is_shown(hall, "StoryCard"), false, "Esc closes it")
+	press(hall, "StoryWreath")
+	key(hall, "ui_accept")
+	assert_eq(is_shown(hall, "StoryCard"), false, "Enter closes it")
+	assert_eq(is_shown(hall, "FusePanel"), false, "and does nothing else")
+
+
+func test_arrows_and_enter_reach_the_wreath() -> void:
+	var hall := open_hall()
+	key(hall, "ui_right")
+	key(hall, "ui_right")
+	assert_eq(hall.highlighted_spot(), "wreath", "after the living room door")
+	key(hall, "ui_accept")
+	assert_eq(is_shown(hall, "StoryCard"), true, "Enter shows the note")
+
+
+func test_online_a_story_note_stays_on_this_device() -> void:
+	var room: Array = await make_started_room(47661)
+	var hall := open_online_hall(room[1])
+	var event_before: String = room[0].game.get("last_event", "")
+	press(hall, "StoryWreath")
+	await wait_frames(5)
+	assert_eq(is_shown(hall, "StoryCard"), true, "Player 2 reads it")
+	assert_eq(room[0].game.get("last_event", ""), event_before, "nothing sent to the host")
+
+
+# A real mouse click, through Godot's own input (down and up again).
+func real_click(at: Vector2) -> void:
+	for down in [true, false]:
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = down
+		click.position = at
+		click.global_position = at
+		tree.root.push_input(click)
+
+
+func test_real_clicks_wreath_note_and_door() -> void:
+	var hall := open_hall()
+	press(hall, "MissionGo")  # the mission note first
+	await wait_frames(2)
+	var scale := 1152.0 / 1376.0
+	var top := (648.0 - 768.0 * scale) / 2
+	real_click(Vector2(254, 271) * scale + Vector2(0, top))  # the middle of the wreath
+	assert_eq(is_shown(hall, "StoryCard"), true, "a click on the wreath shows its note")
+	real_click(Vector2(1000, 600))
+	assert_eq(is_shown(hall, "StoryCard"), false, "a click anywhere closes it")
+	real_click(Vector2(250, 600) * scale + Vector2(0, top))  # the lower part of the door
+	assert_eq(is_shown(hall, "StoryCard"), false, "the door is not the wreath")
+	assert_contains(text_of(hall, "Message"), "red fuse", "the door below the wreath is still the door")
+
