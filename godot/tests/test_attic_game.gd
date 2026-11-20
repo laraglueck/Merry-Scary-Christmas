@@ -73,12 +73,16 @@ func test_attic_actions_only_work_in_the_attic() -> void:
 
 func test_lock_in_ends_the_game_as_scary_christmas_with_the_key() -> void:
 	var game := game_with_attic_open()
+	for gift in ["gift_1", "gift_2", "gift_3"]:
+		InventoryRules.add(game, gift)
+
 	GameRules.apply(game, 2, "take_key", {})
-	assert_true(InventoryRules.has(game, "key"), "the key goes into the inventory when taken")
+	assert_true(InventoryRules.has(game, "key"), "key in inventory")
 	assert_contains(game["last_event"], "Player 3 took the key", "event")
+
 	GameRules.apply(game, 2, "choose_ending", {"choice": "lock_in"})
 	assert_eq(game["phase"], "scary", "phase")
-	assert_true(InventoryRules.has(game, "key"), "key in the inventory")
+	assert_true(InventoryRules.has(game, "key"), "key remains")
 	assert_contains(game["last_event"], "Player 3 locked Scary Jingles in", "event")
 
 
@@ -107,8 +111,11 @@ func test_choosing_before_the_lock_is_open_changes_nothing() -> void:
 
 func test_after_the_ending_nothing_changes() -> void:
 	var game := game_with_attic_open()
+	for gift in ["gift_1", "gift_2", "gift_3"]:
+		InventoryRules.add(game, gift)
 	GameRules.apply(game, 0, "take_key", {})
 	GameRules.apply(game, 0, "choose_ending", {"choice": "lock_in"})
+	assert_eq(game["phase"], "scary", "ending reached before checking")
 	var before := game.duplicate(true)
 	GameRules.apply(game, 0, "try_attic_code", {"dials": [1, 1, 1]})
 	GameRules.apply(game, 0, "choose_ending", {"choice": "reconcile"})
