@@ -5,14 +5,15 @@ extends Control
 
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
+const Title = preload("res://scripts/title.gd")
 
 const IMAGES := "res://assets/images/"
 const GIFTS := ["gift_1", "gift_2", "gift_3"]
 const ENDINGS := {
 	"merry": {"picture": "ui_win_merry.webp", "title": "Merry Christmas!", "colour": Color("ffd76a"),
-			"line": "Scary Jingles remembered who he was.", "sounds": ["sfx_win.mp3", "sfx_bells.mp3"]},
+			"line": "Scary Jingles remembered who he was.", "sounds": ["sfx_win.mp3", "music_merry.mp3"]},
 	"scary": {"picture": "ui_win_scary.webp", "title": "Scary Christmas!", "colour": Color("e05a4a"),
-			"line": "Scary Jingles is locked in. The presents are safe.", "sounds": ["sfx_win.mp3"]},
+			"line": "Scary Jingles is locked in. The presents are safe.", "sounds": ["sfx_win.mp3", "music_scary.mp3"]},
 	"midnight": {"picture": "ui_lose.webp", "title": "Midnight", "colour": Color("a9c4e8"),
 			"line": "The clock struck twelve. Scary Jingles has won.", "sounds": ["sfx_lose.mp3"]},
 }
@@ -71,7 +72,7 @@ func show_ending() -> void:
 		_play(file_name)
 
 
-# Each ending's sounds at once (the bells ring over the win music).
+# Each ending's sounds at once (the Merry and Scary music waits 5 s, then plays over the fanfare's end).
 func _play(file_name: String) -> void:
 	sounds_played.append(file_name)
 	if DisplayServer.get_name() == "headless":
@@ -108,6 +109,13 @@ func _build_ui(ending: Dictionary, result: String, last_event: String) -> void:
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	add_child(background)
+	if place == "merry":
+		# Spec 29: gentle snow over the Christmas Eve picture, behind the words.
+		var snow := Title.make_snow(1152)
+		snow.name = "MerrySnow"
+		snow.amount = 90
+		snow.speed_scale = 0.7
+		add_child(snow)
 
 	# A dark band at the bottom, so the words stay readable on any picture.
 	var band := ColorRect.new()

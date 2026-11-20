@@ -333,7 +333,8 @@ func _build_ui() -> void:
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	title.add_theme_constant_override("outline_size", 6)
 	var back := _button(self, "BackButton", "Back to the hall")
-	back.position = Vector2(940, 16)
+	# Ends left of main.gd's Pause button (top right since spec 29).
+	back.position = Vector2(1008 - back.get_combined_minimum_size().x, 16)
 	back.pressed.connect(_go_to_hall)
 	_message = _label(self, "", 22)
 	_message.name = "Message"

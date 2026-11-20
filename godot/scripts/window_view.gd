@@ -50,6 +50,8 @@ var _waiting := {}  # the weather that came while the glass was still frosty
 
 func _ready() -> void:
 	name = "WindowView"
+	add_to_group("hides_inventory")  # main.gd hides this device's inventory meanwhile (spec 29)
+	_tell_the_hud()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)  # added after the room is built: fill it
 	mouse_filter = Control.MOUSE_FILTER_STOP  # a click anywhere closes the view
 	_build()
@@ -131,8 +133,21 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _close() -> void:
 	visible = false
+	remove_from_group("hides_inventory")
+	_tell_the_hud()
 	closed.emit()
 	queue_free()
+
+
+# Also when the screen changes while the view is open.
+func _exit_tree() -> void:
+	if is_in_group("hides_inventory"):
+		remove_from_group("hides_inventory")
+		_tell_the_hud()
+
+
+func _tell_the_hud() -> void:
+	get_tree().call_group("hud_owner", "refresh_hud")
 
 
 # ---------- building the view (runs once) ----------
