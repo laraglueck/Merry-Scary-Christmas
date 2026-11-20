@@ -723,6 +723,16 @@ func test_online_hall_shows_the_figures_and_walks_with_wasd() -> void:
 	assert_true(await wait_until(func(): return room[0].game["figures"][1]["dx"] == 0.0 and room[0].game["figures"][1]["dy"] == 0.0), "keys up: standing")
 
 
+# Spec 27: the figure in the house wears the chosen accessory.
+func test_figures_wear_their_accessory() -> void:
+	var room: Array = await make_started_room(47626)
+	var hall := open_online_hall(room[1])
+	await wait_frames(2)
+	room[1].game["characters"] = {0: {"character": "santa", "colour": "green", "accessory": "antlers"}}
+	room[1].game_changed.emit()
+	assert_eq(texture_file(hall, "Figure_0"), "char_santa_green_antlers.png", "Santa with antlers")
+
+
 func test_f3_shows_the_floor_outline() -> void:
 	var room: Array = await make_started_room(47625)
 	var hall := open_online_hall(room[0])

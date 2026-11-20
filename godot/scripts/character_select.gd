@@ -1,5 +1,5 @@
 # Character selection (spec 18): every player picks one of three figures (list on the left),
-# sees it big in the middle, changes its accessory (arrows at head height, still a placeholder)
+# sees it big in the middle, changes its accessory (arrows at head height: bow, red nose, antlers, spec 27)
 # and its scarf/jacket colour (arrows at hip height), then presses "Next". The host decides (game_rules.gd -> character_rules.gd); this script
 # only shows net.game and sends actions. When all three are ready the game starts and
 # main.gd switches the screen.
@@ -42,7 +42,7 @@ var _colour_next: Button
 var _accessory_prev: Button
 var _accessory_next: Button
 var _colour_label: Label     # "Colour: Green" under the figure (spec 18)
-var _accessory_label: Label  # "Accessory: None (coming soon)"
+var _accessory_label: Label  # "Accessory: Bow"
 var _player_buttons: Array[Button] = []
 
 
@@ -130,7 +130,8 @@ func _refresh() -> void:
 		card.disabled = holder != -1 and holder != current_player
 		card.button_pressed = holder == current_player
 		var colour: String = chosen[holder]["colour"] if holder != -1 else "red"
-		_thumbs[character].texture = load(IMAGES + CharacterRules.picture_file(character, colour))
+		var accessory: String = chosen[holder].get("accessory", "none") if holder != -1 else "none"
+		_thumbs[character].texture = load(IMAGES + CharacterRules.picture_file(character, colour, accessory))
 		var owner_label: Label = _owners[character]
 		owner_label.text = ""
 		if holder != -1:
@@ -138,7 +139,7 @@ func _refresh() -> void:
 			if chosen[holder]["ready"]:
 				owner_label.text += " - ready"
 	if not mine.is_empty():
-		_big.texture = load(IMAGES + CharacterRules.picture_file(mine["character"], mine["colour"]))
+		_big.texture = load(IMAGES + CharacterRules.picture_file(mine["character"], mine["colour"], mine.get("accessory", "none")))
 		_colour_label.text = "Colour: " + _name_of(Settings.CHARACTER_COLOURS, mine["colour"])
 		_accessory_label.text = "Accessory: " + _name_of(Settings.ACCESSORIES, mine["accessory"])
 	var is_ready: bool = not mine.is_empty() and mine["ready"]
