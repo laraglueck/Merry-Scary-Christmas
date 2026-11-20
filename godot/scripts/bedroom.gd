@@ -41,6 +41,7 @@ var popup_title: Label
 var popup_description: Label
 var status_label: Label
 var digit_label: Label
+var room_digit_label: Label
 var wheel_row: HBoxContainer
 var wheel_symbols: Array[TextureRect] = []
 var calendar_grid: GridContainer
@@ -115,6 +116,15 @@ func _build_room() -> void:
 
 	_add_hotspot("CalendarHotspot", "Examine Advent Calendar", CALENDAR_BOUNDS, "calendar")
 	_add_hotspot("ChestHotspot", "Examine Toy Chest", CHEST_BOUNDS, "chest")
+	room_digit_label = Label.new()
+	room_digit_label.name = "RoomGoldDigit"
+	room_digit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	room_digit_label.add_theme_color_override("font_color", Color("ffd76a"))
+	room_digit_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	room_digit_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	room_digit_label.hide()
+	room_view.add_child(room_digit_label)
+	_anchor_to_bounds(room_digit_label, Rect2(0.83, 0.64, 0.08, 0.08))
 
 	# Spec 24: back to the hall through the door, like in the bathroom (no button any more).
 	door_hall = Button.new()
@@ -136,6 +146,13 @@ func _layout() -> void:
 	var scale_factor := minf(size.x / artwork.x, size.y / artwork.y)
 	room_view.size = artwork * scale_factor
 	room_view.position = (size - room_view.size) * 0.5
+	var digit_scale := room_view.size.x / 1152.0
+	room_digit_label.add_theme_font_size_override(
+		"font_size", maxi(1, roundi(32.0 * digit_scale))
+	)
+	room_digit_label.add_theme_constant_override(
+		"outline_size", maxi(1, roundi(5.0 * digit_scale))
+	)
 	popup_panel.custom_minimum_size.x = clampf(size.x - 24.0, 260.0, 470.0)
 
 
@@ -345,6 +362,8 @@ func _update_room() -> void:
 	door_hall.disabled = game.is_empty()
 
 	var solved: bool = room.get("solved", false)
+	room_digit_label.visible = bedroom_is_lit and solved
+	room_digit_label.text = str(BedroomRules.gold_digit(room)) if solved else ""
 	var gift_taken: bool = room.get("gift_taken", false)
 	if had_room_state and DisplayServer.get_name() != "headless":
 		if gift_taken and not was_gift_taken:
