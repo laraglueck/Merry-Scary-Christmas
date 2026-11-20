@@ -1,5 +1,5 @@
 # Character selection (spec 18). Pure functions: no network, no screens.
-# `selection` maps a player index to {"character", "colour", "ready"}; it lives in
+# `selection` maps a player index to {"character", "colour", "accessory", "ready"}; it lives in
 # game["selection"] while game["phase"] is "select".
 # First check, then change: a refused action changes nothing and returns the reason.
 extends RefCounted
@@ -85,8 +85,15 @@ static func first_free_colour(selection: Dictionary, player: int) -> String:
 	return ""
 
 
-static func picture_file(character: String, colour: String) -> String:
-	return "char_%s.png" % character if colour == "red" else "char_%s_%s.png" % [character, colour]
+# The picture of a figure: char_santa.png (red), char_santa_green.png, and with an accessory
+# (spec 27) char_santa_bow.png, char_santa_green_bow.png.
+static func picture_file(character: String, colour: String, accessory := "none") -> String:
+	var name := "char_" + character
+	if colour != "red":
+		name += "_" + colour
+	if accessory != "none":
+		name += "_" + accessory
+	return name + ".png"
 
 
 # What the running game remembers: the choices without the "ready" flags.

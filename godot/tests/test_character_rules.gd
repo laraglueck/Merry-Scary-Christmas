@@ -79,6 +79,10 @@ func test_picture_file_follows_the_asset_names() -> void:
 	assert_eq(CharacterRules.picture_file("santa", "red"), "char_santa.png", "red = the plain picture")
 	assert_eq(CharacterRules.picture_file("snowman", "green"), "char_snowman_green.png", "green")
 	assert_eq(CharacterRules.picture_file("nutcracker", "yellow"), "char_nutcracker_yellow.png", "yellow")
+	assert_eq(CharacterRules.picture_file("santa", "red", "none"), "char_santa.png", "no accessory = the plain picture")
+	assert_eq(CharacterRules.picture_file("santa", "red", "antlers"), "char_santa_antlers.png", "red with antlers")
+	assert_eq(CharacterRules.picture_file("snowman", "green", "bow"), "char_snowman_green_bow.png", "green with a bow")
+	assert_eq(CharacterRules.picture_file("nutcracker", "yellow", "nose"), "char_nutcracker_yellow_nose.png", "yellow with a red nose")
 
 
 func test_all_nine_pictures_exist() -> void:
@@ -86,6 +90,22 @@ func test_all_nine_pictures_exist() -> void:
 		for colour in CharacterRules.colour_ids():
 			var file := "res://assets/images/" + CharacterRules.picture_file(character, colour)
 			assert_true(ResourceLoader.exists(file), file + " exists")
+
+
+# Spec 27: every figure in every colour with every accessory (3 x 3 x 4 = 36 pictures).
+func test_every_accessory_picture_exists() -> void:
+	assert_eq(CharacterRules.accessory_ids(), ["none", "bow", "nose", "antlers"], "the four accessories")
+	for character in CharacterRules.character_ids():
+		for colour in CharacterRules.colour_ids():
+			for accessory in CharacterRules.accessory_ids():
+				var file := "res://assets/images/" + CharacterRules.picture_file(character, colour, accessory)
+				assert_true(ResourceLoader.exists(file), file + " exists")
+
+
+func test_next_accessory_goes_round() -> void:
+	assert_eq(CharacterRules.next_accessory("none", 1), "bow", "none -> bow")
+	assert_eq(CharacterRules.next_accessory("antlers", 1), "none", "antlers -> none (round)")
+	assert_eq(CharacterRules.next_accessory("none", -1), "antlers", "none <- antlers")
 
 
 func test_final_characters_drop_the_ready_flag() -> void:
@@ -109,9 +129,3 @@ func test_next_colour_goes_round_through_all_colours() -> void:
 	CharacterRules.pick(selection, 1, "snowman", "green")
 	CharacterRules.pick(selection, 2, "nutcracker", "yellow")
 	assert_eq(CharacterRules.next_colour(selection, 0, 1), "green", "all taken: still changes (shared)")
-
-
-func test_next_accessory_goes_round() -> void:
-	var first: String = CharacterRules.accessory_ids()[0]
-	assert_eq(CharacterRules.next_accessory(first, 1) in CharacterRules.accessory_ids(), true, "a known accessory")
-	assert_eq(CharacterRules.next_accessory("none", 1), "none", "only the placeholder: stays")

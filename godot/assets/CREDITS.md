@@ -41,6 +41,33 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | char_snowman_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, white background removed with add_image.gd |
 | char_nutcracker_green.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, white background removed with add_image.gd |
 | char_nutcracker_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, white background removed with add_image.gd |
+| char_santa_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, bow (spec 27), white background removed with add_image.gd |
+| char_santa_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_santa_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_santa_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, bow (spec 27), white background removed with add_image.gd |
+| char_santa_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_santa_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_santa_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, bow (spec 27), white background removed with add_image.gd |
+| char_santa_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_santa_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_snowman_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, bow (spec 27), white background removed with add_image.gd |
+| char_snowman_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_snowman_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_snowman_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, bow (spec 27), white background removed with add_image.gd |
+| char_snowman_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_snowman_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_snowman_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, bow (spec 27), white background removed with add_image.gd |
+| char_snowman_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, red nose (spec 27), white background removed with add_image.gd |
+| char_snowman_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_nutcracker_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, bow (spec 27), white background removed with add_image.gd |
+| char_nutcracker_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, red nose (spec 27), white background removed with add_image.gd |
+| char_nutcracker_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_nutcracker_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, bow (spec 27), white background removed with add_image.gd |
+| char_nutcracker_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, red nose (spec 27), white background removed with add_image.gd |
+| char_nutcracker_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
+| char_nutcracker_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, bow (spec 27), white background removed with add_image.gd |
+| char_nutcracker_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, red nose (spec 27), white background removed with add_image.gd |
+| char_nutcracker_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
 | item_fuse_red.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_green.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_gold.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |

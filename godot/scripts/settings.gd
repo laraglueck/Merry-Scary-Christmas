@@ -60,8 +60,11 @@ const CHARACTER_COLOURS := [
 
 # Accessories (spec 18): a placeholder until the pictures are drawn. Add entries here, with
 # a "picture" (shown on the figure), and the arrows on the selection screen page through them.
-const ACCESSORIES := [
-	{"id": "none", "name": "None (coming soon)"},
+const ACCESSORIES := [  # spec 27: one picture per figure, colour and accessory
+	{"id": "none", "name": "None"},
+	{"id": "bow", "name": "Bow"},
+	{"id": "nose", "name": "Red nose"},
+	{"id": "antlers", "name": "Antlers"},
 ]
 
 # Walking figures (spec 19): WASD, in pixels of the room picture per second.
