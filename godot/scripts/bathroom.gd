@@ -478,7 +478,7 @@ func _build_ui() -> void:
 	mirror_content.alignment = BoxContainer.ALIGNMENT_CENTER
 	_mirror_panel.add_child(mirror_content)
 	# A hint that the mirror will matter later: the steam from the hot water clears it.
-	_mirror_dust = _label(mirror_content, "Grey dust covers the glass.\nFaint marks hide underneath...\nperhaps warm steam would bring them out.", 22)
+	_mirror_dust = _label(mirror_content, "Grey dust covers the glass.\nFaint marks hide underneath...\nPerhaps turning the taps in the right order will clear the view.", 22)
 	_mirror_dust.name = "MirrorDust"
 	_mirror_dust.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mirror_dust.add_theme_color_override("font_color", Color("4a4a4a"))
