@@ -36,6 +36,8 @@ func _process(_delta: float) -> bool:
 
 func _run_all() -> void:
 	OS.set_environment("MERRY_SCARY_SAVE", TEST_SAVE)
+	# The leaderboard too: tests never touch the real list or the internet.
+	OS.set_environment("MERRY_SCARY_LEADERBOARD", "user://test_leaderboard.json")
 	var catcher := ErrorCatcher.new()
 	OS.add_logger(catcher)
 	var passed := 0

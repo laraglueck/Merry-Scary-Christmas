@@ -15,6 +15,7 @@ const LivingRoomRules = preload("res://scripts/rules/living_room_rules.gd")
 const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
 const AtticRules = preload("res://scripts/rules/attic_rules.gd")
 const PhotoRules = preload("res://scripts/rules/photo_rules.gd")
+const PowerRules = preload("res://scripts/rules/power_rules.gd")
 const CharacterRules = preload("res://scripts/rules/character_rules.gd")
 const WalkRules = preload("res://scripts/rules/walk_rules.gd")
 
@@ -98,6 +99,10 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 			_try_attic_code(game, player, data)
 		"choose_ending":
 			_choose_ending(game, player, data)
+		"use_power":  # the hero's power, once per game
+			var error := PowerRules.use(game, player)
+			if error != "":
+				game["last_event"] = "Player %d: %s" % [player + 1, error]
 		"take_key":
 			_take_key(game, player)
 		"take_piece":
@@ -114,13 +119,17 @@ static func _try_fuse(game: Dictionary, player: int, data: Dictionary) -> void:
 	var wires = data.get("wires", [])
 	if typeof(wires) != TYPE_ARRAY:
 		wires = []
-	var result := FuseRules.try_fuse(game["puzzle"], player, wires)
+	# Single player: one order for all three fuses (second test round).
+	var result := FuseRules.try_fuse_alone(game["puzzle"], wires) if game.get("solo", false) \
+			else FuseRules.try_fuse(game["puzzle"], player, wires)
 	var who := "Player %d" % (player + 1)
 	if result["error"] != "":
 		game["last_event"] = "%s: %s" % [who, result["error"]]
 	elif result["correct"]:
 		var fuse: Dictionary = game["puzzle"]["fuses"][player]
 		game["last_event"] = "%s turned on the %s fuse. The %s is lit!" % [who, fuse["colour"], fuse["room"]]
+		if game.get("solo", false):
+			game["last_event"] = "All three breakers flip up. Every room is lit!"
 	else:
 		game["penalty_seconds"] += result["penalty_seconds"]
 		game["last_event"] = "%s: wrong order, -%d s" % [who, result["penalty_seconds"]]
@@ -316,6 +325,10 @@ static func _set_wheels(game: Dictionary, player: int, data: Dictionary) -> void
 		game["last_event"] = "%s: wrong symbols, -%d s" % [
 			who, result["penalty_seconds"]
 		]
+		# The rescue hint, after Settings.RESCUE_TRIES wrong tries: the mirror turns things round.
+		game["bedroom"]["wrong_tries"] = game["bedroom"].get("wrong_tries", 0) + 1
+		if game["bedroom"]["wrong_tries"] >= Settings.RESCUE_TRIES:
+			game["last_event"] += ". Hmm... a mirror shows everything the wrong way round."
 
 
 # Check whether the team can interact with bedroom objects.

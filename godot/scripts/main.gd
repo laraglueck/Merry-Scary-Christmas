@@ -29,6 +29,7 @@ const SCREENS := {
 const PLACEHOLDER = preload("res://scenes/placeholder_room.tscn")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
+const PowerRules = preload("res://scripts/rules/power_rules.gd")
 const PhotoRules = preload("res://scripts/rules/photo_rules.gd")
 const ButtonStyle = preload("res://scripts/button_style.gd")
 const PhotoPuzzle = preload("res://scenes/photo_puzzle.tscn")
@@ -47,6 +48,7 @@ var menu_music_on := false   # spec 23: true while the menu music plays, only on
 var house_music: AudioStreamPlayer
 var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
 var clock_label: Label
+var power_button: Button  # the hero's power, once per game (under the clock)
 var pause_button: Button   # spec 26: next to the clock while the game runs
 var pause_overlay: Control # spec 26: over every screen while the game is paused
 var pause_label: Label
@@ -169,6 +171,22 @@ func _build_clock() -> void:
 	clock_label.add_theme_constant_override("outline_size", 6)
 	clock_label.visible = false
 	layer.add_child(clock_label)
+	# The hero's power: under the clock, for every room.
+	power_button = Button.new()
+	power_button.name = "PowerButton"
+	power_button.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	power_button.offset_left = -130
+	power_button.offset_right = 130
+	power_button.offset_top = 54
+	power_button.offset_bottom = 90
+	power_button.add_theme_font_size_override("font_size", 16)
+	power_button.add_theme_stylebox_override("normal", _hud_box(Color(0.1, 0.07, 0.07, 0.85), Color("d4af37"), 6))
+	power_button.add_theme_stylebox_override("hover", _hud_box(Color(0.2, 0.14, 0.1, 0.95), Color("ffd76a"), 6))
+	power_button.add_theme_stylebox_override("disabled", _hud_box(Color(0.1, 0.07, 0.07, 0.5), Color(1, 1, 1, 0.15), 6))
+	power_button.focus_mode = Control.FOCUS_NONE
+	power_button.pressed.connect(func() -> void: net.send_action("use_power", {}))
+	power_button.visible = false
+	layer.add_child(power_button)
 
 
 # Shown only while the game runs; red in the last minute.
@@ -180,6 +198,16 @@ func _update_clock() -> void:
 		clock_label.text = "Midnight in " + ClockRules.as_text(left)
 		var colour := CLOCK_WARNING_COLOUR if left < Settings.CLOCK_WARNING_SECONDS else CLOCK_COLOUR
 		clock_label.add_theme_color_override("font_color", colour)
+	# The power button: only with a hero; greyed out once used.
+	var power := PowerRules.power_name(net.game, net.my_index) if running else ""
+	power_button.visible = power != ""
+	if power != "":
+		var used := PowerRules.is_used(net.game, net.my_index)
+		power_button.disabled = used
+		power_button.text = ("%s (used)" % power) if used else ("✨ %s" % power)
+		for info in Settings.CHARACTERS:
+			if info["id"] == PowerRules.hero_of(net.game, net.my_index):
+				power_button.tooltip_text = "%s, once per game" % info["power_text"]
 
 
 # Five slots at the bottom right, above every screen, in the order of Settings.ITEMS.

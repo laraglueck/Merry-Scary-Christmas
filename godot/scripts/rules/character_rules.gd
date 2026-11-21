@@ -61,8 +61,9 @@ static func set_ready(selection: Dictionary, player: int) -> String:
 	return ""
 
 
-static func all_ready(selection: Dictionary) -> bool:
-	if selection.size() != Settings.MAX_PLAYERS:
+# All players have chosen and pressed Next: three, or one in a single-player game.
+static func all_ready(selection: Dictionary, needed := Settings.MAX_PLAYERS) -> bool:
+	if selection.size() != needed:
 		return false
 	return selection.values().all(func(choice): return choice["ready"])
 

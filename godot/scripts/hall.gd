@@ -73,6 +73,7 @@ const SOUNDS := "res://assets/sounds/"
 
 # -1 means: a new random puzzle at every start. Tests set a fixed seed.
 @export var seed_value := -1
+@export var solo := false  # offline only: play as one player (online the game says it)
 var net: Node = null  # set by main.gd for online play
 var walking: Control = null  # the walking figures (spec 19), only online; hidden behind close-ups
 var sounds_played: Array[String] = []  # sounds played (or, in the headless tests, that would have been)
@@ -120,6 +121,8 @@ var _spark: AudioStreamPlayer
 var _creak: AudioStreamPlayer
 var _click: AudioStreamPlayer      # a fuse snaps in (spec 22)
 var _doll_turned := false  # she is looking at the players right now
+var _note_panel: Control    # single player: the note by the doll with the wire order
+var _note_symbols: Array[TextureRect] = []
 var _mission_card: Control
 var _story_card: Control        # a story note (spec 25), on this device only
 var _story_text: RichTextLabel
@@ -132,6 +135,17 @@ const MISSION_TEXT := """[font_size=30][b]🎄 Your mission[/b][/font_size]
 Scary Jingles has stolen three presents. Bring them back before midnight!
 
 [b]You are one team: talk to each other![/b]
+
+•  [b]Look into every room first:[/b] what you find in one room may help in another.
+•  [b]Solve the puzzles,[/b] and collect the presents and anything that seems important.
+
+⏰ 20 minutes until midnight."""
+# Single player: the same mission, without the team.
+const MISSION_TEXT_ALONE := """[font_size=30][b]🎄 Your mission[/b][/font_size]
+
+Scary Jingles has stolen three presents. Bring them back before midnight!
+
+[b]You are on your own tonight. Look closely![/b]
 
 •  [b]Look into every room first:[/b] what you find in one room may help in another.
 •  [b]Solve the puzzles,[/b] and collect the presents and anything that seems important.
@@ -212,7 +226,27 @@ func _on_house_plan_pressed() -> void:
 func _close_close_ups() -> void:
 	_fuse_panel.visible = false
 	_house_plan_panel.visible = false
+	_note_panel.visible = false
 	_show_figures(true)
+
+
+# Single player, or not: the game says it online; offline the hall's own switch.
+func _alone() -> bool:
+	return net.game.get("solo", false) if _online() else solo
+
+
+# The doll on the stairs: she turns her head; alone, a note lies by her with the wire order.
+func _on_doll_pressed() -> void:
+	_doll_turns()
+	if _alone():
+		_fuse_panel.visible = false
+		_house_plan_panel.visible = false
+		_note_panel.visible = true
+		_show_figures(false)
+		var label := Rules.label_for(puzzle, 0)
+		for i in _note_symbols.size():
+			_show_symbol(_note_symbols[i], label[i])
+		_message.text = "A crumpled note lies by the doll."
 
 
 # The figures are drawn by depth and would cover a close-up, so they step aside.
@@ -259,11 +293,13 @@ func _submit_attempt() -> void:
 		net.send_action("try_fuse", {"wires": wires})  # the host decides
 		return
 	var fuse: Dictionary = puzzle["fuses"][current_player]
-	var result := Rules.try_fuse(puzzle, current_player, wires)
+	var result := Rules.try_fuse_alone(puzzle, wires) if _alone() else Rules.try_fuse(puzzle, current_player, wires)
 	if result["error"] != "":
 		_message.text = result["error"]
 	elif result["correct"]:
 		_message.text = "The %s fuse is on! The %s is lit." % [fuse["colour"], fuse["room"]]
+		if _alone():
+			_message.text = "All three breakers flip up. Every room is lit!"
 		_play(_click, "sfx_fuse_click.mp3")
 	else:
 		penalty_total += result["penalty_seconds"]
@@ -558,7 +594,7 @@ func _build_mission_card() -> void:
 	var text := RichTextLabel.new()
 	text.name = "MissionText"
 	text.bbcode_enabled = true
-	text.text = MISSION_TEXT
+	text.text = MISSION_TEXT_ALONE if _alone() else MISSION_TEXT
 	text.scroll_active = false
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -654,15 +690,21 @@ func _refresh() -> void:
 	for i in _label_symbols.size():
 		_show_symbol(_label_symbols[i], label[i])
 	_label_frame.add_theme_stylebox_override("panel", _box(Color(0.05, 0.03, 0.03, 0.6), UI_COLOURS[seen_colour], 8))
+	_label_frame.visible = not _alone()
 	# Hints that grow clearer: after one wrong try a question, after two the answer.
 	if fuse["solved"] and not puzzle["fuses"][seen]["solved"]:
 		_fuse_hint.text = "Your fuse is on. But these symbols are still here... someone else might need them."
-	elif _wrong_tries >= 2 and not fuse["solved"]:
+	elif _wrong_tries >= Settings.RESCUE_TRIES and not fuse["solved"]:
 		_fuse_hint.text = "[b]Sparks![/b] Look at the frame: these symbols belong to the %s fuse. Who has it?" % coloured_name
-	elif _wrong_tries == 1 and not fuse["solved"]:
+	elif _wrong_tries >= 1 and not fuse["solved"]:
 		_fuse_hint.text = "[b]Sparks![/b] Are these symbols really meant for [i]your[/i] fuse?"
 	else:
 		_fuse_hint.text = ""
+	if _alone():  # one player: one order for all three fuses, hidden by the doll
+		_fuse_title.text = "Your fuses: all three"
+		_hint_label.text = "Connect the four wires in the right order. [i]The order is hidden somewhere in the hall...[/i]"
+		_fuse_hint.text = "" if fuse["solved"] or _wrong_tries == 0 else \
+				"[b]Sparks![/b] Did you find the order? Someone on the stairs keeps an eye on it."
 	for i in Settings.FUSES.size():
 		var colour: String = puzzle["fuses"][i]["colour"]
 		_sockets[colour].visible = puzzle["fuses"][i]["solved"]
@@ -783,6 +825,13 @@ func _build_ui() -> void:
 			_doors[spot["name"]] = button
 	_spot_by_name["fuse_box"].text = "Fuse box"
 	_spot_by_name["house_plan"].text = "House plan"
+	# The doll can be clicked herself (above the stairs): she turns, and alone she has a note.
+	var doll_spot := Button.new()
+	_style_spot(doll_spot, "DollSpot", 14)
+	doll_spot.tooltip_text = "The doll"
+	_place(doll_spot, DOLL_RECT)
+	doll_spot.pressed.connect(_on_doll_pressed)
+	hall_area.add_child(doll_spot)
 	for story in STORIES:
 		_spot_by_name[story].tooltip_text = STORIES[story]["hint"]  # no name on it, a hint on hover
 	_story_sound = AudioStreamPlayer.new()
@@ -791,6 +840,7 @@ func _build_ui() -> void:
 
 	_build_fuse_box()
 	_build_house_plan()
+	_build_note()
 
 	# On top of everything: title, player switch and penalty, the message line.
 	var title := _label(self, "The Hall", 34)
@@ -1028,6 +1078,49 @@ func _build_house_plan() -> void:
 # ---------- small helpers ----------
 
 # A full-screen layer that catches clicks, so the hall behind stays still.
+# Single player: the crumpled note by the doll, with the four symbols of the wire order.
+func _build_note() -> void:
+	_note_panel = _close_up("NotePanel")
+	var paper := TextureRect.new()
+	paper.texture = load(IMAGES + "prop_note.png")
+	paper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	paper.stretch_mode = TextureRect.STRETCH_SCALE
+	paper.set_anchors_preset(Control.PRESET_CENTER)
+	paper.offset_left = -260
+	paper.offset_right = 260
+	paper.offset_top = -220
+	paper.offset_bottom = 220
+	_note_panel.add_child(paper)
+	var words := _label(paper, "Don't forget the wires... in this order:", 22, true)
+	words.add_theme_color_override("font_color", Color("3b2a1a"))
+	words.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	words.offset_left = 50
+	words.offset_right = -50
+	words.offset_top = 95
+	words.offset_bottom = 160
+	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 14)
+	row.set_anchors_preset(Control.PRESET_CENTER)
+	row.offset_left = -170
+	row.offset_right = 170
+	row.offset_top = -40
+	row.offset_bottom = 40
+	paper.add_child(row)
+	for i in 4:
+		var chip := PanelContainer.new()  # a dark chip, so the coloured symbol stands out on paper
+		chip.add_theme_stylebox_override("panel", _box(Color("3b2a1a"), Color("3b2a1a"), 4))
+		row.add_child(chip)
+		var symbol := _image("NoteSymbol%d" % i, "")
+		symbol.custom_minimum_size = Vector2(60, 60)
+		chip.add_child(symbol)
+		_note_symbols.append(symbol)
+	var back := _plain_button("BackFromNote", "Back to the hall", _close_close_ups)
+	back.position = Vector2(24, 64)
+	_note_panel.add_child(back)
+
+
 func _close_up(node_name: String) -> Control:
 	var layer := Control.new()
 	layer.name = node_name

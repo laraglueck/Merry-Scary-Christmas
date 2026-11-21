@@ -419,3 +419,31 @@ func test_a_player_who_leaves_loses_their_pick() -> void:
 	assert_true(await wait_until(func(): return room[0].players.size() == 2), "Player 3 left")
 	assert_eq(room[0].game["selection"].has(2), false, "the pick is gone")
 	assert_eq(room[0].game.get("phase"), "select", "still choosing")
+
+
+# ---------- single player and the team name (second test round) ----------
+
+func test_play_alone_starts_a_game_with_one_player() -> void:
+	var net := make_device("Alone")
+	net.team_name = "Gloria"
+	net.play_alone()
+	assert_eq(net.connected, true, "ready to play")
+	assert_eq(net.players, [0], "one player")
+	assert_eq(net.can_start(), true, "one player is enough")
+	net.begin_selection()
+	net.send_action("pick_character", {"character": "snowman", "colour": "green"})
+	net.send_action("ready", {})
+	assert_eq(net.game.get("phase"), "hall", "the game runs after one hero is ready")
+	assert_eq(net.game.get("solo"), true, "a single-player game")
+	assert_eq(net.game.get("team_name"), "Gloria", "the player's name")
+
+
+func test_the_team_name_goes_into_the_game() -> void:
+	var room: Array = await make_full_room(47618)
+	room[0].team_name = "  The Elves  "
+	room[0].begin_selection()
+	await wait_until(func(): return room[2].game.get("phase") == "select")
+	pick_all(room)
+	assert_true(await wait_until(func(): return room[2].game.get("phase") == "hall"), "the game runs")
+	assert_eq(room[2].game.get("team_name"), "The Elves", "everyone knows the team name")
+	assert_eq(room[2].game.get("solo", false), false, "not single player")

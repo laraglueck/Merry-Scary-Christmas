@@ -17,12 +17,12 @@ const CREAM := Color("efe2c8")
 const BLOOD_RED := Color("8b1a1a")
 const NIGHT := Color("0b0d14")
 const GOLD := Color("d4af37")
-const FIGURE_BOX := Vector2(290, 380)   # the big figure; the arrows stand beside it
+const FIGURE_BOX := Vector2(290, 352)   # the big figure; the arrows stand beside it
 const ARROW_SIZE := Vector2(64, 64)
 const ACCESSORY_ROW_Y := 40.0           # head height inside the figure area
 const COLOUR_ROW_Y := 235.0             # hip height
 const ARROW_GAP := 40.0
-const LABELS_HEIGHT := 64.0             # "Accessory: ..." and "Colour: ..." under the figure
+const LABELS_HEIGHT := 92.0             # "Accessory: ...", "Colour: ..." and the power under the figure
 
 var net: Node = null  # main.gd hands this in; started alone, it stays null
 
@@ -43,6 +43,8 @@ var _accessory_prev: Button
 var _accessory_next: Button
 var _colour_label: Label     # "Colour: Green" under the figure (spec 18)
 var _accessory_label: Label  # "Accessory: Bow"
+var _power_label: Label      # the chosen hero's power, under the figure
+var _choose_hint: Label      # "Choose your hero on the left" until one is chosen
 var _player_buttons: Array[Button] = []
 
 
@@ -119,10 +121,8 @@ func _on_player_pressed(player: int) -> void:
 # ---------- showing the game ----------
 
 func _refresh() -> void:
+	# Free choice (second test round): nobody gets a hero by themselves; each player clicks one.
 	var chosen := selection()
-	if not chosen.has(current_player) and not _game().get("selection") == null:
-		_pick_first_free()  # everybody always has a figure on screen; the player only changes it
-		return
 	var mine := _mine()
 	for character in CharacterRules.character_ids():
 		var holder := CharacterRules.owner_of(chosen, "character", character)
@@ -138,10 +138,18 @@ func _refresh() -> void:
 			owner_label.text = "Player %d%s" % [holder + 1, " (you)" if holder == current_player else ""]
 			if chosen[holder]["ready"]:
 				owner_label.text += " - ready"
-	if not mine.is_empty():
+	_choose_hint.visible = mine.is_empty()
+	if mine.is_empty():
+		_big.texture = null
+		_colour_label.text = ""
+		_accessory_label.text = ""
+		_power_label.text = ""
+	else:
 		_big.texture = load(IMAGES + CharacterRules.picture_file(mine["character"], mine["colour"], mine.get("accessory", "none")))
 		_colour_label.text = "Colour: " + _name_of(Settings.CHARACTER_COLOURS, mine["colour"])
 		_accessory_label.text = "Accessory: " + _name_of(Settings.ACCESSORIES, mine["accessory"])
+		var info := _character_info(mine["character"])
+		_power_label.text = "Power: %s, %s (once per game)" % [info["power_name"], info["power_text"].to_lower()]
 	var is_ready: bool = not mine.is_empty() and mine["ready"]
 	for arrow in [_colour_prev, _colour_next, _accessory_prev, _accessory_next]:
 		arrow.disabled = mine.is_empty() or is_ready
@@ -152,7 +160,14 @@ func _refresh() -> void:
 		_player_buttons[index].button_pressed = index == current_player
 
 
-# The first character and colour nobody has: where a player starts.
+func _character_info(id: String) -> Dictionary:
+	for info in Settings.CHARACTERS:
+		if info["id"] == id:
+			return info
+	return {}
+
+
+# The first character and colour nobody has (not used since the free choice; kept for later).
 func _pick_first_free() -> void:
 	var chosen := selection()
 	for character in CharacterRules.character_ids():
@@ -312,6 +327,11 @@ func _build_figure_area() -> Control:
 	# What the arrows chose, under the figure.
 	_accessory_label = _build_choice_label("AccessoryLabel", area, FIGURE_BOX.y + 4)
 	_colour_label = _build_choice_label("ColourLabel", area, FIGURE_BOX.y + 32)
+	_power_label = _build_choice_label("PowerLabel", area, FIGURE_BOX.y + 60)
+	_power_label.add_theme_color_override("font_color", GOLD)
+	_choose_hint = _build_choice_label("ChooseHint", area, FIGURE_BOX.y / 2.0 - 20)
+	_choose_hint.text = "Choose your hero on the left"
+	_choose_hint.add_theme_font_size_override("font_size", 26)
 
 	return area
 
@@ -393,6 +413,15 @@ func _build_card(info: Dictionary) -> Button:
 	owner_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	texts.add_child(owner_label)
 	_owners[id] = owner_label
+	var power := Label.new()  # what this hero can do (hero powers)
+	power.name = "Power_" + id
+	power.text = "%s: %s" % [info["power_name"], info["power_text"]]
+	power.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	power.custom_minimum_size = Vector2(110, 0)
+	power.add_theme_font_size_override("font_size", 12)
+	power.add_theme_color_override("font_color", Color("c9b8a0"))
+	power.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	texts.add_child(power)
 	return card
 
 

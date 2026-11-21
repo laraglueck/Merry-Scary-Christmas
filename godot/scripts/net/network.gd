@@ -27,6 +27,8 @@ var _figures_walking := false
 var _clock_rest := 0.0      # host: time since the last whole second (spec 13)
 var save_path := SaveGame.path()  # host: the save file (spec 15)
 var game := {}              # the shared game (spec 04): only the host changes it, everyone gets a copy
+var solo := false           # single player: one player, no room, no network (second test round)
+var team_name := ""         # the host's team name (or the player's own name): on the leaderboard
 
 var _peer_to_index := {}    # host only: network id -> player index (the host has id 1)
 var _rng := RandomNumberGenerator.new()
@@ -139,6 +141,31 @@ func join_room(address: String, port := Settings.NETWORK_PORT, timeout := Settin
 	multiplayer.multiplayer_peer = peer
 	_set_status("Connecting to %s ..." % address)
 	get_tree().create_timer(timeout).timeout.connect(_on_join_timeout.bind(peer, address))
+
+
+# Single player (second test round): no room and no network. The game runs on this
+# computer only; the host's rules work as always, with one player.
+func play_alone() -> void:
+	if is_active() or connected:
+		return
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()  # this computer is the host
+	_peer_to_index = {1: 0}
+	my_index = 0
+	connected = true
+	solo = true
+	players = [0]
+	room_code = ""
+	_set_status("Playing alone.")
+
+
+# One player alone, three in a room.
+func players_needed() -> int:
+	return 1 if solo else Settings.MAX_PLAYERS
+
+
+# The name for the leaderboard: trimmed, at most NAME_LENGTH letters.
+static func clean_name(text: String) -> String:
+	return text.strip_edges().left(Settings.NAME_LENGTH)
 
 
 # ---------- finding a room by its code ----------
@@ -297,7 +324,7 @@ func end_game() -> void:
 
 
 func can_start() -> bool:
-	return connected and my_index == 0 and players.size() == Settings.MAX_PLAYERS and game.is_empty()
+	return connected and my_index == 0 and players.size() == players_needed() and game.is_empty()
 
 
 # Host (spec 18): "Start game" in the lobby. Everyone chooses a character first; the real
@@ -306,6 +333,7 @@ func begin_selection() -> void:
 	if not can_start():
 		return
 	game = CharacterRules.new_selection_game()
+	game["players_needed"] = players_needed()
 	_send_game()
 	game_changed.emit()
 	changed.emit()
@@ -320,6 +348,8 @@ func start_game() -> void:
 
 func _create_game(characters: Dictionary) -> void:
 	game = GameRules.new_game(_rng, characters)
+	game["solo"] = solo                      # single player: one wire order for all fuses
+	game["team_name"] = clean_name(team_name)  # for the leaderboard at the end
 	TestStart.apply_if_asked(game, OS.get_cmdline_user_args())  # only when started with "-- test"
 	_clock_rest = 0.0
 	_save_game()
@@ -348,7 +378,7 @@ func _host_apply(sender: int, action: String, data: Dictionary) -> void:
 	if not _peer_to_index.has(sender) or game.is_empty():
 		return
 	GameRules.apply(game, _peer_to_index[sender], action, data)
-	if game.get("phase") == "select" and CharacterRules.all_ready(game["selection"]):
+	if game.get("phase") == "select" and CharacterRules.all_ready(game["selection"], game.get("players_needed", Settings.MAX_PLAYERS)):
 		_begin_game_from_selection()
 		return
 	_save_game()
@@ -473,6 +503,7 @@ func _set_status(text: String) -> void:
 
 func _forget_room() -> void:
 	connected = false
+	solo = false
 	my_index = -1
 	players = []
 	counter = 0

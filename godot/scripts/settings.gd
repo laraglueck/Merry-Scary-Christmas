@@ -47,11 +47,20 @@ const ITEMS := [
 
 # Character selection (spec 18): the figures and their scarf/jacket colours.
 # The pictures are char_<id>.png (red) and char_<id>_<colour>.png (green, yellow).
+# Each hero has one power, usable once per game (hero powers): what it is called and does.
 const CHARACTERS := [
-	{"id": "santa", "name": "Santa"},
-	{"id": "snowman", "name": "Snowman"},
-	{"id": "nutcracker", "name": "Nutcracker"},
+	{"id": "santa", "name": "Santa", "power": "hint", "power_name": "Ho ho hint",
+		"power_text": "A tip for the room you are in"},
+	{"id": "snowman", "name": "Snowman", "power": "freeze", "power_name": "Freeze",
+		"power_text": "Freezes the clock: +30 seconds"},
+	{"id": "nutcracker", "name": "Nutcracker", "power": "crack", "power_name": "Crack",
+		"power_text": "Cracks one part of the answer"},
 ]
+const FREEZE_SECONDS := 30  # the snowman's power
+const NAME_LENGTH := 20     # team or player name for the leaderboard
+# Help in three levels: gentle hints in the rooms, a hero's power whenever the team wants,
+# and a rescue hint (almost the answer) only after this many wrong tries.
+const RESCUE_TRIES := 5
 const CHARACTER_COLOURS := [
 	{"id": "red", "name": "Red", "dot": Color("b3262a")},
 	{"id": "green", "name": "Green", "dot": Color("2f7d3a")},

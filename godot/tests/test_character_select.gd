@@ -4,10 +4,13 @@ extends "res://tests/base_test.gd"
 const SelectScene = preload("res://scenes/character_select.tscn")
 
 
-# A screen on its own (no network): plays all three players locally.
-func open_select() -> Node:
+# A screen on its own (no network): plays all three players locally. Nobody has a hero
+# yet (free choice), so most tests let Player 1 take Santa first.
+func open_select(pick := "santa") -> Node:
 	var screen = SelectScene.instantiate()
 	tree.root.add_child(screen)
+	if pick != "":
+		press(screen, "Card_" + pick)
 	return screen
 
 
@@ -17,16 +20,39 @@ func test_shows_the_list_the_big_figure_and_the_arrows() -> void:
 	for character in ["santa", "snowman", "nutcracker"]:
 		assert_true(find(screen, "Card_" + character) != null, character + " in the list")
 	var big: TextureRect = find(screen, "Picture_big")
-	assert_true(big != null and big.texture != null, "the big figure")
+	assert_true(big != null and big.texture != null, "the big figure, once a hero is chosen")
 	for arrow in ["AccessoryPrev", "AccessoryNext", "ColourPrev", "ColourNext"]:
 		assert_true(find(screen, arrow) != null, arrow)
 	assert_true(find(screen, "NextButton") != null, "Next")
 
 
-func test_everybody_starts_with_a_figure() -> void:
-	var screen := open_select()
-	assert_eq(screen.selection()[0], {"character": "santa", "colour": "red", "accessory": "none", "ready": false}, "red Santa first")
-	assert_eq(is_disabled(screen, "NextButton"), false, "Next works at once")
+# Free choice (second test round): nobody gets a hero by themselves.
+func test_nobody_has_a_hero_until_they_choose() -> void:
+	var screen := open_select("")
+	assert_true(not screen.selection().has(0), "no hero yet")
+	assert_eq(is_disabled(screen, "NextButton"), true, "Next only after choosing")
+	assert_contains(text_of(screen, "ChooseHint"), "Choose your hero", "says what to do")
+	press(screen, "Card_snowman")
+	assert_eq(screen.selection()[0]["character"], "snowman", "the snowman, chosen freely")
+	assert_eq(is_disabled(screen, "NextButton"), false, "now Next works")
+
+
+func test_every_card_and_the_chosen_hero_show_the_power() -> void:
+	var screen := open_select("")
+	for character in ["santa", "snowman", "nutcracker"]:
+		assert_true(text_of(screen, "Power_" + character) != "", character + " shows its power")
+	press(screen, "Card_nutcracker")
+	assert_contains(text_of(screen, "PowerLabel"), "Crack", "the chosen hero's power under the figure")
+
+
+func test_a_taken_hero_is_free_again_when_its_player_changes() -> void:
+	var screen := open_select()  # Player 1: Santa
+	press(screen, "Player2Button")
+	assert_eq(is_disabled(screen, "Card_santa"), true, "Santa is taken")
+	press(screen, "Player1Button")
+	press(screen, "Card_snowman")  # Player 1 changes their mind
+	press(screen, "Player2Button")
+	assert_eq(is_disabled(screen, "Card_santa"), false, "Santa is free again")
 
 
 func test_the_list_on_the_left_and_the_figure_beside_it() -> void:
@@ -124,8 +150,8 @@ func test_taken_figure_is_blocked_but_colours_are_shared() -> void:
 	var screen := open_select()
 	press(screen, "ColourNext")  # Player 1: red santa -> green santa
 	press(screen, "Player2Button")
-	assert_eq(screen.selection()[1]["character"], "snowman", "Player 2 starts with the first free figure")
-	assert_eq(screen.selection()[1]["colour"], "red", "and the first free colour")
+	press(screen, "Card_snowman")
+	assert_eq(screen.selection()[1]["character"], "snowman", "Player 2 chose the snowman")
 	assert_eq(is_disabled(screen, "Card_santa"), true, "santa is taken")
 	assert_eq(is_disabled(screen, "Card_snowman"), false, "own figure stays free")
 	assert_contains(text_of(screen, "Owner_santa"), "Player 1", "says who has it")
@@ -138,7 +164,9 @@ func test_taken_figure_is_blocked_but_colours_are_shared() -> void:
 func test_colour_arrows_work_with_three_players() -> void:
 	var screen := open_select()
 	press(screen, "Player2Button")
+	press(screen, "Card_snowman")
 	press(screen, "Player3Button")
+	press(screen, "Card_nutcracker")
 	assert_eq(screen.selection().size(), 3, "all three have a figure")
 	var before: String = screen.selection()[2]["colour"]
 	press(screen, "ColourNext")
