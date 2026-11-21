@@ -4,12 +4,12 @@ Owner: Leon
 
 ## Why
 After the toy chest is solved, most bedroom calendar doors only say "Door N is empty."
-Four of them now hide a small surprise picture (an idea already listed in `bedroom.md`).
+Five of them now hide a small surprise picture (an idea already listed in `bedroom.md`).
 
 ## What
-- 4 new pictures `egg_calendar_1.png` ... `egg_calendar_4.png` (512 px, white background removed
+- 5 new pictures `egg_calendar_1.png` ... `egg_calendar_5.png` (512 px, white background removed
   with `tools/add_image.gd`, enclosed gaps too), listed in `tools/asset_names.gd`.
-- `BedroomRules.egg_doors(room, clue) -> Array[int]`: the four egg doors, index i = egg i + 1.
+- `BedroomRules.egg_doors(room, clue) -> Array[int]`: the five egg doors, index i = egg i + 1.
   Never a clock-hand door, never the photo door. Derived from the saved state (wheels and
   digit), so it is random per game but the same after save/resume; no new save data.
 - The egg doors open after the chest, like all other doors.
@@ -21,9 +21,11 @@ Four of them now hide a small surprise picture (an idea already listed in `bedro
   open on that screen for the rest of the game, also after leaving the bedroom (static memory per
   game, like the hall's mission card); a new game starts with all closed.
 
+Egg 5 (Gemini, antlers) was added later on request, with its own scream like the others.
+
 ## Out of scope
 Texts for the pictures, sharing the eggs with the team, more eggs.
 
 ## Done when
 - `tests/test_bedroom_eggs.gd` was red first and is green; all older tests stay green.
-- Manual: bedroom alone (offline), solve the chest. Four doors show a picture, each screams once, and the rest are empty. Close and reopen the calendar: the opened eggs are still there.
+- Manual: bedroom alone (offline), solve the chest. Five doors show a picture, each screams once, and the rest are empty. Close and reopen the calendar: the opened eggs are still there.

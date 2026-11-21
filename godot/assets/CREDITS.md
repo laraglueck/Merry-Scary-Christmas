@@ -74,6 +74,7 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | egg_calendar_2.png | images | provided by Leon (source to confirm) | Leon | to confirm | to confirm | Easter egg behind a bedroom calendar door (spec 28), white background removed with add_image.gd |
 | egg_calendar_3.png | images | provided by Leon (source to confirm) | Leon | to confirm | to confirm | Easter egg behind a bedroom calendar door (spec 28), white background removed with add_image.gd |
 | egg_calendar_4.png | images | provided by Leon (source to confirm) | Leon | to confirm | to confirm | Easter egg behind a bedroom calendar door (spec 28), white background removed with add_image.gd |
+| egg_calendar_5.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | Easter egg behind a bedroom calendar door (spec 28), white background removed with add_image.gd |
 | item_fuse_red.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_green.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |
 | item_fuse_gold.png | images | generated with ChatGPT from our own text prompt | Gloria | AI-generated, own prompt | Yes (ChatGPT, model to confirm) | transparent background from ChatGPT |

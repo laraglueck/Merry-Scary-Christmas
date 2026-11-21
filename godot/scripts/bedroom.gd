@@ -21,10 +21,11 @@ const GIFT_ART = preload(IMAGES + "item_gift_3.png")
 const PHOTO_ART = preload(IMAGES + "item_photo_piece_3.png")  # one torn piece (spec 21)
 const CHEST_OPEN_SOUND = preload("res://assets/sounds/sfx_creak.mp3")
 const GIFT_SOUND = preload("res://assets/sounds/sfx_gift.mp3")
-# Spec 28: Easter eggs behind four calendar doors; each screams when first opened.
+# Spec 28: Easter eggs behind five calendar doors; each screams when first opened.
 const EGG_ART: Array[Texture2D] = [
 	preload(IMAGES + "egg_calendar_1.png"), preload(IMAGES + "egg_calendar_2.png"),
 	preload(IMAGES + "egg_calendar_3.png"), preload(IMAGES + "egg_calendar_4.png"),
+	preload(IMAGES + "egg_calendar_5.png"),
 ]
 const SCARE_SOUND = preload("res://assets/sounds/sfx_scare.mp3")
 const DOOR_ICON_SIZE := 28
