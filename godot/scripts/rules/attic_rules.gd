@@ -10,6 +10,7 @@ const Settings = preload("res://scripts/settings.gd")
 
 const CHOICES := {"lock_in": "scary", "reconcile": "merry"}  # choice -> ending
 const NO_PHOTO := "You have nothing that could change his mind."
+const NO_COOKIES := "The photo alone feels too little. Remember the cookies on the table downstairs?"  # spec 31
 
 
 # The attic part of the shared game. The code is not stored here: it is the
@@ -62,7 +63,8 @@ static func take_key(attic: Dictionary) -> Dictionary:
 
 # The final choice beside the sleeping Scary Jingles. Returns the ending
 # ("scary" or "merry"), or "" and an error text when refused.
-static func choose(attic: Dictionary, choice: String, has_photo: bool) -> Dictionary:
+# The good ending needs the whole photo AND the cookies (spec 31).
+static func choose(attic: Dictionary, choice: String, has_photo: bool, has_cookies: bool) -> Dictionary:
 	# 1. Check ...
 	if not attic["unlocked"]:
 		return {"ending": "", "error": "The attic is still locked."}
@@ -72,6 +74,8 @@ static func choose(attic: Dictionary, choice: String, has_photo: bool) -> Dictio
 		return {"ending": "", "error": "Unknown choice: %s" % choice}
 	if choice == "reconcile" and not has_photo:
 		return {"ending": "", "error": NO_PHOTO}
+	if choice == "reconcile" and not has_cookies:
+		return {"ending": "", "error": NO_COOKIES}
 	if choice == "lock_in" and not attic.get("key_taken", false):
 		return {"ending": "", "error": "Take the key first."}
 

@@ -17,7 +17,7 @@ func test_the_items_in_a_fixed_order() -> void:
 	var ids := []
 	for item in items:
 		ids.append(item["id"])
-	assert_eq(ids, ["gift_1", "gift_2", "gift_3", "photo_piece_1", "photo_piece_2", "photo_piece_3", "photo", "key"], "the items")
+	assert_eq(ids, ["gift_1", "gift_2", "gift_3", "photo_piece_1", "photo_piece_2", "photo_piece_3", "photo", "cookies", "key"], "the items")
 	if items.size() == 5:
 		assert_eq(items[3]["name"], "Photo", "a name to show")
 		assert_eq(items[1]["picture"], "item_gift_2.png", "a picture to show")

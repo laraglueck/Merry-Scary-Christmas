@@ -24,7 +24,7 @@ const HINTS := {
 	"bedroom_done": "Have you looked behind every calendar door? Something torn might be hiding there.",
 	"attic": "Red from the living room, green from the bathroom, gold from the bedroom.",
 	"attic_key": "The key lies on the floor right next to his armchair. Quietly...",
-	"attic_choice": "Before you lock him in: did you put the torn photo together? Remember who he once was.",
+	"attic_choice": "Before you lock him in: did you put the torn photo together? And the cookies on the table downstairs... nobody ever came for them.",
 }
 
 

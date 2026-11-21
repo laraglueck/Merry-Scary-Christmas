@@ -349,6 +349,8 @@ func start_game() -> void:
 func _create_game(characters: Dictionary) -> void:
 	game = GameRules.new_game(_rng, characters)
 	game["solo"] = solo                      # single player: one wire order for all fuses
+	if solo:
+		game["figures"] = WalkRules.new_figures(1)  # only the own hero walks, no strangers
 	game["team_name"] = clean_name(team_name)  # for the leaderboard at the end
 	TestStart.apply_if_asked(game, OS.get_cmdline_user_args())  # only when started with "-- test"
 	_clock_rest = 0.0

@@ -436,6 +436,7 @@ func test_play_alone_starts_a_game_with_one_player() -> void:
 	assert_eq(net.game.get("phase"), "hall", "the game runs after one hero is ready")
 	assert_eq(net.game.get("solo"), true, "a single-player game")
 	assert_eq(net.game.get("team_name"), "Gloria", "the player's name")
+	assert_eq(net.game["figures"].keys(), [0], "only the own hero walks in the hall, no strangers")
 
 
 func test_the_team_name_goes_into_the_game() -> void:

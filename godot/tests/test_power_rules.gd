@@ -41,6 +41,7 @@ func test_santa_says_what_comes_next() -> void:
 	assert_contains(PowerRules.hint_for(game), "key", "lock open: take the key")
 	game["attic"]["key_taken"] = true
 	assert_contains(PowerRules.hint_for(game), "photo", "then think of the photo")
+	assert_contains(PowerRules.hint_for(game), "cookies", "and of the cookies (spec 31)")
 	game["location"] = "hall"
 	for fuse in game["puzzle"]["fuses"]:
 		fuse["solved"] = true

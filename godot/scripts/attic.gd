@@ -36,6 +36,7 @@ const DIMMED := Color(0.45, 0.45, 0.5)
 @export var seed_value := -1
 # Offline only: does the team already have the photo from the bedroom?
 @export var has_photo := false
+@export var has_cookies := false  # spec 31: the good ending needs the cookies too
 var net: Node = null  # set by main.gd for online play
 
 var game: Dictionary       # offline: our own game; online: the shared game
@@ -94,6 +95,8 @@ func _offline_game() -> Dictionary:
 	new_game["location"] = "attic"
 	if has_photo:
 		InventoryRules.add(new_game, "photo")
+	if has_cookies:
+		InventoryRules.add(new_game, "cookies")
 	new_game["last_event"] = ""
 	return new_game
 
@@ -279,9 +282,12 @@ func _refresh() -> void:
 	_snore.volume_db = SNORE_LOCKED_DB if locked else SNORE_OPEN_DB
 	_key.visible = not locked and not _key_taken()
 	var photo := InventoryRules.has(game, "photo")
+	var cookies := InventoryRules.has(game, "cookies")  # spec 31
 	_ending_hint.visible = not locked and _key_taken()
-	if photo:
+	if photo and cookies:
 		_ending_hint.text = "The photo shows Jingles laughing with Santa, before everything went wrong.\n\nLeave it beside him with the cookies. Perhaps a reminder of happier times can change his mind."
+	elif photo:
+		_ending_hint.text = "The photo shows Jingles laughing with Santa, before everything went wrong.\n\nBut a photo alone feels too little. Remember the cookies on the living room table?"
 	else:
 		_ending_hint.text = "Could a memory of happier times change his mind?\n\nFind all three photo pieces and put them together in your inventory first."
 	for i in _choice_buttons.size():
@@ -290,7 +296,7 @@ func _refresh() -> void:
 		var border := HIGHLIGHT if i == _choice_index else Color("5c4a3a")
 		button.add_theme_stylebox_override("normal", _box(Color(0.1, 0.07, 0.07, 0.85), border, 3))
 	# Without the photo the second choice stays clickable, so the reason can be shown.
-	_choice_buttons[1].modulate.a = 1.0 if photo else GREYED_OUT
+	_choice_buttons[1].modulate.a = 1.0 if photo and cookies else GREYED_OUT
 
 
 # ---------- building the screen (runs once) ----------

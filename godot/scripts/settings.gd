@@ -42,6 +42,7 @@ const ITEMS := [
 	{"id": "photo_piece_2", "name": "Torn piece", "picture": "item_photo_piece_2.png"},  # bathroom
 	{"id": "photo_piece_3", "name": "Torn piece", "picture": "item_photo_piece_3.png"},  # bedroom calendar
 	{"id": "photo", "name": "Photo", "picture": "item_photo.png"},         # bedroom calendar
+	{"id": "cookies", "name": "Cookies", "picture": "item_cookies.png"},   # living room tin (spec 31)
 	{"id": "key", "name": "Key", "picture": "item_key.png"},              # attic (spec 16)
 ]
 

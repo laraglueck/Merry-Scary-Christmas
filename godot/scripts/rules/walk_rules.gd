@@ -12,9 +12,10 @@ const MAX_STEP_SECONDS := 0.02  # a long frame is walked in small steps, so nobo
 
 
 # The figures at the start of a game: side by side, standing still.
-static func new_figures() -> Dictionary:
+# Playing alone there is only one figure (second test round).
+static func new_figures(players: int = Settings.MAX_PLAYERS) -> Dictionary:
 	var figures := {}
-	for player in Settings.MAX_PLAYERS:
+	for player in players:
 		figures[player] = {"x": Settings.FIGURE_START_X[player], "y": Settings.FIGURE_START_Y, "dx": 0.0, "dy": 0.0}
 	return figures
 

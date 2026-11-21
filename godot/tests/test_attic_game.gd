@@ -89,6 +89,7 @@ func test_lock_in_ends_the_game_as_scary_christmas_with_the_key() -> void:
 func test_reconcile_with_the_photo_ends_the_game_as_merry_christmas() -> void:
 	var game := game_with_attic_open()
 	InventoryRules.add(game, "photo")
+	InventoryRules.add(game, "cookies")  # spec 31
 	GameRules.apply(game, 0, "choose_ending", {"choice": "reconcile"})
 	assert_eq(game["phase"], "merry", "phase")
 	assert_contains(game["last_event"], "left the photo and the cookies", "event")
@@ -100,6 +101,16 @@ func test_reconcile_without_the_photo_changes_nothing() -> void:
 	assert_eq(game["phase"], "hall", "game goes on")
 	assert_eq(game["attic"]["choice"], "", "nothing chosen")
 	assert_contains(game["last_event"], "nothing that could change his mind", "event")
+
+
+# Spec 31: the photo alone is not enough, the cookies belong to it.
+func test_reconcile_with_the_photo_but_no_cookies_changes_nothing() -> void:
+	var game := game_with_attic_open()
+	InventoryRules.add(game, "photo")
+	GameRules.apply(game, 0, "choose_ending", {"choice": "reconcile"})
+	assert_eq(game["phase"], "hall", "game goes on")
+	assert_eq(game["attic"]["choice"], "", "nothing chosen")
+	assert_contains(game["last_event"], "cookies on the table", "points to the living room")
 
 
 func test_choosing_before_the_lock_is_open_changes_nothing() -> void:

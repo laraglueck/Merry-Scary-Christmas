@@ -103,6 +103,8 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 			var error := PowerRules.use(game, player)
 			if error != "":
 				game["last_event"] = "Player %d: %s" % [player + 1, error]
+		"take_cookies":  # the plate of cookies on the living room table (spec 31)
+			_take_cookies(game, player)
 		"take_key":
 			_take_key(game, player)
 		"take_piece":
@@ -238,6 +240,19 @@ static func _take_living_room_gift(game: Dictionary, player: int) -> void:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
 
 
+# Spec 31: the plate of cookies on the living room table. J. leaves cookies out every
+# year and nobody comes; the team can bring them to him, together with the photo.
+static func _take_cookies(game: Dictionary, player: int) -> void:
+	if not _can_use_living_room(game, player):
+		return
+	var who := "Player %d" % (player + 1)
+	var error := InventoryRules.add(game, "cookies")
+	if error != "":
+		game["last_event"] = "%s: %s." % [who, error]
+	else:
+		game["last_event"] = "%s took the plate of Christmas cookies." % who
+
+
 # Attic (spec 16): the code lock and the final choice, only with the team upstairs.
 static func _in_attic(game: Dictionary, player: int) -> bool:
 	if not game.has("attic"):
@@ -281,7 +296,8 @@ static func _choose_ending(game: Dictionary, player: int, data: Dictionary) -> v
 	var result := AtticRules.choose(
 		game["attic"],
 		choice,
-		InventoryRules.has(game, "photo")
+		InventoryRules.has(game, "photo"),
+		InventoryRules.has(game, "cookies")
 	)
 
 	if result["error"] != "":

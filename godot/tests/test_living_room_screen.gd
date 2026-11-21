@@ -58,6 +58,20 @@ func test_note_reads_bathroom_answer_before_clock_is_solved() -> void:
 	]), "note uses the bathroom answer")
 
 
+# Spec 31: a plate of cookies on the table. One click takes it, and J.'s note was under it.
+func test_the_cookies_on_the_table_can_be_taken_once() -> void:
+	var screen = RoomScene.instantiate()
+	screen.seed_value = 42
+	tree.root.add_child(screen)
+	var cookies: TextureButton = screen.find_child("Cookies", true, false)
+	assert_eq(cookies.visible, true, "the cookies are on the table")
+	cookies.pressed.emit()
+	assert_true("cookies" in screen.game["inventory"], "cookies in the inventory")
+	assert_eq(cookies.visible, false, "the plate is empty now")
+	assert_eq(screen.find_child("NotePanel", true, false).visible, true, "a note was under the plate")
+	assert_contains(screen._note_text.text, "J.", "signed by J.")
+
+
 func test_back_to_the_hall() -> void:
 	var screen = RoomScene.instantiate()
 	screen.seed_value = 42
