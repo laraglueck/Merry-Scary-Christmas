@@ -189,7 +189,7 @@ func test_a_wrong_code_makes_him_stir() -> void:
 	wrong[0] = 1 if wrong[0] != 1 else 2
 	set_dials(attic, wrong)
 	press(attic, "TryButton")
-	assert_eq(attic.jingles_picture(), "char_jingles_peek.png", "peeks for a moment")
+	assert_eq(attic.jingles_picture(), "char_jingles_alert.png", "peeks for a moment")
 	assert_true(find(attic, "LockPanel").visible, "still locked")
 
 
@@ -212,7 +212,7 @@ func test_online_a_teammates_wrong_code_makes_him_stir_here_too() -> void:
 	tree.root.add_child(attic)
 	net.game["penalty_seconds"] += 20  # a teammate tried a wrong code
 	net.game_changed.emit()
-	assert_eq(attic.jingles_picture(), "char_jingles_peek.png", "peeks for a moment")
+	assert_eq(attic.jingles_picture(), "char_jingles_alert.png", "peeks for a moment")
 
 
 # ---------- the key (spec 21) ----------
