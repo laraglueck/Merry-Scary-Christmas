@@ -1,47 +1,147 @@
 # Merry Scary Christmas
 
-Cooperative Christmas escape room for the Introduction to Programming group project.
+A Christmas escape room for **one or three players**, made with **Godot 4.7** for the
+course *Introduction to Programming* at Nova SBE (fall 2026).
 
-## Godot version (current work)
+Scary Jingles, Santa's former helper elf, has stolen three presents and hidden them in his
+dark old house. The team has **20 minutes until midnight** to turn the power back on, solve
+the puzzles in the living room, bathroom and bedroom, collect the presents, a torn photo and
+the cookies, and open the attic. There they decide his fate: lock him in (**Scary Christmas**) or leave
+him the photo of his happier days and the cookies (**Merry Christmas**). If the clock strikes twelve, he wins.
 
-The game is built with **Godot 4.7.2** in the folder `godot/`, on the branch
-`godot-setup`. Open `godot/project.godot` and press ▶ (Mac: ⌘ B).
+Every hero has one power per game: Santa's **Ho ho hint**, the Snowman's **Freeze**
+(+30 seconds) and the Nutcracker's **Crack** (part of an answer). The fastest wins go on a
+**leaderboard** on the end screen, with a countdown to Christmas Eve.
 
-**New here? Start with [docs/TEAM-GUIDE.md](docs/TEAM-GUIDE.md):** how the game is
-built, how to add your room or puzzle, tests and Git rules.
+## Team
 
-The Streamlit sections below describe the old placeholder page.
+| Name | Student number | Main parts |
+| --- | --- | --- |
+| Gloria Bogea Heinzel | 79191 | bathroom, attic, end screens, all pictures, single player, hero powers, leaderboard, cookies |
+| Lara Victoria Glück | 70426 | living room, clock lock, rhyme |
+| Leon Blieffert | 73695 | title and story, characters and accessories, walking, sounds, pause |
+| Carl Mathies Rumohr | 71317 | hall and fuse box, network, clock, inventory, save and resume, weather |
+| Mika Nolte | 71772 | bedroom, toy chest, advent calendar |
 
-## Run locally
+## Demo
 
-1. Install Python 3.11 or newer.
-2. Open a terminal in this repository.
-3. Install the app dependency and start Streamlit:
+<!-- TODO: link to the demo video or public URL, if the professor asks for one. -->
+The game is shown live on one laptop: alone with **Play alone**, or with three game windows
+(see *Play with three windows*).
 
-   ```powershell
-   py -m pip install -r requirements.txt
-   py -m streamlit run streamlit_app.py
+## Run the game
+
+1. Install **Godot 4.7.2** (standard version, not .NET) from [godotengine.org](https://godotengine.org/download).
+2. Clone this repository.
+3. Let Godot import the pictures and sounds once (needed before the first run and before the tests):
+
+   ```bash
+   godot --headless --path godot --import
    ```
 
-The app opens at `http://localhost:8501`. Stop it with `Ctrl+C` in the terminal.
+4. Start the game:
 
-## Deploy on Streamlit Community Cloud
+   ```bash
+   godot --path godot
+   ```
 
-The repository is prepared for Streamlit Community Cloud. Sign in at [share.streamlit.io](https://share.streamlit.io/) with the GitHub account that has admin access to this repository, choose **Create app**, and select:
+   Or open `godot/project.godot` in the Godot editor and press ▶ (F5).
 
-- Repository: `laraglueck/Merry-Scary-Christmas`
-- Branch: `main`
-- Main file path: `streamlit_app.py`
+On a Mac, `godot` is `/Applications/Godot.app/Contents/MacOS/Godot`.
 
-Choose **Deploy**. Community Cloud installs packages from `requirements.txt` and gives the app a `*.streamlit.app` URL. Commits pushed to `main` are published automatically. No API keys or secrets are needed for this starter page.
+### Play alone
 
-## Current state
+In the lobby type your name and click **Play alone**, then **Start game**. You choose one
+hero; the order for the fuse box is on a note by the doll on the stairs.
 
-This is the deployment-ready app shell. The playable rooms, fuse puzzle, gifts, attic, and Santa Scare sequence still need to be implemented. The first version is intended for three-player local co-op on one shared screen; it does not synchronize separate devices.
+### Play with three windows (one laptop)
 
-## Files
+To try the three-player game on one computer, open three windows:
 
-- `streamlit_app.py` - Streamlit entry point and current placeholder screen.
-- `requirements.txt` - Python packages installed by the host.
-- `.streamlit/config.toml` - visual defaults for the Streamlit page.
+- In the editor: **Debug → Customize Run Instances… → Enable Multiple Instances: 3**, then ▶.
+- Or in a terminal, three times: `godot --path godot`
 
+In one window click **Create room** and note the 4-letter code; in the other two type the
+code and click **Join**. The host types a team name, then **Start game**.
+
+### Test start (for trying the rooms quickly)
+
+```bash
+godot --path godot -- test
+```
+
+Starts the game with all three fuses already on and 30 minutes on the clock. Without the
+word `test` nothing changes.
+
+## Run the tests
+
+```bash
+godot --headless --path godot --script res://tests/run_tests.gd
+```
+
+All tests are in `godot/tests/` (one file per part, e.g. `test_bathroom_rules.gd`). The last
+line says how many passed, for example `527 passed, 0 failed`. Import the assets once first
+(step 3 above).
+
+## How it is built
+
+- **Godot 4.7, GDScript.** Every screen is a scene in `godot/scenes/` with its script in
+  `godot/scripts/`.
+- **Rules apart from screens.** Each puzzle's rules are pure functions in
+  `godot/scripts/rules/` (no screens, no network), so they are easy to test: first check,
+  then change, and a refused action changes nothing.
+- **One shared game.** The host keeps the whole game in one dictionary and sends it to the
+  other two players after every action (Godot's high-level multiplayer, `scripts/net/`).
+  Players join with a 4-letter room code on the same Wi-Fi.
+- **Specs first.** Every feature has a short spec in `specs/` (what, why, done when), then
+  tests, then the code.
+- **External data.** The living room window shows the real weather in Nuuk, Greenland, from
+  [Open-Meteo](https://open-meteo.com/) (free, no key). If it does not answer within a few
+  seconds, the window shows a frosted fallback, so the game never waits for it.
+- **Leaderboard.** The fastest wins (team name, ending, time left) are stored online in a
+  [Supabase](https://supabase.com/) table when it is set up (see *Online leaderboard*),
+  otherwise in a file on the computer. If Supabase does not answer within 4 seconds, the
+  local list is shown. The table only accepts sensible rows (name 1-20 letters,
+  merry/scary, 0-3600 seconds).
+- **Save and resume.** The host saves after every action; after a restart the lobby offers
+  **Resume**.
+- **Security.** No accounts or passwords, and no keys in the repository. Players only send
+  actions; the host's rules check every action before anything changes. Rows from the
+  online leaderboard are checked before they are shown.
+
+### Online leaderboard (optional)
+
+Without this the leaderboard is kept on the computer. To share it online, put the
+project's address and its public (publishable) key in a file `supabase.cfg` in Godot's
+user folder (on a Mac: `~/Library/Application Support/Godot/app_userdata/Merry Scary Christmas/`):
+
+```ini
+[supabase]
+url="https://YOUR-PROJECT.supabase.co"
+key="YOUR-PUBLISHABLE-KEY"
+```
+
+Or set the environment variables `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Never put the
+secret (service role) key anywhere in the game.
+
+## Project structure
+
+```text
+godot/
+  scenes/          one scene per screen (hall, bathroom, attic, ...)
+  scripts/         the screens' scripts
+  scripts/rules/   the game rules (pure functions, tested)
+  scripts/net/     network: rooms, joining, sending the shared game
+  tests/           all tests and the test runner
+  tools/           helper scripts for the pictures (add_image, cut_photo, ...)
+  assets/          pictures and sounds, with CREDITS.md
+specs/             one short spec per feature
+docs/              team guide and asset brief
+```
+
+## Credits
+
+Every picture and sound with its source and licence is listed in
+[godot/assets/CREDITS.md](godot/assets/CREDITS.md). Pictures were generated with AI from our
+own prompts or drawn by our own tools; sounds are free to use (Pixabay and similar) or made
+by us.
