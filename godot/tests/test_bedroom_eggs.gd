@@ -1,4 +1,4 @@
-# Tests for spec 28: four Easter-egg pictures behind the advent calendar doors.
+# Tests for spec 28: five Easter-egg pictures behind the advent calendar doors.
 extends "res://tests/base_test.gd"
 
 const BedroomScene = preload("res://scenes/bedroom.tscn")
@@ -13,19 +13,22 @@ func new_game(seed_value: int) -> Dictionary:
 	return GameRules.new_game(rng)
 
 
-func test_egg_doors_are_four_free_doors_and_stable() -> void:
+func test_egg_doors_are_five_free_doors_and_stable() -> void:
 	var seen := {}
 	for seed_value in range(30):
 		var game := new_game(seed_value)
 		var room: Dictionary = game["bedroom"]
 		var clue: Dictionary = game["living_room"]
 		var doors := BedroomRules.egg_doors(room, clue)
-		assert_eq(doors.size(), 4, "four eggs (seed %d)" % seed_value)
+		assert_eq(doors.size(), 5, "five eggs (seed %d)" % seed_value)
 		var taken := [int(clue["hour"]), int(clue["minute"]), BedroomRules.photo_door(room, clue)]
 		for door in doors:
 			assert_true(door in range(1, 13), "a real door")
 			assert_true(door not in taken, "not a clock door, not the photo door (seed %d)" % seed_value)
-		assert_eq(doors.size(), {doors[0]: 0, doors[1]: 0, doors[2]: 0, doors[3]: 0}.size(), "four different doors")
+		var unique := {}
+		for door in doors:
+			unique[door] = true
+		assert_eq(unique.size(), doors.size(), "all different doors")
 		assert_eq(BedroomRules.egg_doors(room.duplicate(true), clue.duplicate(true)), doors, "same after save/resume")
 		seen[str(doors)] = true
 	assert_true(seen.size() > 5, "different games hide them behind different doors")
@@ -121,6 +124,6 @@ func test_opened_eggs_stay_open_until_a_new_game() -> void:
 
 
 func test_the_egg_pictures_exist() -> void:
-	for number in range(1, 5):
+	for number in range(1, 6):
 		var file := "res://assets/images/egg_calendar_%d.png" % number
 		assert_true(ResourceLoader.exists(file), file + " exists")

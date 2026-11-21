@@ -59,7 +59,7 @@ static func images() -> Dictionary:
 	for piece in range(1, 4):  # the photo torn in three (spec 21), cut by tools/cut_photo.gd
 		list["item_photo_piece_%d.png" % piece] = SIZE_ITEM
 	list["item_cookies.png"] = SIZE_ITEM  # left for Scary Jingles in the Merry ending
-	for number in range(1, 5):  # spec 28: Easter eggs behind four bedroom calendar doors
+	for number in range(1, 6):  # spec 28: Easter eggs behind five bedroom calendar doors
 		list["egg_calendar_%d.png" % number] = SIZE_ITEM
 
 	# Changing parts that sit on top of a room background

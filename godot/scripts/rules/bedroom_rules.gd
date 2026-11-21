@@ -73,7 +73,7 @@ static func photo_door(room: Dictionary, clue: Dictionary) -> int:
 	return candidates[posmod(int(room.get("digit", 0)), candidates.size())]
 
 
-# Spec 28: the four doors with an Easter-egg picture (index i = egg i + 1). Like photo_door,
+# Spec 28: the five doors with an Easter-egg picture (index i = egg i + 1). Like photo_door,
 # derived from the saved state (wheels and digit), so it is random per game but stays the same
 # after save/resume. Never a clock-hand door, never the photo door.
 static func egg_doors(room: Dictionary, clue: Dictionary) -> Array[int]:
@@ -89,7 +89,7 @@ static func egg_doors(room: Dictionary, clue: Dictionary) -> Array[int]:
 		var swap := candidates[i]
 		candidates[i] = candidates[j]
 		candidates[j] = swap
-	return candidates.slice(0, 4)
+	return candidates.slice(0, 5)
 
 
 # Older saves could contain zero, which would otherwise skip the attic's gold dial.
