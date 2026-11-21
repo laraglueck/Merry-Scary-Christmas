@@ -54,7 +54,10 @@ var _message: Label
 var _ending_hint: Label
 var _snore: AudioStreamPlayer
 var _lock_sound: AudioStreamPlayer
+var _voice: AudioStreamPlayer
 var _stirring := false
+var _alerting := false
+var _stir_sequence := 0
 
 # Sounds this screen played (or would have played in the headless test run).
 var sounds_played: Array[String] = []
@@ -211,21 +214,35 @@ func _react() -> void:
 	if now["unlocked"] and not _seen["unlocked"]:
 		_play(_lock_sound, "sfx_key_lock.mp3")
 	elif not now["unlocked"] and now["penalty"] > _seen["penalty"]:
-		_stir()  # the lock rattled: a wrong code
+		_stir(true)  # the lock rattled: a wrong code
 	elif now["key"] and not _seen.get("key", false):
 		_stir()  # the key scraped over the floor
 	_seen = now
 
 
 # A wrong code or the key: he peeks with one eye, the snoring stops, then he sleeps on.
-func _stir() -> void:
+func _stir(alert: bool = false) -> void:
+	_stir_sequence += 1
+	var sequence := _stir_sequence
 	_stirring = true
+	_alerting = alert
 	_snore.stream_paused = true
-	get_tree().create_timer(STIR_SECONDS).timeout.connect(_fall_asleep)
+	_voice.stop()
+
+	var duration := STIR_SECONDS
+	if alert:
+		duration = maxf(2.0, _voice.stream.get_length() + 0.2)
+		_play(_voice, "voice_jingles_whos_at_the_door.wav")
+
+	_refresh()
+	await get_tree().create_timer(duration).timeout
+	if sequence == _stir_sequence:
+		_fall_asleep()
 
 
 func _fall_asleep() -> void:
 	_stirring = false
+	_alerting = false
 	_snore.stream_paused = false
 	_refresh()
 
@@ -252,7 +269,12 @@ func _refresh() -> void:
 	# Seen asleep through the door while locked (dimmed like the room), peeking for a
 	# moment when he stirs (spec 21; wide awake is kept for midnight).
 	_jingles.visible = true
-	_jingles.texture = load(IMAGES + ("char_jingles_peek.png" if _stirring else "char_jingles_asleep.png"))
+	if _alerting:
+		_jingles.texture = load(IMAGES + "char_jingles_alert.png")
+	elif _stirring:
+		_jingles.texture = load(IMAGES + "char_jingles_peek.png")
+	else:
+		_jingles.texture = load(IMAGES + "char_jingles_asleep.png")
 	_jingles.modulate = DIMMED if locked and not _stirring else Color.WHITE
 	_snore.volume_db = SNORE_LOCKED_DB if locked else SNORE_OPEN_DB
 	_key.visible = not locked and not _key_taken()
@@ -365,6 +387,11 @@ func _build_ui() -> void:
 	_lock_sound.name = "LockSound"
 	_lock_sound.stream = load(SOUNDS + "sfx_key_lock.mp3")
 	add_child(_lock_sound)
+	_voice = AudioStreamPlayer.new()
+	_voice.name = "JinglesVoice"
+	_voice.stream = load(SOUNDS + "voice_jingles_whos_at_the_door.wav")
+	_voice.volume_db = 0.0
+	add_child(_voice)
 
 
 # The locked attic door: three dials and a Try button.
