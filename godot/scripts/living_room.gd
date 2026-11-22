@@ -46,12 +46,12 @@ func _ready() -> void:
 	_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_background)
 
+	_build_cookies()  # first, so the close-ups lie over the table (playtest)
 	_build_clock_ui()
 	_build_clock_controls()
 	_build_clock_submission()
 	_build_reward()
 	_build_note_ui()
-	_build_cookies()
 	_build_door()
 	_build_window()
 	_refresh()

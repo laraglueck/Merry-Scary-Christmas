@@ -86,6 +86,10 @@ func _build_leaderboard(game: Dictionary) -> void:
 
 
 func _show_rows(rows: Array) -> void:
+	# Players 2 and 3 load the list before the host's save arrives (playtest): our own
+	# win is always in the list we show.
+	if not _my_entry.is_empty() and not rows.has(_my_entry):
+		rows = LeaderboardRules.top(rows + [_my_entry])
 	if rows.is_empty():
 		_board_rows.text = "No wins yet. Be the first!"
 		return

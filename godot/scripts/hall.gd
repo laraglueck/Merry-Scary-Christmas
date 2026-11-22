@@ -85,6 +85,7 @@ var chosen: Array = []  # the cables clicked so far, in order
 var penalty_total := 0
 var _spot_index := 0  # highlighted spot in the hall (keys)
 var _wire_index := 0  # highlighted cable in the fuse box (keys)
+var _wire_keys_used := false  # the frame shows only once the arrow keys are used (playtest)
 
 # Nodes we change later (built in _build_ui)
 var _spot_buttons: Array[Button] = []
@@ -242,12 +243,7 @@ func _alone() -> bool:
 	return net.game.get("solo", false) if _online() else solo
 
 
-# The doll on the stairs: she turns her head. Alone, a note lies in her lap with the wire
-# order; it is clicked on its own, so her turn is not hidden behind it (playtest).
-func _on_doll_pressed() -> void:
-	_doll_turns()
-
-
+# Alone, a note lies in the doll's lap with the wire order (playtest).
 func _on_doll_note_pressed() -> void:
 	if not _alone():
 		return
@@ -404,6 +400,7 @@ func _move_spot(step: int) -> void:
 
 
 func _move_wire(step: int) -> void:
+	_wire_keys_used = true
 	_wire_index = clampi(_wire_index + step, 0, Settings.WIRE_COLOURS.size() - 1)
 	_refresh()
 
@@ -724,7 +721,7 @@ func _refresh() -> void:
 		var colour: String = Settings.WIRE_COLOURS[i]
 		var wire: Button = _wire_buttons[colour]
 		wire.disabled = fuse["solved"] or colour in chosen
-		var border := HIGHLIGHT if i == _wire_index else Color(1, 1, 1, 0.15)
+		var border := HIGHLIGHT if i == _wire_index and _wire_keys_used else Color(1, 1, 1, 0.15)
 		wire.add_theme_stylebox_override("normal", _spot_style(border))
 		wire.add_theme_stylebox_override("disabled", _spot_style(Color(0, 0, 0, 0.4)))
 	if fuse["solved"]:
@@ -837,14 +834,8 @@ func _build_ui() -> void:
 			_doors[spot["name"]] = button
 	_spot_by_name["fuse_box"].text = "Fuse box"
 	_spot_by_name["house_plan"].text = "House plan"
-	# The doll can be clicked herself (above the stairs): she turns, and alone she has a note.
-	var doll_spot := Button.new()
-	_style_spot(doll_spot, "DollSpot", 14)
-	doll_spot.add_theme_stylebox_override("normal", StyleBoxEmpty.new())  # no box around her (playtest)
-	doll_spot.tooltip_text = "The doll"
-	_place(doll_spot, DOLL_RECT)
-	doll_spot.pressed.connect(_on_doll_pressed)
-	hall_area.add_child(doll_spot)
+	# The doll is no button of her own: the dark stairs make her turn (playtest: once is
+	# enough). Alone, a note lies in her lap with the wire order.
 	_doll_note = TextureButton.new()
 	_doll_note.name = "DollNote"
 	_doll_note.texture_normal = load(IMAGES + "prop_note.png")

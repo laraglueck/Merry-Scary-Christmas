@@ -129,3 +129,22 @@ func test_next_colour_goes_round_through_all_colours() -> void:
 	CharacterRules.pick(selection, 1, "snowman", "green")
 	CharacterRules.pick(selection, 2, "nutcracker", "yellow")
 	assert_eq(CharacterRules.next_colour(selection, 0, 1), "green", "all taken: still changes (shared)")
+
+
+# Playtest: with all three heroes taken nobody could change any more. Now a player can
+# give their hero back (before pressing Next), so someone else can take it.
+func test_a_player_can_give_their_hero_back() -> void:
+	var selection := {}
+	CharacterRules.pick(selection, 0, "santa", "red")
+	assert_eq(CharacterRules.release(selection, 0), "", "allowed")
+	assert_eq(selection.has(0), false, "no hero any more")
+	assert_eq(CharacterRules.pick(selection, 1, "santa", "red"), "", "Santa is free for Player 2")
+
+
+func test_no_giving_back_after_next_or_without_a_hero() -> void:
+	var selection := {}
+	assert_contains(CharacterRules.release(selection, 0), "no hero", "nothing to give back")
+	CharacterRules.pick(selection, 0, "santa", "red")
+	CharacterRules.set_ready(selection, 0)
+	assert_contains(CharacterRules.release(selection, 0), "ready", "after Next it stays")
+	assert_eq(selection[0]["character"], "santa", "unchanged")
