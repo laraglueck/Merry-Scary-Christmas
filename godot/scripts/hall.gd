@@ -152,6 +152,7 @@ Scary Jingles has stolen three presents. Bring them back before midnight!
 
 ⏰ 20 minutes until midnight."""
 var _message: Label
+var _last_event := ""  # the game event shown last: a tick with no new event keeps our own message
 
 
 func _ready() -> void:
@@ -173,6 +174,7 @@ func _ready() -> void:
 		for button in _player_buttons:
 			button.visible = false  # each device is one player
 		_message.text = net.game["last_event"]
+		_last_event = net.game["last_event"]
 	_refresh()
 	_show_mission(_mission_seen_for != _mission_key())  # once per game, at the first visit
 
@@ -191,7 +193,10 @@ func _on_game_changed() -> void:
 	if not _online():
 		return  # game is over (host left); main.gd switches the screen
 	_take_game()
-	_message.text = net.game["last_event"]
+	# Only a new event replaces the message (playtest: "still dark" vanished at every clock tick).
+	if net.game["last_event"] != _last_event:
+		_last_event = net.game["last_event"]
+		_message.text = _last_event
 	_notice_wrong_order(net.game)
 	_notice_fuse_on()
 	_refresh()

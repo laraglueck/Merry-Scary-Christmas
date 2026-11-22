@@ -198,6 +198,21 @@ func open_online_hall(net: Node) -> Node:
 	return hall
 
 
+# Playtest: the "still dark" message vanished at the next clock tick. Now it stays until
+# something new happens in the game.
+func test_the_dark_door_message_stays_until_something_happens() -> void:
+	var room: Array = await make_started_room(47620)
+	var hall := open_online_hall(room[0])
+	hall._close_mission()
+	hall._use_spot("bathroom")
+	assert_contains(text_of(hall, "Message"), "still dark", "says why")
+	room[0].game_changed.emit()  # the clock ticks: the game is sent again, nothing new
+	assert_contains(text_of(hall, "Message"), "still dark", "still there after a tick")
+	room[0].game["last_event"] = "Player 2 found something."
+	room[0].game_changed.emit()
+	assert_eq(text_of(hall, "Message"), "Player 2 found something.", "a real event replaces it")
+
+
 func test_online_hall_shows_only_my_player() -> void:
 	var room: Array = await make_started_room(47541)
 	var a = room[1]
