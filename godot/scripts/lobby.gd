@@ -106,7 +106,12 @@ func _refresh() -> void:
 	var host_with_save: bool = net.connected and net.my_index == 0 and net.game.is_empty() and net.has_saved_game()
 	_resume_button.visible = host_with_save
 	_resume_button.disabled = not net.can_resume()
-	_resume_button.text = "Resume saved game" if net.can_resume() else "Resume saved game (needs %d players)" % 3
+	if net.can_resume():
+		_resume_button.text = "Resume saved game"
+	elif net.has_saved_game() and not net.saved_game_fits():
+		_resume_button.text = "Saved game is for 3 players" if net.solo else "Saved game is for 1 player"
+	else:
+		_resume_button.text = "Resume saved game (needs %d players)" % 3
 	_wait_label.visible = net.connected and net.my_index > 0
 	if not host_with_save:
 		_confirm_box.visible = false

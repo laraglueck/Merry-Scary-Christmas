@@ -331,6 +331,37 @@ func test_no_resume_without_a_save_or_players() -> void:
 	assert_eq(room[1].can_resume(), false, "only the host resumes")
 
 
+# Playtest: a game saved with three players does not come back when playing alone (it
+# brought three figures), and a game saved alone not with three players.
+func test_resume_only_the_same_kind_of_game() -> void:
+	var rng := RandomNumberGenerator.new()
+	SaveGame.save(GameRules.new_game(rng), SaveGame.path())  # three players
+	var net := make_device("Alone again")
+	net.play_alone()
+	assert_eq(net.has_saved_game(), true, "there is a save")
+	assert_eq(net.can_resume(), false, "but not for one player")
+	var solo_game := GameRules.new_game(rng)
+	solo_game["solo"] = true
+	SaveGame.save(solo_game, SaveGame.path())
+	assert_eq(net.can_resume(), true, "a solo save: yes")
+	var room: Array = await make_full_room(47619)
+	assert_eq(room[0].can_resume(), false, "a solo save is not for three players")
+
+
+# A solo game saved before the fix still had three figures: only the own one comes back.
+func test_resuming_alone_brings_back_only_the_own_figure() -> void:
+	var rng := RandomNumberGenerator.new()
+	var old := GameRules.new_game(rng)
+	old["solo"] = true
+	old["figures"][0]["x"] = 321.0
+	SaveGame.save(old, SaveGame.path())
+	var net := make_device("Alone")
+	net.play_alone()
+	net.resume_game()
+	assert_eq(net.game["figures"].keys(), [0], "one figure")
+	assert_eq(net.game["figures"][0]["x"], 321.0, "where it stood")
+
+
 # ---------- back to the lobby (spec 17) ----------
 
 func test_a_finished_game_ends_for_everyone_and_the_room_stays() -> void:

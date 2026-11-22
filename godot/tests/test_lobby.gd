@@ -289,6 +289,14 @@ func test_a_name_is_needed_before_starting() -> void:
 	assert_eq(lobby.net.team_name, "Gloria", "the name is kept")
 
 
+func test_resume_says_when_the_save_is_for_three_players() -> void:
+	save_a_game(30)  # saved with three players
+	var lobby := open_lobby()
+	press(lobby, "PlayAloneButton")
+	assert_eq(is_disabled(lobby, "ResumeButton"), true, "cannot resume alone")
+	assert_contains(text_of(lobby, "ResumeButton"), "3 players", "says why")
+
+
 func test_play_alone_needs_no_room() -> void:
 	var lobby := open_lobby()
 	press(lobby, "PlayAloneButton")

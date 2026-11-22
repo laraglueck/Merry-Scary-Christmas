@@ -281,7 +281,13 @@ func has_saved_game() -> bool:
 
 
 func can_resume() -> bool:
-	return can_start() and has_saved_game()
+	return can_start() and has_saved_game() and saved_game_fits()
+
+
+# A game saved alone goes on only alone, a team game only with three players (playtest:
+# a team save resumed alone brought back three figures).
+func saved_game_fits() -> bool:
+	return bool(SaveGame.load_from(save_path).get("solo", false)) == solo
 
 
 # Host: the saved game goes on where it stopped, for everyone.
@@ -289,6 +295,9 @@ func resume_game() -> void:
 	if not can_resume():
 		return
 	game = SaveGame.load_from(save_path)
+	if solo:  # a solo game saved before the fix still had three figures
+		var own: Dictionary = game.get("figures", {}).get(0, {})
+		game["figures"] = {0: own} if not own.is_empty() else WalkRules.new_figures(1)
 	_clock_rest = 0.0
 	_send_game()
 	game_changed.emit()
