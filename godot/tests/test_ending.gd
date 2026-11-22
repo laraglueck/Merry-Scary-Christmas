@@ -144,7 +144,7 @@ func test_a_win_goes_onto_the_leaderboard() -> void:
 	use_test_board()
 	open_won_ending("Team Rudolph", 300)
 	var ending := open_won_ending("Team Comet", 450)
-	assert_contains(text_of(ending, "LeaderboardTitle"), "Fastest", "a leaderboard")
+	assert_contains(text_of(ending, "LeaderboardTitle"), "Fastest escapes", "a leaderboard for teams and solo players (playtest)")
 	var list := text_of(ending, "LeaderboardRows")
 	assert_contains(list, "Team Comet", "the new team")
 	assert_true(list.find("Team Comet") < list.find("Team Rudolph"), "more time left comes first")

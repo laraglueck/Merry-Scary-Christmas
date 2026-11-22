@@ -389,10 +389,10 @@ func _build_cookies() -> void:
 	_cookies.name = "Cookies"
 	_cookies.texture_normal = load(IMAGES + "item_cookies.png")
 	_cookies.ignore_texture_size = true
-	_cookies.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-	_cookies.position = Vector2(555, 302)  # on the plate in the middle of the table
-	_cookies.size = Vector2(56, 38)
-	_cookies.modulate = Color(0.8, 0.76, 0.7)  # a little darker, like the rest of the room
+	_cookies.stretch_mode = TextureButton.STRETCH_SCALE  # squashed to the table's angle (playtest)
+	_cookies.position = Vector2(556, 306)  # exactly over the painted plate in the middle of the table
+	_cookies.size = Vector2(52, 23)
+	_cookies.modulate = Color(0.74, 0.7, 0.65)  # a little darker, like the rest of the room
 	_cookies.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_cookies.tooltip_text = "A plate of cookies"
 	_cookies.pressed.connect(_take_cookies)

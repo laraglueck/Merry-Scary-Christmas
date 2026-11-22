@@ -372,7 +372,7 @@ func _build_card(info: Dictionary) -> Button:
 	var card := Button.new()
 	card.name = "Card_" + id
 	card.toggle_mode = true
-	card.custom_minimum_size = Vector2(210, 120)
+	card.custom_minimum_size = Vector2(230, 140)  # room for the power text (playtest)
 	_paint(card, Color(0.1, 0.07, 0.07, 0.85))
 	card.pressed.connect(_on_card_pressed.bind(id))
 	_cards[id] = card

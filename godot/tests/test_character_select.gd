@@ -1,5 +1,6 @@
 # Tests for spec 18: the character selection screen (list left, big figure, arrows, Next).
 extends "res://tests/base_test.gd"
+const Settings = preload("res://scripts/settings.gd")
 
 const SelectScene = preload("res://scenes/character_select.tscn")
 
@@ -35,6 +36,18 @@ func test_nobody_has_a_hero_until_they_choose() -> void:
 	press(screen, "Card_snowman")
 	assert_eq(screen.selection()[0]["character"], "snowman", "the snowman, chosen freely")
 	assert_eq(is_disabled(screen, "NextButton"), false, "now Next works")
+
+
+# Playtest: the power text ran out of the bottom of the card.
+func test_the_power_text_fits_inside_the_card() -> void:
+	var screen := open_select()
+	await tree.process_frame
+	for info in Settings.CHARACTERS:
+		var card: Control = screen.find_child("Card_" + info["id"], true, false)
+		var power: Label = screen.find_child("Power_" + info["id"], true, false)
+		var texts: Control = power.get_parent()
+		assert_true(texts.get_combined_minimum_size().y <= card.size.y - 12,
+			"%s: text %d high, card %d" % [info["id"], texts.get_combined_minimum_size().y, card.size.y])
 
 
 func test_every_card_and_the_chosen_hero_show_the_power() -> void:

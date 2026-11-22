@@ -1079,8 +1079,9 @@ func test_alone_the_fuse_box_says_the_order_is_hidden() -> void:
 
 func test_alone_the_doll_on_the_stairs_has_the_note() -> void:
 	var hall := open_hall_alone()
-	press(hall, "DollSpot")
-	assert_eq(is_shown(hall, "NotePanel"), true, "a note by the doll")
+	assert_eq(is_shown(hall, "DollNote"), true, "a note lies in her lap")
+	press(hall, "DollNote")
+	assert_eq(is_shown(hall, "NotePanel"), true, "the note opens")
 	var expected := ["star", "bell", "snowflake", "tree"]  # the red fuse's order, seed 42
 	for i in 4:
 		assert_eq(texture_file(hall, "NoteSymbol%d" % i), "sym_%s.png" % expected[i], "note symbol %d" % i)
@@ -1098,9 +1099,25 @@ func test_alone_one_right_order_lights_every_room() -> void:
 		assert_contains(text_of(hall, "RoomLamp%d" % i), "lit", "room %d lit" % i)
 
 
+# Playtest: clicking the doll opened the note at once, so her scary turn was hidden.
+func test_alone_the_doll_herself_only_turns_her_head() -> void:
+	var hall := open_hall_alone()
+	press(hall, "DollSpot")
+	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "she turns her head")
+	assert_eq(is_shown(hall, "NotePanel"), false, "no note over her")
+
+
+# Playtest: a dark box stood around the doll.
+func test_the_doll_has_no_box_around_her() -> void:
+	var hall := open_hall_alone()
+	var spot: Button = hall.find_child("DollSpot", true, false)
+	assert_true(spot.get_theme_stylebox("normal") is StyleBoxEmpty, "see-through until the mouse is over her")
+
+
 func test_in_a_team_the_doll_has_no_note() -> void:
 	var hall := open_hall()
 	hall._close_mission()
+	assert_eq(is_shown(hall, "DollNote"), false, "no note in her lap")
 	press(hall, "DollSpot")
 	assert_eq(is_shown(hall, "NotePanel"), false, "the note is only for single player")
 	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "but she still turns her head")

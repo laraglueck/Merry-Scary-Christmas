@@ -26,7 +26,7 @@ const Leaderboard = preload("res://scripts/net/leaderboard.gd")
 
 # Sounds this screen played (or would have played in the headless test run), spec 20.
 var sounds_played: Array[String] = []
-var _board_rows: Label  # the fastest teams (second test round)
+var _board_rows: Label  # the fastest escapes (second test round)
 var _my_entry := {}
 const WAKE_SECONDS := 5.0    # midnight: how long the wake-up shows before the end screen
 const WAKE_FADE_IN := 2.0     # how slowly his face comes out of the dark
@@ -64,7 +64,7 @@ func _build_leaderboard(game: Dictionary) -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	panel.add_child(column)
-	var title := _label(column, "LeaderboardTitle", "🏆 Fastest teams", 22)
+	var title := _label(column, "LeaderboardTitle", "🏆 Fastest escapes", 22)  # also for one player (playtest)
 	title.add_theme_color_override("font_color", Color("ffd76a"))
 	_board_rows = _label(column, "LeaderboardRows", "Loading...", 15)
 	_board_rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT

@@ -68,6 +68,7 @@ const STORY_SOUND_SECONDS := 2.0  # only the start of the bells
 const DOLL_RECT := Rect2(872, 398, 72, 144)  # sitting on a lower step, on the right, under the stairs label
 const DOLL_DIMMED := Color(0.7, 0.65, 0.65)  # in the dim back of the hall
 const DOLL_TURN_SECONDS := 1.5
+const DOLL_NOTE_RECT := Rect2(890, 472, 32, 24)  # alone: the note lies in her lap (playtest)
 const SOUNDS := "res://assets/sounds/"
 
 
@@ -117,6 +118,7 @@ var _wrong_tries := 0              # this player's wrong orders for their own fu
 var _seen_penalty := 0             # online: to notice a wrong order by anyone (sparks)
 var _seen_solved := 0              # online: to notice a fuse going on, whoever did it (click, spec 22)
 var _doll: TextureRect
+var _doll_note: TextureButton  # alone: the wire order, in the doll's lap
 var _spark: AudioStreamPlayer
 var _creak: AudioStreamPlayer
 var _click: AudioStreamPlayer      # a fuse snaps in (spec 22)
@@ -240,18 +242,23 @@ func _alone() -> bool:
 	return net.game.get("solo", false) if _online() else solo
 
 
-# The doll on the stairs: she turns her head; alone, a note lies by her with the wire order.
+# The doll on the stairs: she turns her head. Alone, a note lies in her lap with the wire
+# order; it is clicked on its own, so her turn is not hidden behind it (playtest).
 func _on_doll_pressed() -> void:
 	_doll_turns()
-	if _alone():
-		_fuse_panel.visible = false
-		_house_plan_panel.visible = false
-		_note_panel.visible = true
-		_show_figures(false)
-		var label := Rules.label_for(puzzle, 0)
-		for i in _note_symbols.size():
-			_show_symbol(_note_symbols[i], label[i])
-		_message.text = "A crumpled note lies by the doll."
+
+
+func _on_doll_note_pressed() -> void:
+	if not _alone():
+		return
+	_fuse_panel.visible = false
+	_house_plan_panel.visible = false
+	_note_panel.visible = true
+	_show_figures(false)
+	var label := Rules.label_for(puzzle, 0)
+	for i in _note_symbols.size():
+		_show_symbol(_note_symbols[i], label[i])
+	_message.text = "A crumpled note lay in the doll's lap."
 
 
 # The figures are drawn by depth and would cover a close-up, so they step aside.
@@ -833,10 +840,24 @@ func _build_ui() -> void:
 	# The doll can be clicked herself (above the stairs): she turns, and alone she has a note.
 	var doll_spot := Button.new()
 	_style_spot(doll_spot, "DollSpot", 14)
+	doll_spot.add_theme_stylebox_override("normal", StyleBoxEmpty.new())  # no box around her (playtest)
 	doll_spot.tooltip_text = "The doll"
 	_place(doll_spot, DOLL_RECT)
 	doll_spot.pressed.connect(_on_doll_pressed)
 	hall_area.add_child(doll_spot)
+	_doll_note = TextureButton.new()
+	_doll_note.name = "DollNote"
+	_doll_note.texture_normal = load(IMAGES + "prop_note.png")
+	_doll_note.ignore_texture_size = true
+	_doll_note.stretch_mode = TextureButton.STRETCH_SCALE
+	_doll_note.modulate = DOLL_DIMMED
+	_doll_note.rotation_degrees = -12
+	_doll_note.tooltip_text = "A crumpled note"
+	_doll_note.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_place(_doll_note, DOLL_NOTE_RECT)
+	_doll_note.pressed.connect(_on_doll_note_pressed)
+	_doll_note.visible = _alone()
+	hall_area.add_child(_doll_note)
 	for story in STORIES:
 		_spot_by_name[story].tooltip_text = STORIES[story]["hint"]  # no name on it, a hint on hover
 	_story_sound = AudioStreamPlayer.new()
