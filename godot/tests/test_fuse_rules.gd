@@ -177,3 +177,22 @@ func test_lit_rooms_are_derived_not_stored() -> void:
 	assert_eq(sorted(puzzle.keys()), ["fuses", "legend"], "puzzle keys")
 	for fuse in puzzle.get("fuses", []):
 		assert_eq(sorted(fuse.keys()), ["colour", "order", "room", "solved"], "fuse keys")
+
+
+# ---------- single player (second test round) ----------
+
+func test_alone_one_right_order_turns_on_all_three_fuses() -> void:
+	var puzzle := Rules.create_puzzle(make_rng(42))
+	var order: Array = puzzle["fuses"][0]["order"].duplicate()
+	var result := Rules.try_fuse_alone(puzzle, order)
+	assert_eq(result["correct"], true, "right")
+	assert_eq(Rules.lit_rooms(puzzle).size(), 3, "every room is lit")
+
+
+func test_alone_a_wrong_order_sparks_and_changes_nothing() -> void:
+	var puzzle := Rules.create_puzzle(make_rng(42))
+	var wrong: Array = puzzle["fuses"][0]["order"].duplicate()
+	wrong.reverse()
+	var before := puzzle.duplicate(true)
+	assert_eq(Rules.try_fuse_alone(puzzle, wrong)["penalty_seconds"], 10, "sparks")
+	assert_eq(puzzle, before, "nothing changed")

@@ -18,10 +18,11 @@ class FakeNet extends Node:
 
 
 # Opens the attic like starting the scene (this runs _ready).
-func open_attic(has_photo := false) -> Node:
+func open_attic(has_photo := false, has_cookies := false) -> Node:
 	var attic = AtticScene.instantiate()
 	attic.seed_value = 42
 	attic.has_photo = has_photo
+	attic.has_cookies = has_cookies
 	tree.root.add_child(attic)
 	return attic
 
@@ -142,8 +143,19 @@ func test_lock_in_ends_the_game_as_scary_christmas() -> void:
 	assert_contains(text_of(attic, "Message"), "locked Scary Jingles in", "message")
 
 
+# Spec 31: with the photo but without the cookies the choice is still greyed out.
+func test_without_the_cookies_the_choice_is_greyed_out_and_explains() -> void:
+	var attic := open_attic(true, false)
+	open_and_take_the_key(attic)
+	assert_true(find(attic, "ChoiceReconcile").modulate.a < 1.0, "greyed out")
+	assert_contains(text_of(attic, "EndingHint"), "cookies", "the hint points to the cookies")
+	press(attic, "ChoiceReconcile")
+	assert_contains(text_of(attic, "Message"), "cookies on the table", "reason")
+	assert_eq(attic.game["phase"], "hall", "game goes on")
+
+
 func test_with_the_photo_the_choice_is_open_and_ends_merry() -> void:
-	var attic := open_attic(true)
+	var attic := open_attic(true, true)
 	open_and_take_the_key(attic)
 	assert_eq(find(attic, "ChoiceReconcile").modulate.a, 1.0, "not greyed out")
 	key(attic, "ui_right")  # from "Lock him in" to the photo

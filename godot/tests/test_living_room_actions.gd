@@ -203,3 +203,26 @@ func test_gift_action_requires_team_in_living_room() -> void:
 	assert_eq(game["penalty_seconds"], 0, "no penalty")
 	assert_contains(game["last_event"], "enter the living room", "reason")
 	
+
+
+# ---------- spec 31: the cookies ----------
+
+func test_the_cookies_go_into_the_inventory() -> void:
+	var game := make_game()
+	GameRules.apply(game, 0, "take_cookies", {})
+	assert_true("cookies" in game["inventory"], "cookies taken")
+	assert_contains(game["last_event"], "cookies", "event")
+
+
+func test_the_cookies_are_taken_only_once() -> void:
+	var game := make_game()
+	GameRules.apply(game, 0, "take_cookies", {})
+	GameRules.apply(game, 1, "take_cookies", {})
+	assert_eq(game["inventory"].count("cookies"), 1, "one plate")
+	assert_contains(game["last_event"], "already", "explains")
+
+
+func test_no_cookies_in_the_dark() -> void:
+	var game := make_game(false)
+	GameRules.apply(game, 0, "take_cookies", {})
+	assert_true(not "cookies" in game["inventory"], "nothing taken")

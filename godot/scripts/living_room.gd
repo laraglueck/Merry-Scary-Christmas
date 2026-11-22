@@ -28,6 +28,7 @@ var _piece_button: TextureButton  # a torn piece of the photo in the open clock 
 var _digit_label: Label
 var _note_panel: Panel
 var _note_text: Label
+var _cookies: TextureButton  # spec 31: a plate of cookies on the table
 
 
 func _ready() -> void:
@@ -50,6 +51,7 @@ func _ready() -> void:
 	_build_clock_submission()
 	_build_reward()
 	_build_note_ui()
+	_build_cookies()
 	_build_door()
 	_build_window()
 	_refresh()
@@ -94,6 +96,7 @@ func _refresh() -> void:
 	_piece_button.visible = solved and not InventoryRules.has(game, "photo_piece_1") \
 			and not InventoryRules.has(game, "photo")
 	_digit_label.visible = solved
+	_cookies.visible = lit and not InventoryRules.has(game, "cookies")
 	_digit_label.text = str(room["digit"])
 
 	if solved:
@@ -371,6 +374,36 @@ func _open_note() -> void:
 
 	var lines := LivingRoomRules.rhyme_for(game["bathroom"]["tap_order"])
 	_note_text.text = "\n\n".join(lines)
+	_clock_panel.hide()
+	_note_panel.get_parent().move_child(_note_panel, -1)  # on top (it lives on the stage, spec 21)
+	_note_panel.show()
+
+
+# Spec 31: a plate of cookies on the table. A click takes them for the team, and the note
+# from J. that lay under the plate opens. The good ending needs the cookies and the photo.
+const PLATE_NOTE := "Every Christmas I leave cookies out for Santa.\nEvery Christmas nobody comes for them.\n\n— J."
+
+
+func _build_cookies() -> void:
+	_cookies = TextureButton.new()
+	_cookies.name = "Cookies"
+	_cookies.texture_normal = load(IMAGES + "item_cookies.png")
+	_cookies.ignore_texture_size = true
+	_cookies.stretch_mode = TextureButton.STRETCH_SCALE  # squashed to the table's angle (playtest)
+	_cookies.position = Vector2(556, 306)  # exactly over the painted plate in the middle of the table
+	_cookies.size = Vector2(52, 23)
+	_cookies.modulate = Color(0.74, 0.7, 0.65)  # a little darker, like the rest of the room
+	_cookies.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_cookies.tooltip_text = "A plate of cookies"
+	_cookies.pressed.connect(_take_cookies)
+	add_child(_cookies)
+
+
+func _take_cookies() -> void:
+	_send("take_cookies", {})
+	if not game["puzzle"]["fuses"][RED_FUSE]["solved"]:
+		return  # too dark: the message says why (online the answer comes later, so no inventory check)
+	_note_text.text = PLATE_NOTE
 	_clock_panel.hide()
 	_note_panel.get_parent().move_child(_note_panel, -1)  # on top (it lives on the stage, spec 21)
 	_note_panel.show()

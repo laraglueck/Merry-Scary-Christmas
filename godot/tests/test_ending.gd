@@ -115,3 +115,50 @@ func test_scary_music_is_a_real_song() -> void:
 	assert_true(music != null, "music_scary.mp3 is there")
 	assert_true(music != null and music.get_length() > 40.0, "a whole song, not a placeholder")
 
+
+
+# ---------- leaderboard and countdown (second test round) ----------
+
+const TEST_BOARD := "user://test_leaderboard.json"
+
+
+func use_test_board() -> void:
+	OS.set_environment("MERRY_SCARY_LEADERBOARD", TEST_BOARD)
+	if FileAccess.file_exists(TEST_BOARD):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_BOARD))
+
+
+func open_won_ending(name: String, seconds_left: int) -> Node:
+	var net := FakeNet.new()
+	tree.root.add_child(net)
+	net.game = {"phase": "merry", "inventory": [], "seconds_played": Settings.GAME_SECONDS - seconds_left,
+			"penalty_seconds": 0, "last_event": "", "team_name": name}
+	var ending = EndingScene.instantiate()
+	ending.net = net
+	ending.place = "merry"
+	tree.root.add_child(ending)
+	return ending
+
+
+func test_a_win_goes_onto_the_leaderboard() -> void:
+	use_test_board()
+	open_won_ending("Team Rudolph", 300)
+	var ending := open_won_ending("Team Comet", 450)
+	assert_contains(text_of(ending, "LeaderboardTitle"), "Fastest escapes", "a leaderboard for teams and solo players (playtest)")
+	var list := text_of(ending, "LeaderboardRows")
+	assert_contains(list, "Team Comet", "the new team")
+	assert_true(list.find("Team Comet") < list.find("Team Rudolph"), "more time left comes first")
+	assert_contains(list, "07:30", "with its time left")
+
+
+func test_midnight_goes_not_onto_the_leaderboard() -> void:
+	use_test_board()
+	open_ending("midnight", [], Settings.GAME_SECONDS)
+	var ending := open_won_ending("Team Comet", 450)
+	assert_true(not text_of(ending, "LeaderboardRows").contains("Nameless"), "only the win is listed")
+
+
+func test_the_end_screen_counts_down_to_christmas() -> void:
+	use_test_board()
+	var ending := open_won_ending("Team Comet", 450)
+	assert_contains(text_of(ending, "Countdown"), "Christmas Eve", "the countdown")

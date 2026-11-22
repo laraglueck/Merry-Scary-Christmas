@@ -331,6 +331,37 @@ func test_no_resume_without_a_save_or_players() -> void:
 	assert_eq(room[1].can_resume(), false, "only the host resumes")
 
 
+# Playtest: a game saved with three players does not come back when playing alone (it
+# brought three figures), and a game saved alone not with three players.
+func test_resume_only_the_same_kind_of_game() -> void:
+	var rng := RandomNumberGenerator.new()
+	SaveGame.save(GameRules.new_game(rng), SaveGame.path())  # three players
+	var net := make_device("Alone again")
+	net.play_alone()
+	assert_eq(net.has_saved_game(), true, "there is a save")
+	assert_eq(net.can_resume(), false, "but not for one player")
+	var solo_game := GameRules.new_game(rng)
+	solo_game["solo"] = true
+	SaveGame.save(solo_game, SaveGame.path())
+	assert_eq(net.can_resume(), true, "a solo save: yes")
+	var room: Array = await make_full_room(47619)
+	assert_eq(room[0].can_resume(), false, "a solo save is not for three players")
+
+
+# A solo game saved before the fix still had three figures: only the own one comes back.
+func test_resuming_alone_brings_back_only_the_own_figure() -> void:
+	var rng := RandomNumberGenerator.new()
+	var old := GameRules.new_game(rng)
+	old["solo"] = true
+	old["figures"][0]["x"] = 321.0
+	SaveGame.save(old, SaveGame.path())
+	var net := make_device("Alone")
+	net.play_alone()
+	net.resume_game()
+	assert_eq(net.game["figures"].keys(), [0], "one figure")
+	assert_eq(net.game["figures"][0]["x"], 321.0, "where it stood")
+
+
 # ---------- back to the lobby (spec 17) ----------
 
 func test_a_finished_game_ends_for_everyone_and_the_room_stays() -> void:
@@ -419,3 +450,32 @@ func test_a_player_who_leaves_loses_their_pick() -> void:
 	assert_true(await wait_until(func(): return room[0].players.size() == 2), "Player 3 left")
 	assert_eq(room[0].game["selection"].has(2), false, "the pick is gone")
 	assert_eq(room[0].game.get("phase"), "select", "still choosing")
+
+
+# ---------- single player and the team name (second test round) ----------
+
+func test_play_alone_starts_a_game_with_one_player() -> void:
+	var net := make_device("Alone")
+	net.team_name = "Gloria"
+	net.play_alone()
+	assert_eq(net.connected, true, "ready to play")
+	assert_eq(net.players, [0], "one player")
+	assert_eq(net.can_start(), true, "one player is enough")
+	net.begin_selection()
+	net.send_action("pick_character", {"character": "snowman", "colour": "green"})
+	net.send_action("ready", {})
+	assert_eq(net.game.get("phase"), "hall", "the game runs after one hero is ready")
+	assert_eq(net.game.get("solo"), true, "a single-player game")
+	assert_eq(net.game.get("team_name"), "Gloria", "the player's name")
+	assert_eq(net.game["figures"].keys(), [0], "only the own hero walks in the hall, no strangers")
+
+
+func test_the_team_name_goes_into_the_game() -> void:
+	var room: Array = await make_full_room(47618)
+	room[0].team_name = "  The Elves  "
+	room[0].begin_selection()
+	await wait_until(func(): return room[2].game.get("phase") == "select")
+	pick_all(room)
+	assert_true(await wait_until(func(): return room[2].game.get("phase") == "hall"), "the game runs")
+	assert_eq(room[2].game.get("team_name"), "The Elves", "everyone knows the team name")
+	assert_eq(room[2].game.get("solo", false), false, "not single player")

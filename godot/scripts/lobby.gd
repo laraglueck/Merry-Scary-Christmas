@@ -18,6 +18,8 @@ var _start_button: Button
 var _resume_button: Button
 var _confirm_box: Control  # "Start a new game? The saved game will be lost."
 var _wait_label: Label     # Players 2 and 3: "Waiting for Player 1 ..." (03c)
+var _name_field: LineEdit  # team name, or your own name when playing alone
+var _alone_button: Button
 
 
 func _ready() -> void:
@@ -34,11 +36,26 @@ func _on_create_pressed() -> void:
 	net.host_room()
 
 
+func _on_alone_pressed() -> void:
+	net.play_alone()
+
+
+func _on_name_changed(text: String) -> void:
+	net.team_name = NetworkScript.clean_name(text)
+	_refresh()
+
+
+func _has_name() -> bool:
+	return NetworkScript.clean_name(net.team_name) != ""
+
+
 func _on_join_pressed() -> void:
 	net.join(_address_field.text)
 
 
 func _on_start_pressed() -> void:
+	if not _has_name():
+		return
 	if net.has_saved_game():
 		_confirm_box.visible = true  # ask first: the save would be lost
 	else:
@@ -67,18 +84,34 @@ func _refresh() -> void:
 	for index in net.players:
 		names.append("Player %d%s" % [index + 1, " (you)" if index == net.my_index else ""])
 	_players_label.text = "Players: " + (", ".join(names) if not names.is_empty() else "nobody yet")
+	if net.solo:
+		_players_label.text = "You play alone tonight."
 	_players_label.visible = not names.is_empty()
-	var busy: bool = net.is_active()
+	var busy: bool = net.is_active() or net.solo
 	_create_button.disabled = busy
+	_alone_button.disabled = busy or net.connected
+	_alone_button.visible = not net.connected  # in a room (or already alone) it is not needed
 	_join_button.disabled = busy
 	_address_field.editable = not busy
 	_start_button.visible = net.connected and net.my_index == 0
-	_start_button.disabled = not net.can_start()
-	_start_button.text = "Start game" if net.can_start() else "Start game (needs %d players)" % 3
+	_start_button.disabled = not net.can_start() or not _has_name()
+	if not net.can_start():
+		_start_button.text = "Start game (needs %d players)" % 3
+	elif not _has_name():
+		_start_button.text = "Start game (enter a name first)"
+	else:
+		_start_button.text = "Start game"
+	_name_field.visible = net.connected and net.my_index == 0
+	_name_field.placeholder_text = "Your name" if net.solo else "Team name"
 	var host_with_save: bool = net.connected and net.my_index == 0 and net.game.is_empty() and net.has_saved_game()
 	_resume_button.visible = host_with_save
 	_resume_button.disabled = not net.can_resume()
-	_resume_button.text = "Resume saved game" if net.can_resume() else "Resume saved game (needs %d players)" % 3
+	if net.can_resume():
+		_resume_button.text = "Resume saved game"
+	elif net.has_saved_game() and not net.saved_game_fits():
+		_resume_button.text = "Saved game is for 3 players" if net.solo else "Saved game is for 1 player"
+	else:
+		_resume_button.text = "Resume saved game (needs %d players)" % 3
 	_wait_label.visible = net.connected and net.my_index > 0
 	if not host_with_save:
 		_confirm_box.visible = false
@@ -103,7 +136,7 @@ func _build_ui() -> void:
 
 	var page := VBoxContainer.new()
 	page.name = "LobbyPage"
-	page.add_theme_constant_override("separation", 26)
+	page.add_theme_constant_override("separation", 24)
 	centre.add_child(page)
 
 	var title := Label.new()
@@ -140,6 +173,15 @@ func _build_ui() -> void:
 	_paint_button(_join_button, Color("2f7d3a"))  # green: its own colour (03c)
 	join_row.add_child(_join_button)
 
+	# Single player (second test round): no room, one hero.
+	_alone_button = Button.new()
+	_alone_button.name = "PlayAloneButton"
+	_alone_button.text = "Play alone"
+	_alone_button.custom_minimum_size = Vector2(532, 48)
+	_alone_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_alone_button.pressed.connect(_on_alone_pressed)
+	page.add_child(_alone_button)
+
 	_status_label = Label.new()
 	_status_label.name = "StatusLabel"
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # as wide as the column: wrapping is safe
@@ -158,6 +200,17 @@ func _build_ui() -> void:
 	_players_label.name = "PlayersLabel"
 	_players_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	page.add_child(_players_label)
+
+	# The name for the leaderboard: the team's, or your own when alone. Only the host types it.
+	_name_field = LineEdit.new()
+	_name_field.name = "NameField"
+	_name_field.max_length = 20
+	_name_field.custom_minimum_size = Vector2(380, 48)
+	_name_field.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_name_field.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_name_field.text_changed.connect(_on_name_changed)
+	_name_field.visible = false
+	page.add_child(_name_field)
 
 	_wait_label = Label.new()
 	_wait_label.name = "WaitLabel"

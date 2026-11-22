@@ -27,9 +27,9 @@ func assert_code_rejected(attic: Dictionary, dials: Array, reason: String) -> vo
 
 
 # A refused choice: error text contains the reason, no ending, attic unchanged.
-func assert_choice_rejected(attic: Dictionary, choice: String, has_photo: bool, reason: String) -> void:
+func assert_choice_rejected(attic: Dictionary, choice: String, has_photo: bool, reason: String, has_cookies := true) -> void:
 	var before := attic.duplicate(true)
-	var result := Rules.choose(attic, choice, has_photo)
+	var result := Rules.choose(attic, choice, has_photo, has_cookies)
 	assert_contains(result.get("error", ""), reason, "error text")
 	assert_eq(result.get("ending"), "", "no ending")
 	assert_eq(attic, before, "attic unchanged")
@@ -95,20 +95,31 @@ func test_trying_an_open_lock_is_refused() -> void:
 func test_lock_in_gives_scary_christmas() -> void:
 	var attic := open_attic()
 	Rules.take_key(attic)
-	var result := Rules.choose(attic, "lock_in", false)
+	var result := Rules.choose(attic, "lock_in", false, false)
 	assert_eq(result, {"ending": "scary", "error": ""}, "result")
 	assert_eq(attic["choice"], "lock_in", "choice kept")
 
 
 func test_reconcile_with_the_photo_gives_merry_christmas() -> void:
 	var attic := open_attic()
-	var result := Rules.choose(attic, "reconcile", true)
+	var result := Rules.choose(attic, "reconcile", true, true)
 	assert_eq(result, {"ending": "merry", "error": ""}, "result")
 	assert_eq(attic["choice"], "reconcile", "choice kept")
 
 
 func test_reconcile_without_the_photo_is_refused() -> void:
 	assert_choice_rejected(open_attic(), "reconcile", false, "nothing that could change his mind")
+
+
+# Spec 31: the good ending needs the cookies too (the empty plate in the living room).
+func test_reconcile_without_the_cookies_is_refused() -> void:
+	assert_choice_rejected(open_attic(), "reconcile", true, "cookies on the table", false)
+
+
+func test_lock_in_needs_no_cookies() -> void:
+	var attic := open_attic()
+	Rules.take_key(attic)
+	assert_eq(Rules.choose(attic, "lock_in", false, false)["ending"], "scary", "scary without cookies")
 
 
 func test_choosing_before_the_lock_is_open_is_refused() -> void:
@@ -122,7 +133,7 @@ func test_unknown_choice_is_refused() -> void:
 func test_second_choice_is_refused() -> void:
 	var attic := open_attic()
 	Rules.take_key(attic)
-	Rules.choose(attic, "lock_in", true)
+	Rules.choose(attic, "lock_in", true, true)
 	assert_choice_rejected(attic, "reconcile", true, "already")
 
 

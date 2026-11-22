@@ -198,6 +198,21 @@ func open_online_hall(net: Node) -> Node:
 	return hall
 
 
+# Playtest: the "still dark" message vanished at the next clock tick. Now it stays until
+# something new happens in the game.
+func test_the_dark_door_message_stays_until_something_happens() -> void:
+	var room: Array = await make_started_room(47620)
+	var hall := open_online_hall(room[0])
+	hall._close_mission()
+	hall._use_spot("bathroom")
+	assert_contains(text_of(hall, "Message"), "still dark", "says why")
+	room[0].game_changed.emit()  # the clock ticks: the game is sent again, nothing new
+	assert_contains(text_of(hall, "Message"), "still dark", "still there after a tick")
+	room[0].game["last_event"] = "Player 2 found something."
+	room[0].game_changed.emit()
+	assert_eq(text_of(hall, "Message"), "Player 2 found something.", "a real event replaces it")
+
+
 func test_online_hall_shows_only_my_player() -> void:
 	var room: Array = await make_started_room(47541)
 	var a = room[1]
@@ -775,12 +790,15 @@ func test_a_wrong_order_sparks_and_asks_whose_order_it_is() -> void:
 	assert_true(not text_of(hall, "FuseHint").contains("gold"), "the colour is not named yet")
 
 
-func test_the_second_wrong_order_names_the_fuse() -> void:
+# The rescue hint comes late (help in three levels): after Settings.RESCUE_TRIES wrong orders.
+func test_the_rescue_hint_names_the_fuse_only_after_many_tries() -> void:
 	var hall := open_hall()
 	press(hall, "FuseBoxButton")
+	for i in Settings.RESCUE_TRIES - 1:
+		click_wires(hall, RED_WRONG)
+	assert_true(not text_of(hall, "FuseHint").contains("GOLD"), "not yet")
 	click_wires(hall, RED_WRONG)
-	click_wires(hall, RED_WRONG)
-	assert_contains(text_of(hall, "FuseHint"), "gold", "Player 1 sees the gold fuse's order")
+	assert_contains(text_of(hall, "FuseHint"), "GOLD", "now it says whose order it is")
 
 
 func test_after_your_own_fuse_the_order_is_still_needed() -> void:
@@ -1037,3 +1055,69 @@ func test_figures_step_aside_while_the_wreath_note_is_open() -> void:
 	key(hall, "ui_cancel")
 	assert_eq(walking.visible if walking != null else false, true, "and come back")
 
+
+
+# ---------- single player (second test round) ----------
+
+func open_hall_alone() -> Node:
+	tree.root.size = Vector2i(1152, 648)
+	var hall = HallScene.instantiate()
+	hall.seed_value = 42
+	hall.solo = true
+	tree.root.add_child(hall)
+	hall._close_mission()
+	return hall
+
+
+func test_alone_the_fuse_box_says_the_order_is_hidden() -> void:
+	var hall := open_hall_alone()
+	press(hall, "FuseBoxButton")
+	assert_contains(text_of(hall, "FuseTitle"), "all three", "one player, all fuses")
+	assert_contains(text_of(hall, "LabelHint"), "hidden somewhere in the hall", "no teammate reads it out")
+	assert_eq(is_shown(hall, "LabelFrame"), false, "no order shown in the box")
+
+
+func test_alone_the_doll_on_the_stairs_has_the_note() -> void:
+	var hall := open_hall_alone()
+	assert_eq(is_shown(hall, "DollNote"), true, "a note lies in her lap")
+	press(hall, "DollNote")
+	assert_eq(is_shown(hall, "NotePanel"), true, "the note opens")
+	var expected := ["star", "bell", "snowflake", "tree"]  # the red fuse's order, seed 42
+	for i in 4:
+		assert_eq(texture_file(hall, "NoteSymbol%d" % i), "sym_%s.png" % expected[i], "note symbol %d" % i)
+	press(hall, "BackFromNote")
+	assert_eq(is_shown(hall, "NotePanel"), false, "closed again")
+
+
+func test_alone_one_right_order_lights_every_room() -> void:
+	var hall := open_hall_alone()
+	press(hall, "FuseBoxButton")
+	click_wires(hall, RED_RIGHT)
+	for colour in ["red", "green", "gold"]:
+		assert_eq(is_shown(hall, "BreakerOn_" + colour), true, colour + " breaker up")
+	for i in 3:
+		assert_contains(text_of(hall, "RoomLamp%d" % i), "lit", "room %d lit" % i)
+
+
+# Playtest: clicking the doll opened the note at once, so her scary turn was hidden.
+func test_alone_the_doll_herself_only_turns_her_head() -> void:
+	var hall := open_hall_alone()
+	press(hall, "DollSpot")
+	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "she turns her head")
+	assert_eq(is_shown(hall, "NotePanel"), false, "no note over her")
+
+
+# Playtest: a dark box stood around the doll.
+func test_the_doll_has_no_box_around_her() -> void:
+	var hall := open_hall_alone()
+	var spot: Button = hall.find_child("DollSpot", true, false)
+	assert_true(spot.get_theme_stylebox("normal") is StyleBoxEmpty, "see-through until the mouse is over her")
+
+
+func test_in_a_team_the_doll_has_no_note() -> void:
+	var hall := open_hall()
+	hall._close_mission()
+	assert_eq(is_shown(hall, "DollNote"), false, "no note in her lap")
+	press(hall, "DollSpot")
+	assert_eq(is_shown(hall, "NotePanel"), false, "the note is only for single player")
+	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "but she still turns her head")

@@ -55,6 +55,16 @@ static func try_fuse(puzzle: Dictionary, fuse_index: int, wires: Array) -> Dicti
 	return {"correct": false, "penalty_seconds": Settings.FUSE_PENALTY_SECONDS, "error": ""}
 
 
+# Single player (second test round): one wire order, the first fuse's, switches on all
+# three fuses together. A wrong order sparks like any other.
+static func try_fuse_alone(puzzle: Dictionary, wires: Array) -> Dictionary:
+	var result := try_fuse(puzzle, 0, wires)
+	if result["correct"]:
+		for fuse in puzzle["fuses"]:
+			fuse["solved"] = true
+	return result
+
+
 # Derived, not stored: always computed fresh from the fuses.
 static func lit_rooms(puzzle: Dictionary) -> Array:
 	var rooms := []

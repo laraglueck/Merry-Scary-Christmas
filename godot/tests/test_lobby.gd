@@ -51,7 +51,15 @@ func open_lobby_with(net: Node) -> Node:
 	var lobby = LobbyScene.instantiate()
 	lobby.net = net
 	tree.root.add_child(lobby)
+	type_name(lobby, "Team Rudolph")  # a name is needed before starting
 	return lobby
+
+
+func type_name(lobby: Node, text: String) -> void:
+	var field: LineEdit = lobby.find_child("NameField", true, false)
+	if field != null:
+		field.text = text
+		field.text_changed.emit(text)
 
 
 func test_start_button_hidden_before_hosting() -> void:
@@ -264,3 +272,35 @@ func test_everything_in_the_middle_with_more_room() -> void:
 		var gap := field.get_global_rect().position.y - create.get_global_rect().end.y
 		assert_true(gap >= 24, "more room between the lines: %d" % gap)
 
+
+
+
+# ---------- name and single player (second test round) ----------
+
+func test_a_name_is_needed_before_starting() -> void:
+	var lobby := open_lobby()
+	press(lobby, "PlayAloneButton")
+	assert_eq(is_disabled(lobby, "StartButton"), true, "no name yet")
+	assert_contains(text_of(lobby, "StartButton"), "name", "says why")
+	type_name(lobby, "Gloria")
+	assert_eq(is_disabled(lobby, "StartButton"), false, "with a name it starts")
+	press(lobby, "StartButton")
+	assert_eq(lobby.net.game.get("phase"), "select", "one player chooses a hero")
+	assert_eq(lobby.net.team_name, "Gloria", "the name is kept")
+
+
+func test_resume_says_when_the_save_is_for_three_players() -> void:
+	save_a_game(30)  # saved with three players
+	var lobby := open_lobby()
+	press(lobby, "PlayAloneButton")
+	assert_eq(is_disabled(lobby, "ResumeButton"), true, "cannot resume alone")
+	assert_contains(text_of(lobby, "ResumeButton"), "3 players", "says why")
+
+
+func test_play_alone_needs_no_room() -> void:
+	var lobby := open_lobby()
+	press(lobby, "PlayAloneButton")
+	assert_eq(is_disabled(lobby, "CreateButton"), true, "no room needed")
+	var alone: Control = lobby.find_child("PlayAloneButton", true, false)
+	assert_eq(alone.visible, false, "once is enough")
+	assert_contains(text_of(lobby, "PlayersLabel"), "alone", "says it")

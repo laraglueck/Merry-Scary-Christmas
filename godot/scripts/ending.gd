@@ -21,9 +21,13 @@ const ENDINGS := {
 @export var place := "merry"  # set by main.gd: the phase that ended the game
 var net: Node = null          # set by main.gd
 const SOUNDS := "res://assets/sounds/"
+const LeaderboardRules = preload("res://scripts/rules/leaderboard_rules.gd")
+const Leaderboard = preload("res://scripts/net/leaderboard.gd")
 
 # Sounds this screen played (or would have played in the headless test run), spec 20.
 var sounds_played: Array[String] = []
+var _board_rows: Label  # the fastest escapes (second test round)
+var _my_entry := {}
 const WAKE_SECONDS := 5.0    # midnight: how long the wake-up shows before the end screen
 const WAKE_FADE_IN := 2.0     # how slowly his face comes out of the dark
 
@@ -32,11 +36,66 @@ func _ready() -> void:
 	var game: Dictionary = net.game if net != null and not net.game.is_empty() else {"phase": place}
 	var ending: Dictionary = ENDINGS.get(place, ENDINGS["midnight"])
 	_build_ui(ending, _result_text(game), str(game.get("last_event", "")))
+	_build_leaderboard(game)
 	if place == "midnight":
 		_wake_up()  # spec 21: the clock strikes and he wakes, then the end screen
 	else:
 		for file_name in ending["sounds"]:
 			_play(file_name)
+
+
+# ---------- leaderboard and countdown (second test round) ----------
+
+# The fastest wins, online or on this computer, and the days until Christmas Eve. Only the
+# host saves the win (once), so a team is not listed three times.
+func _build_leaderboard(game: Dictionary) -> void:
+	var panel := PanelContainer.new()
+	panel.name = "LeaderboardPanel"
+	panel.position = Vector2(828, 70)
+	panel.custom_minimum_size = Vector2(300, 0)
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.05, 0.03, 0.03, 0.78)
+	box.border_color = Color("d4af37")
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(10)
+	box.set_content_margin_all(14)
+	panel.add_theme_stylebox_override("panel", box)
+	add_child(panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	panel.add_child(column)
+	var title := _label(column, "LeaderboardTitle", "🏆 Fastest escapes", 22)  # also for one player (playtest)
+	title.add_theme_color_override("font_color", Color("ffd76a"))
+	_board_rows = _label(column, "LeaderboardRows", "Loading...", 15)
+	_board_rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var countdown := _label(column, "Countdown", LeaderboardRules.countdown_text(
+			LeaderboardRules.days_until_christmas(Time.get_date_dict_from_system())), 15)
+	countdown.add_theme_color_override("font_color", Color("a9e0b0"))
+
+	var board := Leaderboard.new()
+	board.name = "Leaderboard"
+	add_child(board)
+	board.updated.connect(_show_rows)
+	_my_entry = LeaderboardRules.entry_for(game)
+	var index = net.get("my_index") if net != null else null
+	var host: bool = index == null or index == 0
+	if host and not _my_entry.is_empty():
+		board.submit(_my_entry)
+	else:
+		board.load_top()
+
+
+func _show_rows(rows: Array) -> void:
+	if rows.is_empty():
+		_board_rows.text = "No wins yet. Be the first!"
+		return
+	var lines := []
+	for i in rows.size():
+		var row: Dictionary = rows[i]
+		var mine: bool = row == _my_entry
+		lines.append("%s%d. %s  %s  %s" % ["➜ " if mine else "", i + 1, row["name"],
+			ClockRules.as_text(int(row["seconds_left"])), "Merry" if row["ending"] == "merry" else "Scary"])
+	_board_rows.text = "\n".join(lines)
 
 
 # Midnight (spec 21): a dark screen, the clock strikes, and Scary Jingles is wide awake.

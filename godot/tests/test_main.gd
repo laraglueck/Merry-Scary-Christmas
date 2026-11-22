@@ -98,6 +98,14 @@ func test_main_shows_the_character_selection_before_the_game() -> void:
 		mains[player].net.send_action("pick_character", {"character": picks[player][0], "colour": picks[player][1]})
 		mains[player].net.send_action("ready", {})
 	assert_true(await wait_until(func(): return mains.all(func(m): return m.screen_name == "hall")), "then straight into the hall (spec 25)")
+	# Hero powers: each player sees their own hero's power at the top and can use it once.
+	await wait_frames(2)
+	assert_contains(text_of(mains[0], "PowerButton"), "Ho ho hint", "Santa's power for Player 1")
+	assert_contains(text_of(mains[1], "PowerButton"), "Freeze", "the snowman's for Player 2")
+	press(mains[1], "PowerButton")
+	assert_true(await wait_until(func(): return "Freeze" in str(mains[2].net.game.get("last_event", ""))), "everyone sees it")
+	await wait_frames(2)
+	assert_eq(is_disabled(mains[1], "PowerButton"), true, "only once")
 
 
 func test_main_back_to_lobby_when_host_leaves() -> void:
@@ -282,6 +290,10 @@ func test_back_to_the_lobby_after_the_end_and_play_again() -> void:
 	press(mains[0], "BackButton")
 	assert_true(await wait_until(screens_are(mains, "lobby")), "all three back in the lobby")
 	await wait_frames(2)
+	var name_field: LineEdit = mains[0].find_child("NameField", true, false)
+	if name_field != null:
+		name_field.text = "Team Rudolph"
+		name_field.text_changed.emit("Team Rudolph")
 	press(mains[0], "StartButton")
 	assert_true(await wait_until(screens_are(mains, "select")), "a new round starts with the character selection (spec 18)")
 	var picks := [["santa", "red"], ["snowman", "green"], ["nutcracker", "yellow"]]
