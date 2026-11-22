@@ -72,6 +72,20 @@ func test_the_cookies_on_the_table_can_be_taken_once() -> void:
 	assert_contains(screen._note_text.text, "J.", "signed by J.")
 
 
+# Playtest: the cookies showed on top of the clock close-up.
+func test_the_cookies_lie_behind_the_close_ups() -> void:
+	var screen = RoomScene.instantiate()
+	screen.seed_value = 42
+	tree.root.add_child(screen)
+	screen.find_child("ClockButton", true, false).pressed.emit()
+	var cookies: Node = screen.find_child("Cookies", true, false)
+	var clock: Node = screen.find_child("ClockPanel", true, false)
+	var note: Node = screen.find_child("NotePanel", true, false)
+	assert_eq(cookies.get_parent(), clock.get_parent(), "on the same stage")
+	assert_true(cookies.get_index() < clock.get_index(), "under the clock")
+	assert_true(cookies.get_index() < note.get_index(), "under the note")
+
+
 func test_back_to_the_hall() -> void:
 	var screen = RoomScene.instantiate()
 	screen.seed_value = 42

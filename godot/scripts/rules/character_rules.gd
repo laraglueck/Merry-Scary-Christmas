@@ -54,6 +54,19 @@ static func pick(selection: Dictionary, player: int, character: String, colour: 
 	return ""
 
 
+# Gives the player's hero back, so another player can take it (playtest: with all three
+# taken nobody could swap). Not after Next.
+static func release(selection: Dictionary, player: int) -> String:
+	# 1. Check ...
+	if not selection.has(player):
+		return "You have no hero to give back"
+	if selection[player]["ready"]:
+		return "You are ready: your hero stays"
+	# 2. ... then change.
+	selection.erase(player)
+	return ""
+
+
 static func set_ready(selection: Dictionary, player: int) -> String:
 	if not selection.has(player):
 		return "Choose a character first"
@@ -118,6 +131,8 @@ static func apply(game: Dictionary, player: int, action: String, data: Dictionar
 		"pick_character":
 			error = pick(game["selection"], player, str(data.get("character", "")), str(data.get("colour", "")),
 				str(data.get("accessory", "none")))
+		"unpick_character":
+			error = release(game["selection"], player)
 		"ready":
 			error = set_ready(game["selection"], player)
 		_:

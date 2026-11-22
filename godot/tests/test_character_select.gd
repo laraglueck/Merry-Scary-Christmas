@@ -159,6 +159,24 @@ func test_next_button_fits_on_the_screen() -> void:
 		assert_true(screen.get_viewport().get_visible_rect().encloses(next.get_global_rect()), "Next fits: %s" % next.get_global_rect())
 
 
+# Playtest: a taken hero is clearly greyed out.
+func test_a_taken_hero_is_clearly_greyed_out() -> void:
+	var screen := open_select()  # Player 1: Santa
+	press(screen, "Player2Button")
+	var card: Control = screen.find_child("Card_santa", true, false)
+	assert_true(card.modulate.a <= 0.4, "faded: %s" % card.modulate.a)
+	assert_eq(screen.find_child("Card_snowman", true, false).modulate.a, 1.0, "a free hero is not")
+
+
+# Playtest: clicking your own hero again gives it back, so the others can swap.
+func test_clicking_your_own_hero_again_gives_it_back() -> void:
+	var screen := open_select()  # Player 1: Santa
+	press(screen, "Card_santa")
+	assert_eq(screen.selection().has(0), false, "Player 1 has no hero now")
+	assert_eq(is_disabled(screen, "Card_santa"), false, "Santa is free")
+	assert_eq(screen.find_child("ChooseHint", true, false).visible, true, "asks to choose again")
+
+
 func test_taken_figure_is_blocked_but_colours_are_shared() -> void:
 	var screen := open_select()
 	press(screen, "ColourNext")  # Player 1: red santa -> green santa

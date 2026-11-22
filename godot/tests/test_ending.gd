@@ -9,6 +9,7 @@ const Settings = preload("res://scripts/settings.gd")
 class FakeNet extends Node:
 	signal game_changed
 	var game: Dictionary = {}
+	var my_index := 0
 
 
 # Opens the end screen like main.gd does: with the net and the phase as place.
@@ -149,6 +150,27 @@ func test_a_win_goes_onto_the_leaderboard() -> void:
 	assert_contains(list, "Team Comet", "the new team")
 	assert_true(list.find("Team Comet") < list.find("Team Rudolph"), "more time left comes first")
 	assert_contains(list, "07:30", "with its time left")
+
+
+# Playtest: players 2 and 3 load the list before the host's save arrives, so their own
+# team was missing. Every window adds its own result to what it shows; only the host saves.
+func test_players_2_and_3_see_their_team_at_once() -> void:
+	use_test_board()
+	open_won_ending("Team Rudolph", 300)  # an older win
+	var net := FakeNet.new()
+	net.my_index = 1
+	tree.root.add_child(net)
+	net.game = {"phase": "scary", "inventory": [], "seconds_played": Settings.GAME_SECONDS - 450,
+			"penalty_seconds": 0, "last_event": "", "team_name": "Team Comet"}
+	var ending = EndingScene.instantiate()
+	ending.net = net
+	ending.place = "scary"
+	tree.root.add_child(ending)
+	var list := text_of(ending, "LeaderboardRows")
+	assert_contains(list, "➜ 1. Team Comet", "our team, marked, at once")
+	assert_contains(list, "Team Rudolph", "and the others")
+	var saved := FileAccess.get_file_as_string(TEST_BOARD)
+	assert_true(not saved.contains("Team Comet"), "only the host saves it")
 
 
 func test_midnight_goes_not_onto_the_leaderboard() -> void:

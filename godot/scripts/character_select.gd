@@ -84,6 +84,9 @@ func _send(action: String, data: Dictionary) -> void:
 
 func _on_card_pressed(character: String) -> void:
 	var mine := _mine()
+	if mine.get("character", "") == character:  # your own hero again: give it back (playtest)
+		_send("unpick_character", {})
+		return
 	_pick(character, mine.get("colour", CharacterRules.first_free_colour(selection(), current_player)), mine.get("accessory", "none"))
 
 
@@ -128,6 +131,7 @@ func _refresh() -> void:
 		var holder := CharacterRules.owner_of(chosen, "character", character)
 		var card: Button = _cards[character]
 		card.disabled = holder != -1 and holder != current_player
+		card.modulate.a = 0.35 if card.disabled else 1.0  # clearly taken (playtest)
 		card.button_pressed = holder == current_player
 		var colour: String = chosen[holder]["colour"] if holder != -1 else "red"
 		var accessory: String = chosen[holder].get("accessory", "none") if holder != -1 else "none"

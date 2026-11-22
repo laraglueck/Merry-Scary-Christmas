@@ -1099,25 +1099,26 @@ func test_alone_one_right_order_lights_every_room() -> void:
 		assert_contains(text_of(hall, "RoomLamp%d" % i), "lit", "room %d lit" % i)
 
 
-# Playtest: clicking the doll opened the note at once, so her scary turn was hidden.
-func test_alone_the_doll_herself_only_turns_her_head() -> void:
+# Playtest: the first (blue) wire always had a yellow frame. The frame shows only once
+# the arrow keys are used (the mouse shows its own frame on hover).
+func test_no_wire_is_framed_before_the_keys_are_used() -> void:
 	var hall := open_hall_alone()
-	press(hall, "DollSpot")
-	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "she turns her head")
-	assert_eq(is_shown(hall, "NotePanel"), false, "no note over her")
+	press(hall, "FuseBoxButton")
+	var first: Button = hall.find_child("Wire_" + Settings.WIRE_COLOURS[0], true, false)
+	assert_true((first.get_theme_stylebox("normal") as StyleBoxFlat).border_color != HallScript.HIGHLIGHT, "no frame at first")
+	key(hall, "ui_right")
+	var second: Button = hall.find_child("Wire_" + Settings.WIRE_COLOURS[1], true, false)
+	assert_eq((second.get_theme_stylebox("normal") as StyleBoxFlat).border_color, HallScript.HIGHLIGHT, "the keys show it")
 
 
-# Playtest: a dark box stood around the doll.
-func test_the_doll_has_no_box_around_her() -> void:
+# Playtest: the doll scared you both on her own and on the stairs; the stairs are enough.
+# She is no button of her own (so also no dark box around her).
+func test_only_the_dark_stairs_make_the_doll_turn() -> void:
 	var hall := open_hall_alone()
-	var spot: Button = hall.find_child("DollSpot", true, false)
-	assert_true(spot.get_theme_stylebox("normal") is StyleBoxEmpty, "see-through until the mouse is over her")
+	assert_true(hall.find_child("DollSpot", true, false) == null, "no click area on the doll")
 
 
 func test_in_a_team_the_doll_has_no_note() -> void:
 	var hall := open_hall()
 	hall._close_mission()
-	assert_eq(is_shown(hall, "DollNote"), false, "no note in her lap")
-	press(hall, "DollSpot")
-	assert_eq(is_shown(hall, "NotePanel"), false, "the note is only for single player")
-	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "but she still turns her head")
+	assert_eq(is_shown(hall, "DollNote"), false, "no note in her lap: it is only for single player")
