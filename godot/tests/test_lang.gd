@@ -84,3 +84,22 @@ func test_the_picker_on_the_title_switches_the_language() -> void:
 	main.title_done = true
 	main._update_screen()
 	assert_eq(picker.visible, false, "only on the title")
+
+
+# The results card (merged from godot-setup) has several lines in one label: each one is
+# translated by itself.
+func test_the_results_card_is_translated_line_by_line() -> void:
+	OS.set_environment("MERRY_SCARY_LANGUAGE_FILE", "user://test_language.cfg")
+	Lang.setup()
+	Lang.set_language("de")
+	var ending: Node = load("res://scenes/ending.tscn").instantiate()
+	ending.place = "scary"
+	tree.root.add_child(ending)
+	var rows: String = tree.root.tr(text_of(ending, "ResultsRows"))
+	Lang.set_language("en")
+	ending.queue_free()
+	DirAccess.remove_absolute("user://test_language.cfg")
+	assert_contains(rows, "Zeit übrig: ", "time left in German: %s" % rows)
+	assert_contains(rows, "Fehler: keine", "no mistakes in German")
+	assert_contains(rows, "Kräfte: keine", "no powers in German")
+	assert_true(not rows.contains("Time left"), "no English line left")

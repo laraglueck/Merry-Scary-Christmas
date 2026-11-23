@@ -625,3 +625,15 @@ func test_the_ending_music_follows_the_music_button() -> void:
 	main.toggle_music()
 	assert_eq(ending.music_allowed(), true, "and on again")
 	ending.queue_free()
+
+# Spec 34: something new in the inventory plays the pickup sound on every device, in every
+# room; starting (or joining) a game does not.
+func test_a_picked_up_item_plays_the_pickup_sound_for_everyone() -> void:
+	var mains: Array = await make_started_mains(47691)
+	await wait_until(screens_are(mains, "hall"))
+	for main in mains:
+		assert_eq(main.sounds_played.count("sfx_gift.mp3"), 0, "no sound for starting the game")
+	mains[0].net.game["bathroom"]["solved"] = true  # the host's game: taps solved
+	mains[1].net.send_action("take_gift", {"room": "bathroom"})
+	var everyone_hears := func(): return mains.all(func(m): return m.sounds_played.count("sfx_gift.mp3") == 1)
+	assert_true(await wait_until(everyone_hears), "all three hear it once: %s" % [mains.map(func(m): return m.sounds_played)])

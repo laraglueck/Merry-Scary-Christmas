@@ -409,4 +409,16 @@ const TEXTS := {
 	"Warm": "Warm",
 	"warm": "warm",
 	"You have nothing that could change his mind.": "Ihr habt nichts, was ihn umstimmen könnte.",
+	# ---------- click to start and the results card (merged from godot-setup) ----------
+	"Click to start": "Zum Starten klicken",
+	"Your escape": "Eure Flucht",
+	"Time left: %s": "Zeit übrig: %s",
+	"Mistakes: %d (-%d s)": "Fehler: %d (-%d s)",
+	"Mistakes: none": "Fehler: keine",
+	"%s (Player %d)": "%s (Spieler %d)",
+	"Powers: %s": "Kräfte: %s",
+	"none": "keine",
+	"Power": "Kraft",
+	"Nothing found": "Nichts gefunden",
+	"the team": "das Team",
 }
