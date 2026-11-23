@@ -27,6 +27,10 @@ Every hero has one power per game: Santa's **Ho ho hint**, the Snowman's **Freez
 
 **Play in the browser (alone): https://laraglueck.github.io/Merry-Scary-Christmas/**
 
+Play it in a desktop browser on a laptop or computer (Chrome, Firefox, Safari, Edge).
+Phones and tablets are not supported: the game needs a keyboard (for the name and for
+walking).
+
 The browser version is for **one player** (a web page may not open the network port that
 playing together needs). The **three-player game** runs in the Godot version on laptops in
 the same Wi-Fi or on one phone hotspot (see *Play together* below).

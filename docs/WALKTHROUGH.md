@@ -125,6 +125,10 @@ every room owner could work in their own file without breaking the others.
   Create room and Join are hidden there (`lobby.gd`, `in_browser`). The browser also has
   no emoji font (`web_text.gd`) and no key for the online leaderboard, so it keeps its
   own local list.
+- **Laptop or computer only.** The URL opens on a phone, but the browser version opens no
+  on-screen keyboard (so no name can be typed and the game cannot start) and walking needs
+  W A S D. How it could change: switch on Godot's on-screen keyboard for the web export and
+  add buttons for walking.
 - **Multiplayer needs the same network.** Players find the host on the local Wi-Fi (or
   type the host's address). It does not work across the internet, and university Wi-Fi may
   block it, so the demo uses three windows on one laptop or **Play alone**.

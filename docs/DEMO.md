@@ -39,6 +39,7 @@ At least two members can operate the demo, in case one is absent or a laptop fai
 | **Supabase** (online leaderboard) | free project paused after a week; no internet | after 4 s the game shows the local list on this computer; nothing breaks | open the Supabase dashboard the day before |
 | **Open-Meteo** (weather in the window) | service down, slow, no internet | after 4 s a frosted window with "it snows anyway"; costs no game time | try once with Wi-Fi off |
 | **Local network** (3 players) | eduroam blocks laptops from each other; room code not found | use one phone's hotspot; type the host's address instead of the code (README) | test the three laptops on the hotspot the day before |
+| **Device** | someone opens the URL on a phone | phones are not supported (no on-screen keyboard); use a laptop | — |
 | **Sound** | projector has no sound | subtitles show the story | — |
 | **Secrets** | a key visible on the projector | close the Supabase dashboard and `supabase.cfg` | before sharing the screen |
 
