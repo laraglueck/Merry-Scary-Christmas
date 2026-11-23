@@ -429,4 +429,10 @@ const TEXTS := {
 	"Power": "Kraft",
 	"Nothing found": "Nichts gefunden",
 	"the team": "das Team",
+	# ---------- flashing warning (spec 34) ----------
+	"Before you play": "Bevor ihr spielt",
+	"This game contains flickering lights that may affect people with photosensitive epilepsy.\nYou can switch the flickering off here, or later on the pause screen.": "Dieses Spiel enthält flackerndes Licht, das Menschen mit fotosensitiver Epilepsie schaden kann.\nIhr könnt das Flackern hier ausschalten oder später im Pausebildschirm.",
+	"Reduce flashing: %s": "Weniger Flackern: %s",
+	"On": "An",
+	"Off": "Aus",
 }

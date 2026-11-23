@@ -77,6 +77,7 @@ func test_the_picker_on_the_title_switches_the_language() -> void:
 	tree.root.add_child(device)
 	tree.set_multiplayer(SceneMultiplayer.new(), device.get_path())
 	device.add_child(main)
+	main.warning_done = true  # the flashing warning comes first (spec 34)
 	main.story_done = true
 	main._update_screen()
 	var picker: Control = main.find_child("LanguagePicker", true, false)
@@ -111,3 +112,10 @@ func test_the_results_card_is_translated_line_by_line() -> void:
 	assert_contains(rows, "Fehler: keine", "no mistakes in German")
 	assert_contains(rows, "Kräfte: keine", "no powers in German")
 	assert_true(not rows.contains("Time left"), "no English line left")
+
+
+func test_the_flashing_switch_is_translated() -> void:
+	var de := Lang.TemplateTranslation.from_catalog("de", load(Lang.CATALOGS["de"]).TEXTS)
+	assert_eq(de.translate("Reduce flashing: On"), "Weniger Flackern: An", "German")
+	var pt := Lang.TemplateTranslation.from_catalog("pt", load(Lang.CATALOGS["pt"]).TEXTS)
+	assert_eq(pt.translate("Reduce flashing: Off"), "Reduzir intermitência: Desligado", "Portuguese")

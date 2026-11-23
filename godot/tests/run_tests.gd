@@ -20,6 +20,7 @@ class ErrorCatcher extends Logger:
 		pass
 
 
+const Comfort = preload("res://scripts/comfort.gd")
 const TEST_SAVE := "user://test_saved_game.save"
 
 var _started := false
@@ -66,6 +67,7 @@ func _run_all() -> void:
 			if not name.begins_with("test_"):
 				continue
 			DirAccess.remove_absolute(TEST_SAVE)  # every test starts without a save
+			Comfort.reduce_flashing = false        # and with the flashing as it is (spec 34)
 			var suite = script.new()
 			suite.tree = self
 			catcher.errors.clear()

@@ -14,6 +14,7 @@ const ButtonStyle = preload("res://scripts/button_style.gd")
 const Rules = preload("res://scripts/rules/fuse_rules.gd")
 const FuseMark = preload("res://scripts/fuse_mark.gd")
 const Settings = preload("res://scripts/settings.gd")
+const Comfort = preload("res://scripts/comfort.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
 const WalkLayer = preload("res://scripts/walk_layer.gd")
 const WebText = preload("res://scripts/web_text.gd")
@@ -808,11 +809,20 @@ func _on_flicker_tick() -> void:
 		_flicker_steps = flicker_cycle(_flicker_rng, flicker_strength(Rules.lit_rooms(puzzle).size()))
 	var step: Array = _flicker_steps.pop_front()
 	_flicker.color.a = step[0]
+	if Comfort.reduce_flashing:  # spec 34: steadily a little dark, no flicker
+		_flicker_steps.clear()
+		_flicker.color.a = flicker_strength(Rules.lit_rooms(puzzle).size()) * 0.5
+		_flicker_timer.start(0.5)  # looks again soon: the switch may change
+		return
 	_flicker_timer.start(step[1])
 
 
 # A room on the plan flashes bright for a moment when its light comes on.
 func _glow(tile: Control) -> void:
+	if Comfort.reduce_flashing:  # spec 34: a soft glow, no bright flash
+		tile.modulate = Color(1.15, 1.15, 1.15)
+		create_tween().tween_property(tile, "modulate", Color.WHITE, 1.5)
+		return
 	tile.modulate = Color(1.8, 1.8, 1.8)
 	create_tween().tween_property(tile, "modulate", Color.WHITE, 0.8)
 

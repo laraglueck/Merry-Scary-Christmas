@@ -429,4 +429,10 @@ const TEXTS := {
 	"Power": "Poder",
 	"Nothing found": "Nada encontrado",
 	"the team": "a equipa",
+	# ---------- flashing warning (spec 34) ----------
+	"Before you play": "Antes de jogar",
+	"This game contains flickering lights that may affect people with photosensitive epilepsy.\nYou can switch the flickering off here, or later on the pause screen.": "Este jogo contém luzes intermitentes que podem afetar pessoas com epilepsia fotossensível.\nPodem desligar a intermitência aqui ou mais tarde no ecrã de pausa.",
+	"Reduce flashing: %s": "Reduzir intermitência: %s",
+	"On": "Ligado",
+	"Off": "Desligado",
 }
