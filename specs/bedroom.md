@@ -38,6 +38,7 @@ Interactive areas:
 - `chest`
 - `gift`
 - `door_hall`
+- `window`, which opens the living room's close-up with the frost wipe and Nuuk weather
 - `photo`, accessible through the calendar after the chest opens
 
 The bedroom becomes accessible when the gold fuse is solved.

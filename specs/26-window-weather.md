@@ -29,6 +29,10 @@ shows the real weather in Nuuk right now.
 - The view asks Open-Meteo once per opening (`HTTPRequest`, 4 s timeout). Not in the headless
   tests: there it shows the fallback, and the tests feed it answers directly.
 - Esc, Enter or a click closes the view. Only on this device; no time, nothing changes.
+- Rain and storms play their matching ambient loop once the frost is clear, in both
+  the living room and bedroom. Other weather is quiet. Leaving the view stops the loop.
+- The bathroom's window above the bathtub opens the same view, with the same weather
+  and audio. It is also reachable with the bathroom's arrow-key navigation.
 
 - After the manual test (19.11.): the moon lies on top of the lamp and the house. Now it is in the
   sky, behind the trees: `tools/make_window_view.gd` cuts the garden (`Rect2(0, 150, 620, 457)` of

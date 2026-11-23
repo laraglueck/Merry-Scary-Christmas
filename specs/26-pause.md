@@ -19,9 +19,12 @@ pause that stops the clock for all three players at once.
   house. While paused, `PauseOverlay` darkens every screen on all three devices and blocks clicks:
   "Paused by Player 2" (`PauseLabel`) and a `ContinueButton` ("Continue") that everyone can press.
 - A saved game (spec 15) keeps the pause; after resuming it the team presses Continue.
+- In the browser, changing tabs or leaving the browser window pauses the game and its
+  audio. On return, the pause overlay waits for Continue. Audio resumes where it left off,
+  preserving the music switch. This also applies to the story, menus and endings.
 
 ## Out of scope
-Pausing the sounds and animations inside a room, a pause key, pausing in the selection or the story.
+Pausing room sounds and animation with the team's manual Pause button, and a pause key.
 
 ## Done when
 - New tests in `test_game_rules.gd`, `test_clock_rules.gd` and `test_main.gd` were red first and
