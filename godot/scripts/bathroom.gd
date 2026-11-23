@@ -321,7 +321,7 @@ func _refresh() -> void:
 	# The turns made so far, in the rhyme's words ("warm  cold"); how many are needed stays a secret.
 	var words := []
 	for tap in _bathroom()["turns"]:
-		words.append(_tap_word(tap))
+		words.append(tr(_tap_word(tap)))
 	_turns_label.text = "  ".join(words)
 
 	var solved: bool = _bathroom()["solved"]
@@ -454,7 +454,7 @@ func _build_ui() -> void:
 
 	# Title and message line.
 	var title := _label(self, "The Bathroom", 34)
-	title.position = Vector2(24, 12)
+	title.position = Vector2(52, 12)  # right of the music button (spec 33)
 	title.add_theme_color_override("font_color", Color("e8d9c0"))
 	_message = _label(self, "", 22)
 	_message.name = "Message"

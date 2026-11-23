@@ -380,7 +380,7 @@ func _open_note() -> void:
 		return
 
 	var lines := LivingRoomRules.rhyme_for(game["bathroom"]["tap_order"])
-	_note_text.text = "\n\n".join(lines)
+	_note_text.text = "\n\n".join(lines.map(func(line: String) -> String: return tr(line)))
 	_clock_panel.hide()
 	_note_panel.get_parent().move_child(_note_panel, -1)  # on top (it lives on the stage, spec 21)
 	_note_panel.show()
