@@ -18,6 +18,14 @@ func _german() -> Lang.TemplateTranslation:
 	return Lang.TemplateTranslation.from_catalog("de", SAMPLE)
 
 
+
+# The fuse hint names the fuse's shape (spec 34): the shape is translated as a part.
+func test_the_fuse_hint_and_credits_are_translated() -> void:
+	var de := Lang.TemplateTranslation.from_catalog("de", load(Lang.CATALOGS["de"]).TEXTS)
+	var hint := "[b]Sparks![/b] Look at the frame: these symbols belong to the %s fuse (%s). Who has it?" % ["GOLD", "diamond"]
+	assert_contains(de.translate(hint), "Sicherung GOLD (Raute)", "German hint with the shape")
+	assert_eq(de.translate("Made by"), "Gemacht von", "credits")
+
 func test_a_plain_text_is_translated() -> void:
 	assert_eq(_german().translate("Start"), "Start", "same word")
 	assert_eq(_german().translate("Player 2"), "Spieler 2", "with a number")

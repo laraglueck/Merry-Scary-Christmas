@@ -54,6 +54,9 @@ var music_button: Button
 var language_picker: Control  # spec 34: top right on the title
 var _music_icon: Control
 var clock_label: Label
+var penalty_float: Label   # spec 34: "−20 s" floats up under the clock after a wrong answer
+var shakes := 0            # spec 34: how often the screen shook (the tests read this)
+var _penalty_seen := -1    # the penalty last shown; -1 = no game yet (a resumed game does not shake)
 var power_button: Button  # the hero's power, once per game (under the clock)
 var power_message: Label  # playtest: what a power did, right under the button (not covered)
 var _powers_seen := 0     # how many powers were used when the box was last updated
@@ -78,6 +81,7 @@ func _ready() -> void:
 	_start_music()
 	_build_house_music()
 	_build_clock()
+	_build_penalty_float()
 	_build_inventory()
 	_build_pause()
 	_build_music_button()
@@ -117,6 +121,7 @@ func _on_title_start_pressed() -> void:
 
 func _update_screen() -> void:
 	_update_clock()
+	_update_penalty()
 	_update_house_music()
 	_update_inventory()
 	_update_pause()
@@ -567,6 +572,60 @@ func _update_pause() -> void:
 	pause_overlay.visible = paused
 	if paused:
 		pause_label.text = "Paused by Player %d" % (int(net.game.get("paused_by", 0)) + 1)
+
+
+# ---------- a penalty you can see (spec 34) ----------
+
+func _build_penalty_float() -> void:
+	penalty_float = Label.new()
+	penalty_float.name = "PenaltyFloat"
+	penalty_float.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	penalty_float.offset_left = -80
+	penalty_float.offset_right = 80
+	penalty_float.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	penalty_float.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	penalty_float.add_theme_font_size_override("font_size", 30)
+	penalty_float.add_theme_color_override("font_color", CLOCK_WARNING_COLOUR)
+	penalty_float.add_theme_color_override("font_outline_color", Color.BLACK)
+	penalty_float.add_theme_constant_override("outline_size", 7)
+	penalty_float.visible = false
+	get_node("ClockLayer").add_child(penalty_float)
+
+
+# Only when the penalty grows while we watch: not at the start, not after a resume.
+func _update_penalty() -> void:
+	if net.game.is_empty():
+		_penalty_seen = -1
+		return
+	var penalty: int = net.game.get("penalty_seconds", 0)
+	if _penalty_seen >= 0 and penalty > _penalty_seen:
+		_show_penalty(penalty - _penalty_seen)
+	_penalty_seen = penalty
+
+
+func _show_penalty(seconds: int) -> void:
+	penalty_float.text = "−%d s" % seconds
+	penalty_float.visible = true
+	penalty_float.modulate.a = 1.0
+	penalty_float.offset_top = 46   # just under the clock
+	penalty_float.offset_bottom = 86
+	var tween := penalty_float.create_tween().set_parallel()
+	tween.tween_property(penalty_float, "offset_top", 6.0, 1.2).set_ease(Tween.EASE_OUT)
+	tween.tween_property(penalty_float, "offset_bottom", 46.0, 1.2).set_ease(Tween.EASE_OUT)
+	tween.tween_property(penalty_float, "modulate:a", 0.0, 0.6).set_delay(0.6)
+	tween.chain().tween_callback(func() -> void: penalty_float.visible = false)
+	_shake()
+
+
+# Shakes only the screen below (canvas layer 0), not the clock, inventory or buttons.
+func _shake() -> void:
+	shakes += 1
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	var tween := create_tween()
+	for offset in [Vector2(9, -4), Vector2(-8, 5), Vector2(6, 3), Vector2(-4, -3), Vector2(2, 1), Vector2.ZERO]:
+		tween.tween_property(viewport, "canvas_transform", Transform2D(0.0, offset), 0.055)
 
 
 # ---------- languages (spec 34) ----------

@@ -4,6 +4,14 @@
 extends RefCounted
 
 const TEXTS := {
+	# ---------- credits and fuse shapes (spec 34) ----------
+	"[b]Sparks![/b] Look at the frame: these symbols belong to the %s fuse (%s). Who has it?": "[b]Funken![/b] Schau auf den Rahmen: Diese Symbole gehören zur Sicherung %s (%s). Wer hat sie?",
+	"circle": "Kreis",
+	"triangle": "Dreieck",
+	"diamond": "Raute",
+	"Credits": "Mitwirkende",
+	"Made by": "Gemacht von",
+	"Nova SBE · Introduction to Programming · Fall 2026": "Nova SBE · Introduction to Programming · Herbst 2026",
 	# ---------- core ----------
 	"%s (used)": "%s (verbraucht)",
 	"%s climbed the stairs to the attic.": "%s steigt die Treppe zum Dachboden hinauf.",

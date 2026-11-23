@@ -552,6 +552,43 @@ func test_a_power_shows_its_result_under_the_power_button() -> void:
 	assert_eq(box.visible, false, "a click closes it")
 
 
+# ---------- a penalty you can see (spec 34) ----------
+
+func test_a_wrong_fuse_floats_the_lost_seconds_and_shakes_everyone() -> void:
+	var mains: Array = await make_started_mains(47692)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	await wait_frames(2)
+	for m in mains:
+		var float_label: Node = m.find_child("PenaltyFloat", true, false)
+		assert_true(float_label == null or not float_label.visible, "nothing floats at the start")
+		assert_eq(m.get("shakes"), 0, "no shake at the start")
+	var wrong: Array = mains[1].net.game["puzzle"]["fuses"][1]["order"].duplicate()
+	wrong.reverse()
+	mains[1].net.send_action("try_fuse", {"wires": wrong})
+	var all_see := func(): return mains.all(func(m):
+		var f: Node = m.find_child("PenaltyFloat", true, false)
+		return f != null and f.visible)
+	assert_true(await wait_until(all_see), "all three see the lost seconds")
+	for m in mains:
+		assert_eq(text_of(m, "PenaltyFloat"), "−%d s" % Settings.FUSE_PENALTY_SECONDS, "how much")
+		assert_eq(m.get("shakes"), 1, "the screen shook once")
+
+
+func test_a_resumed_game_with_penalties_does_not_shake() -> void:
+	var main := make_main_device("Resumed")
+	main._update_penalty()  # no game yet
+	main.net.game = {"phase": "hall", "penalty_seconds": 40}  # as if loaded from a save
+	main._update_penalty()
+	assert_eq(main.get("shakes"), 0, "an old penalty does not shake")
+	var float_label: Node = main.find_child("PenaltyFloat", true, false)
+	assert_true(float_label == null or not float_label.visible, "and does not float")
+	main.net.game["penalty_seconds"] = 60  # a new wrong answer after the resume
+	main._update_penalty()
+	assert_eq(main.get("shakes"), 1, "a new one does")
+	assert_eq(text_of(main, "PenaltyFloat"), "−20 s", "the 20 seconds just lost")
+	main.net.game = {}
+
+
 # ---------- music on/off (spec 33) ----------
 
 func test_music_button_switches_the_music_off_and_on() -> void:
