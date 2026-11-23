@@ -506,6 +506,30 @@ func test_browser_pause_preserves_disabled_music_before_play() -> void:
 	main.music.stop()
 
 
+# Playtest at the URL: the page loaded without the focus, so the first thing to see was
+# "Paused while away". Before the story has started there is nothing to pause.
+func test_browser_start_is_not_a_pause() -> void:
+	var main := make_main_device("WebStart")
+	assert_eq(main.screen_name, "warning", "the warning comes first")
+	main._set_web_page_away(true)
+	assert_true(not tree.paused and not main.pause_overlay.visible, "no pause on the warning")
+	assert_true(not AudioServer.is_bus_mute(0), "nothing is muted")
+	main._set_web_page_away(false)
+	main.warning_done = true
+	main._update_screen()
+	assert_eq(main.screen_name, "intro", "then the story")
+	main.screen.wait_for_click = true  # what the browser version does: "Click to start"
+	main._set_web_page_away(true)
+	assert_true(not tree.paused and not main.pause_overlay.visible, "no pause on \"Click to start\"")
+	main._set_web_page_away(false)
+	main.screen.wait_for_click = false  # clicked: now the story runs
+	main._set_web_page_away(true)
+	assert_true(tree.paused and main.pause_overlay.visible, "the running story pauses")
+	main._set_web_page_away(false)
+	press(main, "ContinueButton")
+	assert_true(not tree.paused and not main.pause_overlay.visible, "and goes on")
+
+
 # ---------- playtest fixes (spec 29) ----------
 
 func test_pause_and_help_sit_together_next_to_the_penalty() -> void:
