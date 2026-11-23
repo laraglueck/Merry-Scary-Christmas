@@ -399,3 +399,17 @@ func check_message_clear_of_the_inventory_bar(screen: Node) -> void:
 
 func test_the_message_is_not_covered_by_the_inventory_bar() -> void:
 	check_message_clear_of_the_inventory_bar(open_bathroom())
+
+
+# Spec 34: "the pipes rattle angrily" has a sound of its own.
+func test_a_wrong_order_rattles_the_pipes() -> void:
+	var bathroom := open_bathroom()
+	click_taps(bathroom, wrong_taps(bathroom))
+	assert_eq(bathroom.game["penalty_seconds"] > 0, true, "a wrong order")
+	assert_true("sfx_key_lock.mp3" in bathroom.sounds_played, "the pipes rattle: %s" % [bathroom.sounds_played])
+
+
+func test_the_right_order_does_not_rattle() -> void:
+	var bathroom := open_bathroom()
+	click_taps(bathroom, right_taps(bathroom))
+	assert_true(not "sfx_key_lock.mp3" in bathroom.sounds_played, "no rattle")

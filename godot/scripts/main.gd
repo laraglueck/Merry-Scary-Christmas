@@ -48,6 +48,9 @@ var music: AudioStreamPlayer
 var menu_music_on := false   # spec 23: true while the menu music plays, only on the title (the tests read this)
 var house_music: AudioStreamPlayer
 var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
+var music_enabled := true    # spec 33: the music button on this device (off pauses both musics)
+var music_button: Button
+var _music_icon: Control
 var clock_label: Label
 var penalty_float: Label   # spec 34: "−20 s" floats up under the clock after a wrong answer
 var shakes := 0            # spec 34: how often the screen shook (the tests read this)
@@ -62,6 +65,9 @@ var inventory_bar: PanelContainer
 var _item_pictures := {}  # item id -> its picture in the bar
 var _item_names := {}     # item id -> its name under the picture
 var _piece_pictures := {} # torn photo piece -> its small picture in the photo's slot (spec 21)
+var pickup_sound: AudioStreamPlayer  # spec 34: something new in the inventory, in every room
+var _items_heard := -1     # how many items the inventory had last time; -1 = no game seen yet
+var sounds_played := []    # the sounds this device played (the tests read this)
 
 
 func _ready() -> void:
@@ -75,6 +81,11 @@ func _ready() -> void:
 	_build_penalty_float()
 	_build_inventory()
 	_build_pause()
+	_build_music_button()
+	pickup_sound = AudioStreamPlayer.new()
+	pickup_sound.name = "PickupSound"
+	pickup_sound.stream = load("res://assets/sounds/sfx_gift.mp3")
+	add_child(pickup_sound)
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
@@ -155,6 +166,7 @@ func _set_menu_music(on: bool) -> void:
 		return
 	if on:
 		music.play()
+		music.stream_paused = not music_enabled  # spec 33: switched off stays off
 	else:
 		music.stop()
 
@@ -371,10 +383,25 @@ func refresh_hud() -> void:
 	_update_inventory()
 
 
+# Spec 34: a new item in the team's inventory plays the pickup sound on this device. What
+# was already there when this device first saw the game (started, joined, resumed) does not.
+func _hear_new_items() -> void:
+	if net.game.is_empty():
+		_items_heard = -1
+		return
+	var count: int = net.game.get("inventory", []).size()
+	if _items_heard >= 0 and count > _items_heard:
+		sounds_played.append("sfx_gift.mp3")
+		if DisplayServer.get_name() != "headless":  # not in the test run: no sound card
+			pickup_sound.play()
+	_items_heard = count
+
+
 func _update_inventory() -> void:
 	var running: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
 	# While someone looks out of the window, their bar steps aside (it covered the lines there).
 	inventory_bar.visible = running and not _window_is_open()
+	_hear_new_items()
 	if not running:
 		return
 	for item in Settings.ITEMS:
@@ -425,8 +452,55 @@ func _update_house_music() -> void:
 		return  # the test run has no sound card
 	if in_house:
 		house_music.play()
+		house_music.stream_paused = not music_enabled  # spec 33: switched off stays off
 	else:
 		house_music.stop()
+
+
+# ---------- music on/off (spec 33) ----------
+
+# A small square in the top left, on every screen: a music note, crossed out and greyed
+# while the music is off. Only for this device.
+func _build_music_button() -> void:
+	music_button = Button.new()
+	music_button.name = "MusicButton"
+	music_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	# 36 px, close to the corner: the living room's window starts at x 44 (it is clickable too).
+	music_button.offset_left = 6
+	music_button.offset_right = 42
+	music_button.offset_top = 6
+	music_button.offset_bottom = 42
+	ButtonStyle.make_clickable(music_button)
+	music_button.focus_mode = Control.FOCUS_NONE  # Space/Enter stay with the game
+	music_button.pressed.connect(toggle_music)
+	get_node("ClockLayer").add_child(music_button)
+	_music_icon = preload("res://scripts/music_icon.gd").new()
+	_music_icon.name = "MusicIcon"
+	_music_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_music_icon.offset_left = 7
+	_music_icon.offset_top = 7
+	_music_icon.offset_right = -7
+	_music_icon.offset_bottom = -7
+	_music_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	music_button.add_child(_music_icon)
+	_show_music_state()
+
+
+func toggle_music() -> void:
+	music_enabled = not music_enabled
+	# Paused, not stopped: switched on again, the music goes on where it was.
+	music.stream_paused = not music_enabled
+	house_music.stream_paused = not music_enabled
+	for player in get_tree().get_nodes_in_group("music"):  # e.g. the ending's music box
+		if is_ancestor_of(player):
+			player.stream_paused = not music_enabled
+	_show_music_state()
+
+
+func _show_music_state() -> void:
+	_music_icon.crossed = not music_enabled
+	music_button.modulate = Color.WHITE if music_enabled else Color(0.65, 0.65, 0.65, 0.75)
+	music_button.tooltip_text = "Music off" if music_enabled else "Music on"
 
 
 # ---------- pause (spec 26) ----------
