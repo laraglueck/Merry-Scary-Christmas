@@ -1,6 +1,8 @@
 extends Control
 
 const HoverGlow = preload("res://scripts/hover_glow.gd")  # spec 34
+const RoomStage = preload("res://scripts/room_stage.gd")
+const WindowView = preload("res://scripts/window_view.gd")
 
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
@@ -36,6 +38,7 @@ const EGG_ICON_SIZE := 80
 const CALENDAR_BOUNDS := Rect2(0.347, 0.204, 0.181, 0.296)
 const CHEST_BOUNDS := Rect2(0.746, 0.688, 0.239, 0.285)
 const DOOR_BOUNDS := Rect2(0.035, 0.13, 0.215, 0.65)  # the open door on the left (spec 24)
+const WINDOW_BOUNDS := Rect2(0.843, 0.16, 0.114, 0.351)  # start below the pause button
 const GOLD := Color("#e8c18c")
 const TEXT := Color("#f4e7d1")
 
@@ -44,6 +47,7 @@ const TEXT := Color("#f4e7d1")
 var net: Node
 var offline_game: Dictionary
 var room_view: Control
+var window_stage: Control
 var background_rect: TextureRect
 var modal: CenterContainer
 var popup_panel: PanelContainer
@@ -88,6 +92,10 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_room()
 	_build_popup()
+	window_stage = Control.new()
+	window_stage.size = RoomStage.STAGE_SIZE
+	window_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(window_stage)
 	room_sound = AudioStreamPlayer.new()
 	room_sound.volume_db = -14.0
 	add_child(room_sound)
@@ -129,8 +137,12 @@ func _build_room() -> void:
 	title.add_theme_constant_override("outline_size", 6)
 	room_view.add_child(title)
 
-	_add_hotspot("CalendarHotspot", "Examine Advent Calendar", CALENDAR_BOUNDS, "calendar")
-	_add_hotspot("ChestHotspot", "Examine Toy Chest", CHEST_BOUNDS, "chest")
+	_add_popup_hotspot("CalendarHotspot", "Examine Advent Calendar", CALENDAR_BOUNDS, "calendar")
+	_add_popup_hotspot("ChestHotspot", "Examine Toy Chest", CHEST_BOUNDS, "chest")
+	var window := _add_hotspot("WindowButton", "Look out of the window", WINDOW_BOUNDS)
+	var window_glow := window.get_theme_stylebox("hover") as StyleBoxFlat
+	window_glow.draw_center = false
+	window.pressed.connect(_open_window_view)
 	room_digit_label = Label.new()
 	room_digit_label.name = "RoomGoldDigit"
 	room_digit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -142,13 +154,7 @@ func _build_room() -> void:
 	_anchor_to_bounds(room_digit_label, Rect2(0.83, 0.64, 0.08, 0.08))
 
 	# Spec 24: back to the hall through the door, like in the bathroom (no button any more).
-	door_hall = Button.new()
-	door_hall.name = "DoorHall"
-	door_hall.tooltip_text = "Back to the hall"
-	door_hall.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	HoverGlow.spot(door_hall)  # a soft gold glow, as in the other rooms (spec 24, 34)
-	room_view.add_child(door_hall)
-	_anchor_to_bounds(door_hall, DOOR_BOUNDS)
+	door_hall = _add_hotspot("DoorHall", "Back to the hall", DOOR_BOUNDS)
 	door_hall.pressed.connect(func(): _send("go_to", {"place": "hall"}))
 
 
@@ -157,6 +163,7 @@ func _layout() -> void:
 	var scale_factor := minf(size.x / artwork.x, size.y / artwork.y)
 	room_view.size = artwork * scale_factor
 	room_view.position = (size - room_view.size) * 0.5
+	RoomStage.fit(self, window_stage)
 	var digit_scale := room_view.size.x / 1152.0
 	room_digit_label.add_theme_font_size_override(
 		"font_size", maxi(1, roundi(32.0 * digit_scale))
@@ -167,18 +174,31 @@ func _layout() -> void:
 	popup_panel.custom_minimum_size.x = clampf(size.x - 24.0, 260.0, 470.0)
 
 
-func _add_hotspot(node_name: String, hint: String, bounds: Rect2, page: String) -> void:
+func _add_hotspot(node_name: String, hint: String, bounds: Rect2) -> Button:
 	var button := Button.new()
 	button.name = node_name
 	button.tooltip_text = hint
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	HoverGlow.spot(button)  # a soft gold glow, as in the other rooms (spec 24, 34)
 	room_view.add_child(button)
 	_anchor_to_bounds(button, bounds)
+	return button
+
+
+func _add_popup_hotspot(node_name: String, hint: String, bounds: Rect2, page: String) -> void:
+	var button := _add_hotspot(node_name, hint, bounds)
 	button.pressed.connect(func():
 		popup_opener = button
 		_open_popup(page)
 	)
+
+
+func _open_window_view() -> void:
+	if modal.visible or not room_view.visible:
+		return
+	room_view.hide()
+	var view := WindowView.new()
+	view.closed.connect(room_view.show)
+	window_stage.add_child(view)
 
 
 func _anchor_to_bounds(control: Control, bounds: Rect2) -> void:

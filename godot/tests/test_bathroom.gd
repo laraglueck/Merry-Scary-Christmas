@@ -69,9 +69,9 @@ func test_dark_picture_while_the_green_fuse_is_off() -> void:
 	assert_eq(background_file(open_bathroom(false)), "room_bathroom_dark.webp", "background")
 
 
-func test_all_five_spots_are_there() -> void:
+func test_all_six_spots_are_there() -> void:
 	var bathroom := open_bathroom()
-	for spot in ["door_hall", "mirror", "hot_tap", "cold_tap", "bathtub"]:
+	for spot in ["door_hall", "mirror", "hot_tap", "cold_tap", "bathtub", "window"]:
 		find(bathroom, "Spot_" + spot)
 
 
@@ -82,11 +82,67 @@ func test_arrows_move_the_highlight_from_spot_to_spot() -> void:
 	assert_eq(bathroom.highlighted_spot(), "door_hall", "start at the door")
 	key(bathroom, "ui_left")
 	assert_eq(bathroom.highlighted_spot(), "mirror", "one left")
+	for i in 6:
+		key(bathroom, "ui_left")
+	assert_eq(bathroom.highlighted_spot(), "window", "stops at the first spot")
+	key(bathroom, "ui_right")
+	assert_eq(bathroom.highlighted_spot(), "bathtub", "one right")
+
+
+func test_bathroom_window_uses_the_shared_nuuk_view() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var bathroom := open_bathroom()
+	await wait_frames(2)
+	var hotspot := find(bathroom, "Spot_window") as Button
+	if hotspot == null:
+		return
+	assert_true(Rect2(60, 60, 105, 210).encloses(hotspot.get_global_rect()), "aligned with the window above the bathtub")
+	assert_true(hotspot.get_global_rect().has_point(Vector2(95, 166)), "covers the glass")
+	var hover := hotspot.get_theme_stylebox("hover") as StyleBoxFlat
+	assert_true(hover != null and hover.border_color.is_equal_approx(Color("ffd76a")) and not hover.draw_center, "gold outline without a fill")
+
+	var before: Dictionary = bathroom.game.duplicate(true)
 	for i in 5:
 		key(bathroom, "ui_left")
-	assert_eq(bathroom.highlighted_spot(), "bathtub", "stops at the first spot")
-	key(bathroom, "ui_right")
-	assert_eq(bathroom.highlighted_spot(), "cold_tap", "one right")
+	key(bathroom, "ui_accept")
+	var view := find(bathroom, "WindowView") as Control
+	if view == null:
+		return
+	bathroom.size = Vector2(864, 486)
+	await wait_frames(2)
+	var stage := find(bathroom, "Stage") as Control
+	assert_eq(stage.scale, Vector2(0.75, 0.75), "the room shrinks")
+	assert_true(view.get_global_rect().is_equal_approx(stage.get_global_rect()), "the window covers the resized stage")
+	assert_true(view.is_in_group("hides_inventory"), "the HUD steps aside")
+	view.show_weather({"kind": "rain", "text": "Nuuk, Greenland"})
+	view.finish_wipe()
+	assert_contains(text_of(view, "WeatherLine"), "Nuuk")
+	var audio := find(view, "WeatherAudio") as AudioStreamPlayer
+	assert_true(audio != null and audio.stream != null, "uses the shared weather audio")
+
+	var escape := InputEventAction.new()
+	escape.action = "ui_cancel"
+	escape.pressed = true
+	tree.root.push_input(escape)
+	assert_true(not view.visible and not view.is_in_group("hides_inventory"), "Esc closes the view")
+	await wait_frames(2)
+
+	for down in [true, false]:
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = down
+		click.position = hotspot.get_global_rect().get_center()
+		click.global_position = click.position
+		tree.root.push_input(click)
+	var reopened := find(bathroom, "WindowView") as Control
+	if reopened == null:
+		return
+	var enter := InputEventAction.new()
+	enter.action = "ui_accept"
+	enter.pressed = true
+	tree.root.push_input(enter)
+	assert_true(not reopened.visible, "Enter closes the view after a mouse click")
+	assert_eq(bathroom.game, before, "no shared game changes")
 
 
 func test_enter_uses_the_highlighted_spot() -> void:

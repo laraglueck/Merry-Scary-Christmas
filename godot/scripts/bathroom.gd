@@ -13,6 +13,7 @@ const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
 const RoomStage = preload("res://scripts/room_stage.gd")
 const Settings = preload("res://scripts/settings.gd")
+const WindowView = preload("res://scripts/window_view.gd")
 
 const IMAGES := "res://assets/images/"
 const GREEN_FUSE := 1  # the green fuse lights the bathroom
@@ -23,13 +24,13 @@ const EXAMPLE_WHEELS := ["bell", "star", "tree"]
 # Rect2(x, y, width, height) on the 1152 x 648 screen, measured on room_bathroom_lit.webp.
 # The door is on the right, as in the house plan. If a new picture moves things, change these numbers.
 const SPOTS := [
+	{"name": "window", "label": "Look out of the window", "rect": Rect2(65, 80, 92, 187)},
 	{"name": "bathtub", "label": "Bathtub", "rect": Rect2(112, 378, 420, 175)},
 	{"name": "cold_tap", "label": "Cold", "rect": Rect2(678, 300, 52, 52)},
 	{"name": "hot_tap", "label": "Warm", "rect": Rect2(734, 300, 52, 52)},
 	{"name": "mirror", "label": "Mirror", "rect": Rect2(616, 128, 230, 176)},
 	{"name": "door_hall", "label": "Hall", "rect": Rect2(954, 70, 150, 515)},
 ]
-const START_SPOT := 4  # the team comes in through the door, so the highlight starts there
 const GIFT_RECT := Rect2(282, 300, 110, 110)  # the present, standing in the empty tub
 const PIECE_RECT := Rect2(398, 352, 74, 60)   # a torn piece of the photo, beside it (spec 21)
 const DIGIT_POSITION := Vector2(232, 318)     # the digit scratched into the enamel
@@ -53,9 +54,11 @@ static var _face_seen := false
 var net: Node = null  # set by main.gd for online play
 
 var game: Dictionary          # offline: our own game; online: the shared game
-var _highlight := START_SPOT  # index in SPOTS
+var _highlight := SPOTS.size() - 1  # the team comes in through the door, the last spot
 
 # Nodes we change later (built in _build_ui)
+var _stage: Control
+var _window_view: Control
 var _background: TextureRect
 var _spot_buttons: Array[Button] = []
 var _turns_label: Label
@@ -94,7 +97,7 @@ func _ready() -> void:
 	_message.text = game.get("last_event", "")
 	_seen = _what_happened_so_far()
 	_refresh()
-	RoomStage.put_on_stage(self)  # click areas stay on their objects when the window changes (spec 21)
+	_stage = RoomStage.put_on_stage(self)  # click areas stay on their objects when the window changes (spec 21)
 
 
 func _online() -> bool:
@@ -148,6 +151,8 @@ func _is_lit() -> bool:
 # ---------- keys ----------
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_instance_valid(_window_view):
+		return  # the window view handles its own close keys
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_down"):
 		_close_mirror()
 	elif _mirror_panel.visible:
@@ -198,10 +203,29 @@ func _use_spot(spot: String) -> void:
 			_turn_tap("cold")
 		"mirror":
 			_open_mirror()
+		"window":
+			_open_window_view()
 		"bathtub":
 			_send("take_gift", {"room": "bathroom"})
 		"door_hall":
 			_send("go_to", {"place": "hall"})  # the whole team walks back (spec 07)
+
+
+func _open_window_view() -> void:
+	if _mirror_panel.visible or is_instance_valid(_window_view):
+		return
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused != null and _stage.is_ancestor_of(focused):
+		focused.release_focus()
+	_stage.focus_behavior_recursive = Control.FOCUS_BEHAVIOR_DISABLED
+	_window_view = WindowView.new()
+	_window_view.closed.connect(_on_window_view_closed)
+	_stage.add_child(_window_view)
+
+
+func _on_window_view_closed() -> void:
+	_window_view = null
+	_stage.focus_behavior_recursive = Control.FOCUS_BEHAVIOR_INHERITED
 
 
 # Every turn goes to the shared game, so the whole team builds one order.
@@ -220,7 +244,7 @@ func _open_mirror() -> void:
 		_mirror_dust.modulate.a = 0.0  # only the face, nothing else in the glass
 		_play(_scare, "sfx_scare.mp3")
 		_shake(_mirror_panel)
-		get_tree().create_timer(FACE_SECONDS).timeout.connect(_face_goes)
+		get_tree().create_timer(FACE_SECONDS, false).timeout.connect(_face_goes)
 	if not _bathroom()["solved"]:
 		_message.text = "Too much dust to see anything... but something seems hidden underneath."
 	_refresh()
@@ -269,7 +293,7 @@ func _play(player: AudioStreamPlayer, file_name: String, pitch := 1.0, cut_after
 	player.pitch_scale = pitch
 	player.play()
 	if cut_after > 0.0:
-		get_tree().create_timer(cut_after).timeout.connect(player.stop)
+		get_tree().create_timer(cut_after, false).timeout.connect(player.stop)
 
 
 # The steam fades in and drifts up a little over the mirror.
@@ -441,6 +465,9 @@ func _build_ui() -> void:
 		button.add_theme_color_override("font_outline_color", Color.BLACK)
 		button.add_theme_constant_override("outline_size", 5)
 		HoverGlow.spot(button)  # a soft gold glow on hover (spec 34)
+		if spot["name"] == "window":
+			var glow := button.get_theme_stylebox("hover") as StyleBoxFlat
+			glow.draw_center = false
 		button.pressed.connect(_on_spot_pressed.bind(i))
 		add_child(button)
 		_spot_buttons.append(button)

@@ -42,6 +42,7 @@ const Lang = preload("res://scripts/lang.gd")
 const HallScript = preload("res://scripts/hall.gd")  # its loose-bulb flicker (spec 05, 35)
 const CLOCK_COLOUR := Color("f3e6cf")
 const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
+const WEB_WINDOW_EVENTS := ["blur", "focus", "pagehide", "pageshow"]
 
 var net: Node
 var screen: Node
@@ -78,6 +79,14 @@ var _powers_seen := 0     # how many powers were used when the box was last upda
 var pause_button: Button   # spec 26: next to the clock while the game runs
 var pause_overlay: Control # spec 26: over every screen while the game is paused
 var pause_label: Label
+var continue_button: Button
+var _web_window: JavaScriptObject
+var _web_document: JavaScriptObject
+var _web_focus_listener: JavaScriptObject
+var _web_page_away := false
+var _web_pause_active := false
+var _master_was_muted := false
+var _paused_audio_players: Array[AudioStreamPlayer] = []
 var inventory_bar: PanelContainer
 var _item_pictures := {}  # item id -> its picture in the bar
 var _item_names := {}     # item id -> its name under the picture
@@ -109,9 +118,17 @@ func _ready() -> void:
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
+	if OS.has_feature("web"):
+		_watch_web_page()
 
 
 func _exit_tree() -> void:
+	if _web_focus_listener != null:
+		for event_name in WEB_WINDOW_EVENTS:
+			_web_window.removeEventListener(event_name, _web_focus_listener)
+		_web_document.removeEventListener("visibilitychange", _web_focus_listener)
+	if _web_pause_active:
+		_resume_web_scene()
 	Lang.cleanup()
 
 
@@ -291,7 +308,7 @@ func _update_clock() -> void:
 		power_message.text = str(net.game.get("last_event", ""))
 		power_message.visible = true
 		var shown := used_count
-		get_tree().create_timer(Settings.POWER_MESSAGE_SECONDS).timeout.connect(func() -> void:
+		get_tree().create_timer(Settings.POWER_MESSAGE_SECONDS, false).timeout.connect(func() -> void:
 			if _powers_seen == shown:  # a newer power keeps its own full time
 				close_power_message())
 	_powers_seen = used_count
@@ -672,6 +689,7 @@ func _build_pause() -> void:
 	var layer := CanvasLayer.new()  # above the clock, the inventory and the photo puzzle
 	layer.name = "PauseLayer"
 	layer.layer = 10
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(layer)
 	pause_overlay = ColorRect.new()
 	pause_overlay.name = "PauseOverlay"
@@ -697,14 +715,14 @@ func _build_pause() -> void:
 	pause_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	pause_label.add_theme_constant_override("outline_size", 6)
 	box.add_child(pause_label)
-	var go_on := Button.new()
-	go_on.name = "ContinueButton"
-	go_on.text = "Continue"
-	go_on.custom_minimum_size = Vector2(240, 58)
-	go_on.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	go_on.add_theme_font_size_override("font_size", 28)
-	go_on.pressed.connect(func(): net.send_action("resume", {}))
-	box.add_child(go_on)
+	continue_button = Button.new()
+	continue_button.name = "ContinueButton"
+	continue_button.text = "Continue"
+	continue_button.custom_minimum_size = Vector2(240, 58)
+	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	continue_button.add_theme_font_size_override("font_size", 28)
+	continue_button.pressed.connect(_continue_game)
+	box.add_child(continue_button)
 	# Spec 34: switch the flickering off without starting again (only on this device).
 	var flashing := Button.new()
 	flashing.name = "PauseReduceFlashing"
@@ -722,11 +740,70 @@ func _build_pause() -> void:
 
 func _update_pause() -> void:
 	var running: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
-	var paused: bool = running and net.game.get("paused", false)
+	var paused: bool = _web_pause_active or (running and net.game.get("paused", false))
 	pause_button.visible = running and not paused
 	pause_overlay.visible = paused
-	if paused:
+	continue_button.disabled = _web_page_away
+	if _web_pause_active:
+		pause_label.text = "Paused while away"
+	elif paused:
 		pause_label.text = "Paused by Player %d" % (int(net.game.get("paused_by", 0)) + 1)
+
+
+func _continue_game() -> void:
+	if _web_page_away:
+		return
+	if _web_pause_active:
+		_resume_web_scene()
+	if net.game.get("paused", false):
+		net.send_action("resume", {})
+	_update_pause()
+
+
+func _watch_web_page() -> void:
+	_web_window = JavaScriptBridge.get_interface("window")
+	_web_document = JavaScriptBridge.get_interface("document")
+	_web_focus_listener = JavaScriptBridge.create_callback(_on_web_page_changed)
+	for event_name in WEB_WINDOW_EVENTS:
+		_web_window.addEventListener(event_name, _web_focus_listener)
+	_web_document.addEventListener("visibilitychange", _web_focus_listener)
+	_on_web_page_changed([])
+
+
+func _on_web_page_changed(args: Array) -> void:
+	var left: bool = not args.is_empty() and args[0].type in ["blur", "pagehide"]
+	_set_web_page_away(left or _web_document.hidden or not _web_document.hasFocus())
+
+
+func _set_web_page_away(away: bool) -> void:
+	_web_page_away = away
+	if away and not _web_pause_active:
+		_web_pause_active = true
+		_pause_web_scene()
+	_update_pause()
+
+
+func _pause_web_scene() -> void:
+	# The master bus also covers audio that is started by an asynchronous callback.
+	_master_was_muted = AudioServer.is_bus_mute(0)
+	AudioServer.set_bus_mute(0, true)
+	for player in find_children("*", "AudioStreamPlayer", true, false):
+		if player.stream_paused:
+			_paused_audio_players.append(player)
+	get_tree().paused = true
+	if net.game.get("phase") == "hall" and not net.game.get("paused", false):
+		net.send_action("pause", {})
+
+
+func _resume_web_scene() -> void:
+	_web_pause_active = false
+	get_tree().paused = false
+	# Godot unpauses audio players with the scene. Restore ones already paused.
+	for player in _paused_audio_players:
+		if is_instance_valid(player):
+			player.stream_paused = true
+	_paused_audio_players.clear()
+	AudioServer.set_bus_mute(0, _master_was_muted)
 
 
 # ---------- a penalty you can see (spec 34) ----------

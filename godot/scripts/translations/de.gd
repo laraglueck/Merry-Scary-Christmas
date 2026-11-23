@@ -68,6 +68,7 @@ const TEXTS := {
 	"Music off": "Musik aus",
 	"Music on": "Musik an",
 	"Pause": "Pause",
+	"Paused while away": "Pausiert während deiner Abwesenheit",
 	"Paused by Player %d": "Pausiert von Spieler %d",
 	"Photo": "Foto",
 	"photo": "Foto",

@@ -458,6 +458,54 @@ func test_no_pause_button_before_the_game() -> void:
 	assert_true(pause == null or not pause.is_visible_in_tree(), "no Pause on the story or the title")
 
 
+func test_browser_leaving_pauses_until_continue() -> void:
+	var main := make_main_device("WebPause")
+	assert_true(main.has_method("_set_web_page_away"), "handles browser focus changes")
+	if not main.has_method("_set_web_page_away"):
+		return
+	main.net.play_alone()
+	main.net.start_game()
+	var played: int = main.net.game["seconds_played"]
+	var continue_button := find(main, "ContinueButton") as Button
+
+	main._set_web_page_away(true)
+	assert_true(tree.paused and main.net.game["paused"], "the scene and the saved game pause")
+	assert_true(AudioServer.is_bus_mute(0), "all browser audio is muted")
+	assert_true(main.pause_overlay.visible and continue_button.disabled, "the pause is visible while away")
+	assert_contains(main.pause_label.text, "Paused")
+	main.net.advance_clock(4.0)
+	assert_eq(main.net.game["seconds_played"], played, "the timer stays still")
+	continue_button.pressed.emit()
+	assert_true(tree.paused, "cannot resume while the page is away")
+
+	main._set_web_page_away(false)
+	assert_true(tree.paused and main.pause_overlay.visible, "returning keeps the pause")
+	assert_true(AudioServer.is_bus_mute(0) and not continue_button.disabled, "audio waits for Continue too")
+	press(main, "ContinueButton")
+	assert_true(not tree.paused and not main.net.game["paused"], "Continue resumes the game")
+	assert_true(not main.pause_overlay.visible and not AudioServer.is_bus_mute(0), "the overlay clears and audio resumes")
+	main.net.advance_clock(2.0)
+	assert_eq(main.net.game["seconds_played"], played + 2, "the timer resumes")
+
+
+func test_browser_pause_preserves_disabled_music_before_play() -> void:
+	var main := make_main_device("WebTitlePause")
+	assert_true(main.has_method("_set_web_page_away"), "handles browser focus changes")
+	if not main.has_method("_set_web_page_away"):
+		return
+	main.warning_done = true
+	main.story_done = true
+	main._update_screen()
+	main.music.play()  # headless does not start the title music automatically
+	main.toggle_music()
+	main._set_web_page_away(true)
+	assert_true(main.pause_overlay.visible and tree.paused, "the title pauses too")
+	main._set_web_page_away(false)
+	press(main, "ContinueButton")
+	assert_true(not main.music_enabled and main.music.stream_paused, "music switched off stays off")
+	main.music.stop()
+
+
 # ---------- playtest fixes (spec 29) ----------
 
 func test_pause_and_help_sit_together_next_to_the_penalty() -> void:

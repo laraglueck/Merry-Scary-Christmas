@@ -29,8 +29,8 @@ Playtest of the browser version on 23 Nov:
   every later time she creaks, as before.
 
 ## Out of scope
-The music on/off button (spec 33, Leon), a pause when the tab is left, more buffer for
-crackling sound in the browser (later, if there is time).
+The music on/off button (spec 33, Leon), browser tab pause (spec 26) and more buffer for
+crackling sound in the browser.
 
 ## Done when
 New tests (red first): the browser start screen waits for a click and then plays the

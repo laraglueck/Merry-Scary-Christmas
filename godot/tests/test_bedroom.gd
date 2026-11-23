@@ -115,3 +115,44 @@ func test_bedroom_frames_are_gold() -> void:
 			var gold: bool = hover is StyleBoxFlat and hover.border_color.is_equal_approx(Color("ffd76a"))
 			assert_true(gold, node_name + ": gold frame on hover")
 
+
+func test_bedroom_window_uses_the_shared_nuuk_view() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var bedroom = BedroomScene.instantiate()
+	bedroom.seed_value = 42
+	tree.root.add_child(bedroom)
+	await wait_frames(2)
+	var hotspot := find(bedroom, "WindowButton") as Button
+	if hotspot == null:
+		return
+	assert_true(Rect2(960, 40, 155, 300).encloses(hotspot.get_global_rect()), "aligned with the window")
+	assert_true(hotspot.get_global_rect().has_point(Vector2(1050, 255)), "covers the glass")
+	assert_true(hotspot.get_theme_stylebox("normal") is StyleBoxEmpty, "hidden until hovered")
+	var hover := hotspot.get_theme_stylebox("hover") as StyleBoxFlat
+	assert_true(hover != null and hover.border_color.is_equal_approx(Color("ffd76a")) and not hover.draw_center, "gold outline without a filled centre")
+
+	tree.root.size = Vector2i(864, 486)
+	await wait_frames(2)
+	var before: Dictionary = bedroom.offline_game.duplicate(true)
+	hotspot.pressed.emit()
+	await wait_frames(2)
+	var view = find(bedroom, "WindowView")
+	if view == null:
+		return
+	assert_true(view.size.is_equal_approx(Vector2(1152, 648)), "keeps the shared view's design size")
+	assert_true(view.get_global_rect().size.is_equal_approx(bedroom.size), "fits the resized room")
+	assert_true(view.is_in_group("hides_inventory"), "the HUD looks for this group")
+	assert_eq(text_of(view, "WeatherLine"), "Wiping the frost off the glass...")
+	var body := JSON.stringify({"current": {"temperature_2m": 3.2, "weather_code": 63}}).to_utf8_buffer()
+	view._on_request_completed(HTTPRequest.RESULT_SUCCESS, 200, PackedStringArray(), body)
+	view.finish_wipe()
+	assert_eq(text_of(view, "WeatherLine"), "Nuuk, Greenland, tonight: 3 °C, rain.")
+
+	var escape := InputEventAction.new()
+	escape.action = "ui_cancel"
+	escape.pressed = true
+	tree.root.push_input(escape)
+	assert_true(not view.visible and not view.is_in_group("hides_inventory"), "Esc closes the view and restores the HUD")
+	assert_true(hotspot.is_visible_in_tree(), "the bedroom can be interacted with again")
+	assert_eq(bedroom.offline_game, before, "the weather view leaves the shared game state untouched")
+

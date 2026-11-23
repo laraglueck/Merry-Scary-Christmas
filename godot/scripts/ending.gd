@@ -160,7 +160,7 @@ func _wake_up() -> void:
 	wake.add_child(jingles)
 	create_tween().tween_property(jingles, "modulate:a", 1.0, WAKE_FADE_IN)
 	_play("sfx_clock_chime.mp3")
-	get_tree().create_timer(WAKE_SECONDS).timeout.connect(show_ending)
+	get_tree().create_timer(WAKE_SECONDS, false).timeout.connect(show_ending)
 
 
 # After the wake-up: the end screen with its picture and the lose music (tests call it too).
