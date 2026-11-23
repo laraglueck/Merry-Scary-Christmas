@@ -1122,3 +1122,40 @@ func test_in_a_team_the_doll_has_no_note() -> void:
 	var hall := open_hall()
 	hall._close_mission()
 	assert_eq(is_shown(hall, "DollNote"), false, "no note in her lap: it is only for single player")
+
+
+# ---------- not by colour alone (spec 34) ----------
+
+func test_every_fuse_has_its_own_shape() -> void:
+	var marks := {}
+	for fuse in Settings.FUSES:
+		assert_true(fuse.has("mark"), fuse["colour"] + " has a shape")
+		marks[fuse.get("mark", "")] = true
+	assert_eq(marks.size(), Settings.FUSES.size(), "three different shapes")
+	assert_eq(Settings.FUSES[0].get("mark"), "circle", "red = circle")
+
+
+func test_title_and_frame_show_the_fuses_shapes() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	var seen := {0: 2, 1: 0, 2: 1}  # player -> the fuse whose order they see
+	for player in seen:
+		press(hall, "PlayerButton%d" % player)
+		var own: Node = find(hall, "FuseTitleMark")
+		var frame: Node = find(hall, "FrameMark")
+		if own == null or frame == null:
+			return
+		assert_eq(own.get("shape"), Settings.FUSES[player]["mark"], "player %d: own shape in the title" % [player + 1])
+		assert_eq(frame.get("shape"), Settings.FUSES[seen[player]]["mark"], "player %d: the order's shape on the frame" % [player + 1])
+		assert_true(own.is_visible_in_tree() and frame.is_visible_in_tree(), "both shown")
+	var row: Node = find(hall, "LabelSymbols")
+	assert_true(row != null and not row.is_ancestor_of(find(hall, "FrameMark")), "not in the row of symbols")
+	assert_eq(row.get_child_count() if row != null else -1, 4, "still four symbols in the row")
+
+
+func test_the_rescue_hint_names_the_shape() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	for i in Settings.RESCUE_TRIES:
+		click_wires(hall, RED_WRONG)
+	assert_contains(text_of(hall, "FuseHint"), "GOLD fuse (diamond)", "colour and shape")

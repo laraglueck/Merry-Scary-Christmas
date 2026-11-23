@@ -10,6 +10,7 @@ extends Control
 
 const ButtonStyle = preload("res://scripts/button_style.gd")
 const Rules = preload("res://scripts/rules/fuse_rules.gd")
+const FuseMark = preload("res://scripts/fuse_mark.gd")
 const Settings = preload("res://scripts/settings.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
 const WalkLayer = preload("res://scripts/walk_layer.gd")
@@ -99,6 +100,8 @@ var _house_plan_panel: Control
 var _sockets := {}           # fuse colour -> fuse picture in its socket
 var _wire_buttons := {}
 var _fuse_title: Label
+var _fuse_title_mark: Control  # the own fuse's shape, before the title (spec 34)
+var _frame_mark: Control       # the order's fuse shape, a tag on the frame (spec 34)
 var _hint_label: RichTextLabel  # rich text: the fuse's name in its colour
 var _label_symbols: Array[TextureRect] = []
 var _chosen_label: Label
@@ -691,10 +694,13 @@ func _refresh() -> void:
 	var fuse: Dictionary = puzzle["fuses"][current_player]
 	_fuse_title.text = "Player %d, your fuse: %s" % [current_player + 1, fuse["colour"].to_upper()]
 	_fuse_title.add_theme_color_override("font_color", UI_COLOURS[fuse["colour"]])
+	_show_mark(_fuse_title_mark, current_player)
+	_fuse_title_mark.visible = true
 	var seen := _fuse_seen_by(current_player)
 	var seen_colour: String = puzzle["fuses"][seen]["colour"]
 	var label := Rules.label_for(puzzle, seen)
 	var coloured_name := "[color=#%s]%s[/color]" % [UI_COLOURS[seen_colour].to_html(false), seen_colour.to_upper()]
+	_show_mark(_frame_mark, seen)
 	# The order is shown as if it were the player's own; only its frame tells whose it is.
 	_hint_label.text = "Connect the four wires in the right order. [i]Not every order you see is meant for you.[/i]\n\n[b]The order:[/b]"
 	for i in _label_symbols.size():
@@ -705,13 +711,14 @@ func _refresh() -> void:
 	if fuse["solved"] and not puzzle["fuses"][seen]["solved"]:
 		_fuse_hint.text = "Your fuse is on. But these symbols are still here... someone else might need them."
 	elif _wrong_tries >= Settings.RESCUE_TRIES and not fuse["solved"]:
-		_fuse_hint.text = "[b]Sparks![/b] Look at the frame: these symbols belong to the %s fuse. Who has it?" % coloured_name
+		_fuse_hint.text = "[b]Sparks![/b] Look at the frame: these symbols belong to the %s fuse (%s). Who has it?" % [coloured_name, Settings.FUSES[seen]["mark"]]
 	elif _wrong_tries >= 1 and not fuse["solved"]:
 		_fuse_hint.text = "[b]Sparks![/b] Are these symbols really meant for [i]your[/i] fuse?"
 	else:
 		_fuse_hint.text = ""
 	if _alone():  # one player: one order for all three fuses, hidden by the doll
 		_fuse_title.text = "Your fuses: all three"
+		_fuse_title_mark.visible = false
 		_hint_label.text = "Connect the four wires in the right order. [i]The order is hidden somewhere in the hall...[/i]"
 		_fuse_hint.text = "" if fuse["solved"] or _wrong_tries == 0 else \
 				"[b]Sparks![/b] Did you find the order? Someone on the stairs keeps an eye on it."
@@ -735,6 +742,13 @@ func _refresh() -> void:
 		_chosen_wires[i].visible = i < chosen.size()
 		if i < chosen.size():
 			_chosen_wires[i].add_theme_stylebox_override("panel", _box(UI_COLOURS[chosen[i]], Color(0, 0, 0, 0.7), 0))
+
+
+# A fuse's shape in its colour (spec 34).
+func _show_mark(mark: Control, fuse_index: int) -> void:
+	var info: Dictionary = Settings.FUSES[fuse_index]
+	mark.shape = info["mark"]
+	mark.colour = UI_COLOURS[info["colour"]]
 
 
 # The fuse whose torn label this player can see.
@@ -978,8 +992,18 @@ func _build_fuse_box() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
 	side.add_child(box)
-	_fuse_title = _label(box, "", 24, true)
+	var title_row := HBoxContainer.new()  # the own fuse's shape, then the words (spec 34)
+	title_row.add_theme_constant_override("separation", 8)
+	box.add_child(title_row)
+	_fuse_title_mark = FuseMark.new()
+	_fuse_title_mark.name = "FuseTitleMark"
+	_fuse_title_mark.custom_minimum_size = Vector2(22, 22)
+	_fuse_title_mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_fuse_title_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_row.add_child(_fuse_title_mark)
+	_fuse_title = _label(title_row, "", 22, true)
 	_fuse_title.name = "FuseTitle"
+	_fuse_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var space := Control.new()  # a bit more room under the title (manual test 4)
 	space.custom_minimum_size = Vector2(0, 4)
 	box.add_child(space)
@@ -1000,6 +1024,20 @@ func _build_fuse_box() -> void:
 	symbols.name = "LabelSymbols"
 	symbols.add_theme_constant_override("separation", 0)
 	_label_frame.add_child(symbols)
+	# The fuse's shape as a tag on the frame's top edge (spec 34). Not in the row of symbols:
+	# a fuse picture there was read as part of the order (second test round).
+	var tag_layer := Control.new()  # fills the frame like the row, so the tag can sit on the edge
+	tag_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_label_frame.add_child(tag_layer)
+	_frame_mark = FuseMark.new()
+	_frame_mark.name = "FrameMark"
+	_frame_mark.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_frame_mark.offset_left = -15
+	_frame_mark.offset_right = 15
+	_frame_mark.offset_top = -8 - 15  # centred on the frame's edge (the frame's margin is 8)
+	_frame_mark.offset_bottom = -8 + 15
+	_frame_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tag_layer.add_child(_frame_mark)
 	for i in 4:
 		var symbol := _image("LabelSymbol%d" % i, "")
 		symbol.custom_minimum_size = Vector2(56, 56)

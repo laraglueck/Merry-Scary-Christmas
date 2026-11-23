@@ -6,11 +6,12 @@ extends RefCounted
 const FUSE_PENALTY_SECONDS := 10
 const WIRE_COLOURS := ["blue", "yellow", "white", "black"]
 const SYMBOLS := ["star", "bell", "tree", "snowflake"]
-# Fuse i belongs to player i and lights one room.
+# Fuse i belongs to player i and lights one room. Its shape ("mark") shows with its colour,
+# so colour-blind players can tell the fuses apart too (spec 34).
 const FUSES := [
-	{"colour": "red", "room": "living/dining room", "place": "living_room"},
-	{"colour": "green", "room": "bathroom", "place": "bathroom"},
-	{"colour": "gold", "room": "bedroom", "place": "bedroom"},
+	{"colour": "red", "room": "living/dining room", "place": "living_room", "mark": "circle"},
+	{"colour": "green", "room": "bathroom", "place": "bathroom", "mark": "triangle"},
+	{"colour": "gold", "room": "bedroom", "place": "bedroom", "mark": "diamond"},
 ]
 
 # Bathroom (spec 10): four turns of the taps, each hot or cold.
