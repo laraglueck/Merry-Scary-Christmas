@@ -208,7 +208,7 @@ godot/
   tools/           helper scripts for the pictures (add_image, cut_photo, ...)
   assets/          pictures and sounds, with CREDITS.md
 specs/             one short spec per feature
-docs/              walkthrough, team guide and asset brief
+docs/              walkthrough, demo plan, team guide and asset brief
 supabase/          the leaderboard table and its access rules (SQL)
 web/               the game exported for the browser (GitHub Pages)
 ```
