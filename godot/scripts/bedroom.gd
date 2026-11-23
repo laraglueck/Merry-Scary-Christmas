@@ -121,7 +121,7 @@ func _build_room() -> void:
 
 	var title := Label.new()
 	title.text = "The Bedroom"
-	title.position = Vector2(24, 12)
+	title.position = Vector2(52, 12)  # right of the music button (spec 33)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title.add_theme_font_size_override("font_size", 34)
 	title.add_theme_color_override("font_color", Color("#e8d9c0"))

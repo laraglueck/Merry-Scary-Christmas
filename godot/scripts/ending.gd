@@ -68,7 +68,9 @@ func _build_results_card(game: Dictionary) -> void:
 	panel.add_child(column)
 	var title := _label(column, "ResultsTitle", "Your escape", 22)
 	title.add_theme_color_override("font_color", Color("ffd76a"))
-	var rows := _label(column, "ResultsRows", "\n".join(ResultsRules.lines(game)), 15)
+	# Line by line through tr(): the translations match one text at a time (spec 34).
+	var lines: Array = ResultsRules.lines(game).map(func(line: String) -> String: return tr(line))
+	var rows := _label(column, "ResultsRows", "\n".join(lines), 15)
 	rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
 

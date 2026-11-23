@@ -738,7 +738,7 @@ func _refresh() -> void:
 	elif chosen.is_empty():
 		_chosen_label.text = "Your order: click the wires"
 	else:
-		_chosen_label.text = "Your order: " + ", ".join(chosen)
+		_chosen_label.text = "Your order: " + ", ".join(chosen.map(func(c): return tr(c)))  # each colour translated
 	for i in _chosen_wires.size():
 		_chosen_wires[i].visible = i < chosen.size()
 		if i < chosen.size():
@@ -871,7 +871,8 @@ func _build_ui() -> void:
 
 	# On top of everything: title, player switch and penalty, the message line.
 	var title := _label(self, "The Hall", 34)
-	title.position = Vector2(24, 12)
+	title.name = "HallTitle"
+	title.position = Vector2(52, 12)  # right of the music button (spec 33)
 	title.add_theme_color_override("font_color", Color("e8d9c0"))
 	_outline(title)
 	var hud := HBoxContainer.new()
