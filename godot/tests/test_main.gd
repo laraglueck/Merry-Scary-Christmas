@@ -4,6 +4,7 @@ extends "res://tests/base_test.gd"
 const MainScene = preload("res://scenes/main.tscn")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
+const Comfort = preload("res://scripts/comfort.gd")
 
 
 # One device running the whole game (main scene), with its own multiplayer.
@@ -36,6 +37,7 @@ func make_started_mains(port: int) -> Array:
 
 func test_main_starts_with_the_story() -> void:
 	var main := make_main_device("Solo")
+	main.screen.accepted.emit()  # the flashing warning (spec 34)
 	assert_eq(main.screen_name, "intro", "the story first, before the title (spec 25)")
 	await wait_frames(2)
 	assert_true(main.find_child("SubtitleLabel", true, false) != null, "story shown")
@@ -44,6 +46,7 @@ func test_main_starts_with_the_story() -> void:
 
 func test_main_story_then_title_then_lobby() -> void:
 	var main := make_main_device("Solo2")
+	main.screen.accepted.emit()  # the flashing warning (spec 34)
 	main.screen.finished.emit()  # voice over, click or key
 	assert_eq(main.screen_name, "title", "the title after the story")
 	await wait_frames(2)
@@ -61,6 +64,8 @@ func test_menu_music_only_on_the_title() -> void:
 	var music: AudioStreamPlayer = main.get_node_or_null("Music")
 	assert_true(music != null and music.stream != null, "music in main")
 	assert_true(music != null and music.stream.loop, "music loops")
+	assert_eq(main.get("menu_music_on"), false, "no music under the warning")
+	main.screen.accepted.emit()  # the flashing warning (spec 34)
 	assert_eq(main.get("menu_music_on"), false, "no music under the story")
 	main.screen.finished.emit()
 	assert_eq(main.get("menu_music_on"), true, "music on the title")
@@ -358,6 +363,7 @@ func test_house_music_plays_quietly_while_the_game_runs() -> void:
 # Spec 25: the story comes first on each device, before the title, on its own.
 func test_the_story_at_the_start_fades_in_without_music() -> void:
 	var main := make_main_device("Story25")
+	main.screen.accepted.emit()  # the flashing warning (spec 34)
 	await wait_frames(2)
 	assert_eq(main.screen_name, "intro", "the story")
 	assert_true(main.screen.get("lead_in") != null and main.screen.lead_in >= 1.5, "the story fades in first")
@@ -625,3 +631,41 @@ func test_the_ending_music_follows_the_music_button() -> void:
 	main.toggle_music()
 	assert_eq(ending.music_allowed(), true, "and on again")
 	ending.queue_free()
+
+
+# ---------- flashing warning (spec 34) ----------
+
+func test_the_flashing_warning_comes_before_the_story() -> void:
+	var main := make_main_device("Warning")
+	assert_eq(main.screen_name, "warning", "the warning first")
+	await wait_frames(2)
+	assert_contains(text_of(main, "WarningText"), "photosensitive epilepsy", "says why")
+	assert_true(main.find_child("SubtitleLabel", true, false) == null, "no story yet")
+	press(main, "WarningContinue")
+	assert_eq(main.screen_name, "intro", "then the story")
+
+
+func test_the_warning_switch_reduces_flashing() -> void:
+	var main := make_main_device("WarningSwitch")
+	await wait_frames(1)
+	assert_eq(Comfort.reduce_flashing, false, "flashing on at the start")
+	assert_contains(text_of(main, "ReduceFlashingSwitch"), "Off", "the switch says Off")
+	press(main, "ReduceFlashingSwitch")
+	assert_eq(Comfort.reduce_flashing, true, "reduced after a click")
+	assert_contains(text_of(main, "ReduceFlashingSwitch"), "On", "the switch says On")
+	press(main, "ReduceFlashingSwitch")
+	assert_eq(Comfort.reduce_flashing, false, "and back")
+
+
+func test_the_pause_screen_has_the_flashing_switch() -> void:
+	var mains: Array = await make_started_mains(47691)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	press(mains[0], "PauseButton")
+	assert_true(await wait_until(func(): return mains[0].find_child("PauseOverlay", true, false).visible), "paused")
+	var switch: Button = mains[0].find_child("PauseReduceFlashing", true, false)
+	assert_true(switch != null and switch.is_visible_in_tree(), "the switch on the pause screen")
+	if switch == null:
+		return
+	switch.pressed.emit()
+	assert_eq(Comfort.reduce_flashing, true, "reduced from the pause screen")
+	assert_contains(switch.text, "On", "says On")

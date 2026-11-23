@@ -9,6 +9,7 @@ const HallScene = preload("res://scenes/hall.tscn")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const HallScript = preload("res://scripts/hall.gd")
 const Settings = preload("res://scripts/settings.gd")
+const Comfort = preload("res://scripts/comfort.gd")
 
 const RED_RIGHT := ["white", "blue", "yellow", "black"]
 const GREEN_RIGHT := ["blue", "black", "yellow", "white"]
@@ -1122,3 +1123,18 @@ func test_in_a_team_the_doll_has_no_note() -> void:
 	var hall := open_hall()
 	hall._close_mission()
 	assert_eq(is_shown(hall, "DollNote"), false, "no note in her lap: it is only for single player")
+
+
+# Spec 34: with "Reduce flashing" the hall stays steadily a little dark, no flicker.
+func test_reduced_flashing_keeps_the_hall_steady() -> void:
+	Comfort.reduce_flashing = true
+	var hall := open_hall()
+	var overlay: ColorRect = find(hall, "FlickerOverlay")
+	var seen := {}
+	for i in 40:
+		hall._on_flicker_tick()
+		seen[snappedf(overlay.color.a, 0.001)] = true
+	assert_eq(seen.size(), 1, "one steady darkness: %s" % [seen.keys()])
+	var a: float = seen.keys()[0]
+	assert_true(a > 0.0 and a <= HallScript.flicker_strength(0) * 0.5 + 0.001, "a little dark: %s" % a)
+	Comfort.reduce_flashing = false

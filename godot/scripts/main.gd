@@ -13,6 +13,7 @@ extends Node
 
 const NetworkScript = preload("res://scripts/net/network.gd")
 const SCREENS := {
+	"warning": preload("res://scenes/flash_warning.tscn"),  # flickering lights (spec 34)
 	"intro": preload("res://scenes/intro.tscn"),
 	"title": preload("res://scenes/title.tscn"),
 	"lobby": preload("res://scenes/lobby.tscn"),
@@ -36,6 +37,7 @@ const PhotoPuzzle = preload("res://scenes/photo_puzzle.tscn")
 const IMAGES := "res://assets/images/"
 const Settings = preload("res://scripts/settings.gd")
 const WebText = preload("res://scripts/web_text.gd")
+const Comfort = preload("res://scripts/comfort.gd")
 const CLOCK_COLOUR := Color("f3e6cf")
 const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
 
@@ -43,6 +45,7 @@ var net: Node
 var screen: Node
 var screen_name := ""
 var title_done := false  # "Start" pressed, or a game already started on this device
+var warning_done := false  # the flashing warning was answered on this device (spec 34)
 var story_done := false  # the story ended or was skipped on this device (spec 25)
 var music: AudioStreamPlayer
 var menu_music_on := false   # spec 23: true while the menu music plays, only on the title (the tests read this)
@@ -84,6 +87,8 @@ func _ready() -> void:
 # the team is; later phases (e.g. an end screen) -> that phase.
 func current_screen() -> String:
 	if net.game.is_empty():
+		if not warning_done:
+			return "warning"
 		if not story_done:
 			return "intro"
 		return "lobby" if title_done else "title"
@@ -96,6 +101,11 @@ func current_screen() -> String:
 # The story is over on this device (voice ended, click or key): on to the title (spec 25).
 func _on_intro_finished() -> void:
 	story_done = true
+	_update_screen()
+
+
+func _on_warning_accepted() -> void:
+	warning_done = true
 	_update_screen()
 
 
@@ -112,6 +122,7 @@ func _update_screen() -> void:
 	if not net.game.is_empty():
 		title_done = true
 		story_done = true
+		warning_done = true
 	var wanted := current_screen()
 	_set_menu_music(wanted == "title")
 	if wanted == screen_name:
@@ -126,6 +137,8 @@ func _update_screen() -> void:
 		screen.lead_in = Settings.STORY_LEAD_IN_SECONDS  # fade in, then the voice (spec 23)
 	if screen.has_signal("finished"):
 		screen.finished.connect(_on_intro_finished)
+	if screen.has_signal("accepted"):
+		screen.accepted.connect(_on_warning_accepted)
 	if screen.has_signal("start_pressed"):
 		screen.start_pressed.connect(_on_title_start_pressed)
 	add_child(screen)
@@ -531,6 +544,19 @@ func _build_pause() -> void:
 	go_on.add_theme_font_size_override("font_size", 28)
 	go_on.pressed.connect(func(): net.send_action("resume", {}))
 	box.add_child(go_on)
+	# Spec 34: switch the flickering off without starting again (only on this device).
+	var flashing := Button.new()
+	flashing.name = "PauseReduceFlashing"
+	flashing.text = Comfort.switch_text()
+	flashing.custom_minimum_size = Vector2(300, 44)
+	flashing.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	flashing.add_theme_font_size_override("font_size", 18)
+	ButtonStyle.make_clickable(flashing)
+	flashing.pressed.connect(func() -> void:
+		Comfort.reduce_flashing = not Comfort.reduce_flashing
+		flashing.text = Comfort.switch_text())
+	pause_overlay.visibility_changed.connect(func() -> void: flashing.text = Comfort.switch_text())
+	box.add_child(flashing)
 
 
 func _update_pause() -> void:
