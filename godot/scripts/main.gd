@@ -111,6 +111,10 @@ func _ready() -> void:
 	_update_screen()
 
 
+func _exit_tree() -> void:
+	Lang.cleanup()
+
+
 # First the story; then before "Start" -> title; no game yet (or game over) -> lobby; in the house -> where
 # the team is; later phases (e.g. an end screen) -> that phase.
 func current_screen() -> String:

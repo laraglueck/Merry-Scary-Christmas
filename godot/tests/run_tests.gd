@@ -21,6 +21,7 @@ class ErrorCatcher extends Logger:
 
 
 const Comfort = preload("res://scripts/comfort.gd")
+const Lang = preload("res://scripts/lang.gd")
 const TEST_SAVE := "user://test_saved_game.save"
 
 var _started := false
@@ -86,4 +87,5 @@ func _run_all() -> void:
 				for problem in problems:
 					print("        ", problem)
 	print("\n%d passed, %d failed" % [passed, failed])
+	Lang.cleanup()  # otherwise Godot crashes while it closes
 	quit(1 if failed > 0 else 0)

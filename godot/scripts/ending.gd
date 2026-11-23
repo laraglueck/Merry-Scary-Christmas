@@ -86,6 +86,8 @@ func _build_leaderboard(game: Dictionary) -> void:
 	panel.name = "LeaderboardPanel"
 	panel.position = Vector2(828, 70)
 	panel.custom_minimum_size = Vector2(300, 0)
+	panel.offset_right = panel.position.x + 300
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN  # spec 34: a longer language grows to the left
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color(0.05, 0.03, 0.03, 0.78)
 	box.border_color = Color("d4af37")

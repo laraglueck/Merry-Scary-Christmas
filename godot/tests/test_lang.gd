@@ -119,3 +119,90 @@ func test_the_flashing_switch_is_translated() -> void:
 	assert_eq(de.translate("Reduce flashing: On"), "Weniger Flackern: An", "German")
 	var pt := Lang.TemplateTranslation.from_catalog("pt", load(Lang.CATALOGS["pt"]).TEXTS)
 	assert_eq(pt.translate("Reduce flashing: Off"), "Reduzir intermitência: Desligado", "Portuguese")
+
+
+# ---------- spec 34: the texts fit in every language ----------
+
+func _use_language(code: String) -> void:
+	OS.set_environment("MERRY_SCARY_LANGUAGE_FILE", "user://test_language.cfg")
+	Lang.setup()
+	Lang.set_language(code)
+
+
+func _back_to_english() -> void:
+	Lang.set_language("en")
+	DirAccess.remove_absolute("user://test_language.cfg")
+
+
+# How wide a text is when it is written with this label's or button's letters.
+func _text_width(control: Control, text: String) -> float:
+	return control.get_theme_font("font").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			control.get_theme_font_size("font_size")).x
+
+
+# A word wider than its button would break in the middle ("Badezimm er").
+func test_no_word_in_the_hall_breaks_in_the_middle() -> void:
+	for code in ["en", "de", "pt"]:
+		_use_language(code)
+		var hall: Control = load("res://scenes/hall.tscn").instantiate()
+		tree.root.add_child(hall)
+		await wait_frames(2)
+		for spot in ["FuseBoxButton", "Door_living_room", "Door_bathroom", "StairsButton", "Door_bedroom", "HousePlanButton"]:
+			var button: Button = find(hall, spot)
+			var room: float = button.size.x - button.get_theme_stylebox("normal").get_minimum_size().x
+			for word in tree.root.tr(button.text).replace("\n", " ").split(" ", false):
+				assert_true(_text_width(button, word) <= room, "%s: '%s' needs %d, %s has %d" % [code, word, _text_width(button, word), spot, room])
+		hall.queue_free()
+		await wait_frames(1)
+	_back_to_english()
+
+
+func test_the_heroes_names_and_powers_fit() -> void:
+	for code in ["en", "de", "pt"]:
+		_use_language(code)
+		var screen: Control = load("res://scenes/character_select.tscn").instantiate()
+		tree.root.add_child(screen)
+		for info in load("res://scripts/settings.gd").CHARACTERS:
+			press(screen, "Card_" + info["id"])
+			await wait_frames(2)
+			var card: Control = find(screen, "Card_" + info["id"])
+			var texts: Control = find(screen, "Power_" + info["id"]).get_parent()
+			assert_true(texts.get_global_rect().end.x <= card.get_global_rect().end.x, "%s: %s inside its card" % [code, info["name"]])
+			var power: Label = find(screen, "PowerLabel")
+			var width := _text_width(power, tree.root.tr(power.text))
+			assert_true(width <= power.size.x and power.get_global_rect().end.x <= 1152.0,
+				"%s: the power line of %s is on the screen (%d wide, ends at %d)" % [code, info["name"], width, power.get_global_rect().end.x])
+		screen.queue_free()
+		await wait_frames(1)
+	_back_to_english()
+
+
+func test_the_leaderboard_stays_on_the_screen() -> void:
+	for code in ["en", "de", "pt"]:
+		_use_language(code)
+		for place in ["merry", "midnight"]:
+			var ending: Control = load("res://scenes/ending.tscn").instantiate()
+			ending.place = place
+			tree.root.add_child(ending)
+			await wait_frames(2)
+			var panel: Control = find(ending, "LeaderboardPanel")
+			assert_true(panel.position.x + panel.size.x <= 1140.0, "%s, %s: ends at %d" % [code, place, panel.position.x + panel.size.x])
+			ending.queue_free()
+			await wait_frames(1)
+	_back_to_english()
+
+
+# Godot crashed when it was closed: our translations are scripts, and they were still in
+# the TranslationServer after Godot had put its scripts away.
+func test_closing_the_game_takes_the_translations_out() -> void:
+	var device := Node.new()
+	tree.root.add_child(device)
+	tree.set_multiplayer(SceneMultiplayer.new(), device.get_path())
+	var main = load("res://scenes/main.tscn").instantiate()
+	device.add_child(main)
+	assert_true(TranslationServer.get_loaded_locales().has("de"), "loaded while the game runs")
+	device.free()
+	for code in Lang.CATALOGS:
+		assert_eq(TranslationServer.get_loaded_locales().has(code), false, code + " is taken out")
+	Lang.setup()
+	assert_true(TranslationServer.get_loaded_locales().has("pt"), "and can be loaded again")
