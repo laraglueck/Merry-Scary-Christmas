@@ -719,3 +719,83 @@ func test_a_picked_up_item_plays_the_pickup_sound_for_everyone() -> void:
 	mains[1].net.send_action("take_gift", {"room": "bathroom"})
 	var everyone_hears := func(): return mains.all(func(m): return m.sounds_played.count("sfx_gift.mp3") == 1)
 	assert_true(await wait_until(everyone_hears), "all three hear it once: %s" % [mains.map(func(m): return m.sounds_played)])
+
+# ---------- the last minutes (spec 35) ----------
+
+# A game alone on this device, with `left` seconds to midnight.
+func make_solo_at(device_name: String, left: int) -> Node:
+	var main := make_main_device(device_name)
+	main.net.game = {"phase": "hall", "seconds_played": Settings.GAME_SECONDS - left}
+	main._update_dread()
+	return main
+
+
+func test_calm_before_the_last_five_minutes() -> void:
+	var main := make_solo_at("Dread0", 400)
+	assert_eq(main.dread_stage, 0, "calm")
+	assert_eq(main.get_node("HouseMusic").pitch_scale, 1.0, "music normal")
+	assert_eq(main.dread_sounds, [], "no snore, no chime")
+	var flicker: Control = main.find_child("DreadFlicker", true, false)
+	assert_true(flicker != null and not flicker.visible, "no flicker")
+
+
+func test_five_minutes_left_snoring_faster_music_and_a_chime() -> void:
+	var main := make_solo_at("Dread1", 301)
+	main.net.game["seconds_played"] += 1  # 5:00 left
+	main._update_dread()
+	assert_eq(main.dread_stage, 1, "stage 1")
+	assert_true(is_equal_approx(main.get_node("HouseMusic").pitch_scale, Settings.DREAD_MUSIC_PITCH), "music a bit faster")
+	assert_true("sfx_snore.mp3" in main.dread_sounds, "Jingles snores in every room")
+	assert_eq(main.dread_sounds.count("sfx_clock_chime.mp3"), 1, "the clock strikes")
+	var snore: AudioStreamPlayer = main.get_node_or_null("DreadSnore")
+	assert_true(snore != null and snore.volume_db <= -18.0, "quietly")
+	main.net.game["seconds_played"] += 1
+	main._update_dread()
+	assert_eq(main.dread_sounds.count("sfx_clock_chime.mp3"), 1, "only once for 5:00")
+	assert_true(not main.find_child("DreadFlicker", true, false).visible, "no flicker yet")
+
+
+func test_two_minutes_left_flicker_everywhere_and_jingles_twitches_once() -> void:
+	var main := make_solo_at("Dread2", 121)
+	main.net.game["seconds_played"] += 1
+	main._update_dread()
+	assert_eq(main.dread_stage, 2, "stage 2")
+	assert_true(is_equal_approx(main.get_node("HouseMusic").pitch_scale, Settings.PANIC_MUSIC_PITCH), "faster still")
+	var flicker: ColorRect = main.find_child("DreadFlicker", true, false)
+	assert_true(flicker != null and flicker.visible, "the lights flicker")
+	assert_eq(flicker.mouse_filter, Control.MOUSE_FILTER_IGNORE, "clicks go through")
+	var shot: Control = main.find_child("JinglesTwitch", true, false)
+	assert_true(shot != null and shot.visible, "Jingles twitches")
+	assert_eq(main.jingles_shots, 1, "once")
+	main.net.game["seconds_played"] += 5
+	main._update_dread()
+	assert_eq(main.jingles_shots, 1, "still once")
+
+
+func test_nothing_while_paused_and_calm_again_after_the_game() -> void:
+	var main := make_solo_at("Dread3", 100)
+	assert_eq(main.dread_stage, 2, "panic")
+	main.net.game["paused"] = true
+	main._update_dread()
+	assert_eq(main.dread_stage, 0, "paused: calm")
+	assert_true(not main.find_child("DreadFlicker", true, false).visible, "no flicker in the pause")
+	main.net.game["paused"] = false
+	main.net.game["phase"] = "scary"
+	main._update_dread()
+	assert_eq(main.dread_stage, 0, "the game is over")
+	assert_eq(main.get_node("HouseMusic").pitch_scale, 1.0, "music back to normal")
+
+
+func test_with_reduced_flashing_the_last_minutes_do_not_flicker() -> void:
+	Comfort.reduce_flashing = true
+	var main := make_solo_at("Dread4", 100)
+	var flicker: ColorRect = main.find_child("DreadFlicker", true, false)
+	await tree.create_timer(0.3).timeout
+	var seen := []
+	for i in 6:
+		seen.append(flicker.color.a)
+		await tree.create_timer(0.1).timeout
+	Comfort.reduce_flashing = false
+	assert_true(seen.all(func(a): return is_equal_approx(a, seen[0])), "steady, no flicker: %s" % [seen])
+	assert_true(seen[0] > 0.0, "but a little dark")
+	main.net.game = {}

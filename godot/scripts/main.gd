@@ -39,6 +39,7 @@ const Settings = preload("res://scripts/settings.gd")
 const WebText = preload("res://scripts/web_text.gd")
 const Comfort = preload("res://scripts/comfort.gd")
 const Lang = preload("res://scripts/lang.gd")
+const HallScript = preload("res://scripts/hall.gd")  # its loose-bulb flicker (spec 05, 35)
 const CLOCK_COLOUR := Color("f3e6cf")
 const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
 
@@ -56,6 +57,17 @@ var music_enabled := true    # spec 33: the music button on this device (off pau
 var music_button: Button
 var language_picker: Control  # spec 34: top right on the title
 var _music_icon: Control
+var dread_stage := 0         # spec 35: 0 calm, 1 the last 5 minutes, 2 the last 2 (the tests read this)
+var dread_sounds: Array[String] = []  # spec 35: sounds started (or, headless, that would have been)
+var jingles_shots := 0       # spec 35: how often Jingles twitched on this device (once per game)
+var _last_left := -1         # time left at the last update, for the chimes (-1: no game running)
+var _dread_snore: AudioStreamPlayer
+var _chime: AudioStreamPlayer
+var _dread_flicker: ColorRect
+var _dread_timer: Timer
+var _dread_steps: Array = []
+var _dread_rng := RandomNumberGenerator.new()
+var _jingles_shot: TextureRect
 var clock_label: Label
 var penalty_float: Label   # spec 34: "−20 s" floats up under the clock after a wrong answer
 var shakes := 0            # spec 34: how often the screen shook (the tests read this)
@@ -93,6 +105,7 @@ func _ready() -> void:
 	pickup_sound.name = "PickupSound"
 	pickup_sound.stream = load("res://assets/sounds/sfx_gift.mp3")
 	add_child(pickup_sound)
+	_build_dread()
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
@@ -133,6 +146,7 @@ func _update_screen() -> void:
 	_update_clock()
 	_update_penalty()
 	_update_house_music()
+	_update_dread()
 	_update_inventory()
 	_update_pause()
 	if not net.game.is_empty():
@@ -519,6 +533,117 @@ func _show_music_state() -> void:
 	_music_icon.crossed = not music_enabled
 	music_button.modulate = Color.WHITE if music_enabled else Color(0.65, 0.65, 0.65, 0.75)
 	music_button.tooltip_text = "Music off" if music_enabled else "Music on"
+
+# ---------- the last minutes (spec 35) ----------
+
+# Snoring, the chime, a flickering dark layer under the HUD and Jingles' twitch over it.
+func _build_dread() -> void:
+	_dread_snore = AudioStreamPlayer.new()
+	_dread_snore.name = "DreadSnore"
+	var snore: AudioStreamMP3 = load("res://assets/sounds/sfx_snore.mp3").duplicate()
+	snore.loop = true
+	_dread_snore.stream = snore
+	_dread_snore.volume_db = Settings.DREAD_SNORE_DB
+	add_child(_dread_snore)
+	_chime = AudioStreamPlayer.new()
+	_chime.name = "DreadChime"
+	_chime.stream = load("res://assets/sounds/sfx_clock_chime.mp3")
+	add_child(_chime)
+
+	var layer := CanvasLayer.new()  # above the screens, under the clock and inventory (layer 5)
+	layer.name = "DreadLayer"
+	layer.layer = 4
+	add_child(layer)
+	_dread_flicker = ColorRect.new()
+	_dread_flicker.name = "DreadFlicker"
+	_dread_flicker.color = Color(0, 0, 0, 0)
+	_dread_flicker.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_dread_flicker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dread_flicker.visible = false
+	layer.add_child(_dread_flicker)
+	_dread_rng.randomize()
+	_dread_timer = Timer.new()
+	_dread_timer.one_shot = true
+	_dread_timer.timeout.connect(_on_dread_flicker_tick)
+	add_child(_dread_timer)
+	_jingles_shot = TextureRect.new()
+	_jingles_shot.name = "JinglesTwitch"
+	_jingles_shot.texture = load(IMAGES + "char_jingles_peek.png")
+	_jingles_shot.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_jingles_shot.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_jingles_shot.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_jingles_shot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_jingles_shot.visible = false
+	layer.add_child(_jingles_shot)
+
+
+func _update_dread() -> void:
+	var in_house: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
+	var running: bool = in_house and not net.game.get("paused", false)
+	var left := ClockRules.time_left(net.game) if in_house else 0
+	if running and _last_left >= 0 and ClockRules.chime_due(_last_left, left):
+		_dread_play(_chime, "sfx_clock_chime.mp3")
+	_last_left = left if in_house else -1
+	if not in_house:
+		jingles_shots = 0  # a new game may twitch again
+	var stage := ClockRules.dread_stage(left) if running else 0
+	# The attic has its own, louder snoring.
+	_dread_snore.volume_db = -80.0 if screen_name == "attic" else Settings.DREAD_SNORE_DB
+	if stage == dread_stage:
+		return
+	dread_stage = stage
+	house_music.pitch_scale = [1.0, Settings.DREAD_MUSIC_PITCH, Settings.PANIC_MUSIC_PITCH][stage]
+	if stage >= 1 and not _dread_snore.playing:
+		_dread_play(_dread_snore, "sfx_snore.mp3")
+	elif stage == 0:
+		_dread_snore.stop()
+	_dread_flicker.visible = stage == 2
+	if stage == 2:
+		_dread_steps.clear()
+		_dread_timer.start(0.1)
+		if jingles_shots == 0:
+			_show_jingles_twitch()
+	else:
+		_dread_timer.stop()
+		_dread_flicker.color.a = 0.0
+
+
+func _dread_play(player: AudioStreamPlayer, file_name: String) -> void:
+	dread_sounds.append(file_name)
+	if DisplayServer.get_name() != "headless":  # the test run has no sound card
+		player.play()
+
+
+func _on_dread_flicker_tick() -> void:
+	if _dread_steps.is_empty():
+		_dread_steps = HallScript.flicker_cycle(_dread_rng, Settings.PANIC_FLICKER_DARKNESS)
+	var step: Array = _dread_steps.pop_front()
+	_dread_flicker.color.a = step[0]
+	if Comfort.reduce_flashing:  # spec 34: steadily a little dark, no flicker
+		_dread_steps.clear()
+		_dread_flicker.color.a = Settings.PANIC_FLICKER_DARKNESS * 0.5
+		_dread_timer.start(0.5)  # looks again soon: the switch may change
+		return
+	_dread_timer.start(step[1])
+
+
+# Jingles twitches in his sleep: his face flashes up and fades, about a second.
+func _show_jingles_twitch() -> void:
+	jingles_shots += 1
+	_jingles_shot.visible = true
+	var tween := create_tween()
+	if Comfort.reduce_flashing:  # spec 34: no sudden flash, he fades in and out softly
+		_jingles_shot.modulate.a = 0.0
+		tween.tween_property(_jingles_shot, "modulate:a", 0.6, 0.8)
+		tween.tween_property(_jingles_shot, "modulate:a", 0.0, Settings.JINGLES_SHOT_SECONDS)
+		tween.tween_callback(func() -> void: _jingles_shot.visible = false)
+		return
+	_jingles_shot.modulate.a = 0.85
+	tween.tween_property(_jingles_shot, "position:x", 6.0, 0.05)
+	tween.tween_property(_jingles_shot, "position:x", -6.0, 0.08)
+	tween.tween_property(_jingles_shot, "position:x", 0.0, 0.05)
+	tween.tween_property(_jingles_shot, "modulate:a", 0.0, Settings.JINGLES_SHOT_SECONDS)
+	tween.tween_callback(func() -> void: _jingles_shot.visible = false)
 
 
 # ---------- pause (spec 26) ----------
