@@ -1,5 +1,7 @@
 extends Control
 
+const HoverGlow = preload("res://scripts/hover_glow.gd")  # spec 34
+
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
@@ -144,11 +146,7 @@ func _build_room() -> void:
 	door_hall.name = "DoorHall"
 	door_hall.tooltip_text = "Back to the hall"
 	door_hall.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	door_hall.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	var door_outline := _box(Color.TRANSPARENT, Color("ffd76a"), 3, 10, 0)  # gold, as in the other rooms (spec 24)
-	door_outline.draw_center = false
-	for state in ["hover", "pressed", "focus"]:
-		door_hall.add_theme_stylebox_override(state, door_outline)
+	HoverGlow.spot(door_hall)  # a soft gold glow, as in the other rooms (spec 24, 34)
 	room_view.add_child(door_hall)
 	_anchor_to_bounds(door_hall, DOOR_BOUNDS)
 	door_hall.pressed.connect(func(): _send("go_to", {"place": "hall"}))
@@ -174,11 +172,7 @@ func _add_hotspot(node_name: String, hint: String, bounds: Rect2, page: String) 
 	button.name = node_name
 	button.tooltip_text = hint
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	var outline := _box(Color.TRANSPARENT, Color("ffd76a"), 3, 10, 0)  # gold, as in the other rooms (spec 24)
-	outline.draw_center = false
-	for state in ["hover", "pressed", "focus"]:
-		button.add_theme_stylebox_override(state, outline)
+	HoverGlow.spot(button)  # a soft gold glow, as in the other rooms (spec 24, 34)
 	room_view.add_child(button)
 	_anchor_to_bounds(button, bounds)
 	button.pressed.connect(func():
