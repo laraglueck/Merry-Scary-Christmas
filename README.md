@@ -192,6 +192,8 @@ key="YOUR-PUBLISHABLE-KEY"
 
 Or set the environment variables `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Never put the
 secret (service role) key anywhere in the game.
+The file `supabase.cfg.example` shows the format; the real `supabase.cfg` is ignored by git
+(`.gitignore`), and the rules for secrets are in [AGENTS.md](AGENTS.md).
 
 ## Project structure
 

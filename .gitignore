@@ -183,3 +183,8 @@ cython_debug/
 
 # Godot cache
 godot/.godot/
+
+# Secrets and local settings (see AGENTS.md): never in the repository.
+.streamlit/secrets.toml
+supabase.cfg
+.claude/

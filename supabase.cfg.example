@@ -1,0 +1,8 @@
+; Example only: the online leaderboard's settings, with placeholder values.
+; The real file is called supabase.cfg and lives in Godot's user folder on your computer
+; (Mac: ~/Library/Application Support/Godot/app_userdata/Merry Scary Christmas/),
+; never in this repository. Get the real values from a teammate in a private message.
+; Only the public (publishable) key goes here, never the secret / service role key.
+[supabase]
+url="https://YOUR-PROJECT.supabase.co"
+key="YOUR-PUBLISHABLE-KEY"
