@@ -46,6 +46,7 @@ and the rules can be tested without starting any screen.
 | --- | --- |
 | Where does the game start? | `scenes/main.tscn` + `scripts/main.gd`: story → title → lobby → hero choice → hall/rooms → ending |
 | Where are the puzzles' rules? | `scripts/rules/` one file per part: `fuse_rules`, `living_room_rules`, `bathroom_rules`, `bedroom_rules`, `attic_rules`, `photo_rules`, `clock_rules`, `inventory_rules`, `power_rules`, `walk_rules`, `leaderboard_rules`, `weather_rules`, `character_rules`; `game_rules.gd` puts them together (`new_game`, `apply`) |
+| How is the ending decided? | `attic_rules.gd` `choose(attic, choice, has_photo, has_cookies)`: "lock him in" always works (Scary); "leave the photo and cookies" (Merry) only with the whole photo **and** the cookies, otherwise it is refused with a hint. Midnight comes from `clock_rules.gd` |
 | Where are numbers like the 20 minutes? | `scripts/settings.gd` (`GAME_SECONDS`, ports, items, heroes, rescue tries) |
 | How do players connect? | `scripts/net/network.gd` (Godot high-level multiplayer, ENet, port 47411) and `room_code.gd` (4-letter code, found on the Wi-Fi via port 47412) |
 | Playing alone? | `network.play_alone()`: the computer is host with one player, no network at all |
