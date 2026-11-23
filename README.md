@@ -16,17 +16,32 @@ left, and the game says what is missing.
 
 Every hero has one power per game: Santa's **Ho ho hint**, the Snowman's **Freeze**
 (+30 seconds) and the Nutcracker's **Crack** (part of an answer). The fastest wins go on a
-**leaderboard** on the end screen, with a countdown to Christmas Eve.
+**leaderboard** on the end screen (one list for solo players, one for teams), next to a
+results card and a countdown to Christmas Eve.
+
+### What else is in it
+
+- **Three languages:** English, German and Portuguese, chosen on the title screen. Every
+  player chooses for themselves, so a team can play in three languages at once. (The
+  story's voice is English; its subtitles are translated.)
+- **Easier on the eyes:** a warning before the flickering lights with a *Reduce flashing*
+  switch (also on the pause screen), and the fuses differ by shape as well as by colour.
+- **Real weather:** the windows in the living room, bathroom and bedroom show the weather in
+  Nuuk, Greenland, right now.
+- **The last five minutes get scary:** the music speeds up, Jingles' snoring is heard
+  everywhere, the clock strikes every minute, and in the last two minutes the lights flicker.
+- **Small things:** a music on/off button, a soft glow on clickable things, a floating
+  "−10 s" when a wrong answer costs time, credits, pause, save and resume.
 
 ## Team
 
 | Name | Student number | Main parts |
 | --- | --- | --- |
-| Gloria Bogea Heinzel | 79191 | bathroom, attic, end screens, all pictures, single player, hero powers, leaderboard, cookies |
-| Lara Victoria Glück | 70426 | living room, clock lock, rhyme |
-| Leon Blieffert | 73695 | title and story, characters and accessories, walking, sounds, pause |
+| Gloria Bogea Heinzel | 79191 | bathroom, attic, end screens, all pictures, single player, hero powers, leaderboard, cookies, browser version |
+| Lara Victoria Glück | 70426 | living room, clock lock, rhyme, security tests and review |
+| Leon Blieffert | 73695 | title and story, characters and accessories, walking, sounds, pause, languages, music button, results card, credits, last five minutes |
 | Carl Mathies Rumohr | 71317 | hall and fuse box, network, clock, inventory, save and resume, weather |
-| Mika Nolte | 71772 | bedroom, toy chest, advent calendar |
+| Mika Nolte | 71772 | bedroom, toy chest, advent calendar, weather windows in bedroom and bathroom, browser pause, Windows fix |
 
 ## Demo
 
@@ -34,7 +49,9 @@ Every hero has one power per game: Santa's **Ho ho hint**, the Snowman's **Freez
 
 Play it in a desktop browser on a laptop or computer (Chrome, Firefox, Safari, Edge).
 Phones and tablets are not supported: the game needs a keyboard (for the name and for
-walking).
+walking). First comes a short warning about flickering lights (*Continue*), then *Click to
+start*: a browser plays no sound before the first click. If you leave the tab, the game
+pauses by itself; *Continue* goes on.
 
 The browser version is for **one player** (a web page may not open the network port that
 playing together needs). The **three-player game** runs in the Godot version on laptops in
@@ -51,9 +68,11 @@ Moments a short demo cannot reach (made from the game itself):
 | ![The attic after a wrong code: Jingles opens one eye](docs/screenshots/3-attic-wrong-code.jpg) | ![The attic choice: lock him in or leave the photo and cookies](docs/screenshots/4-attic-choice.jpg) |
 | A wrong code: Jingles opens one eye, and it costs 20 seconds | The choice: lock him in, or leave the photo and cookies (only possible with the whole photo and the cookies) |
 | ![Merry Christmas ending with the leaderboard](docs/screenshots/5-ending-merry.jpg) | ![Scary Christmas ending](docs/screenshots/6-ending-scary.jpg) |
-| Merry Christmas, with the leaderboard ("Team Rudolph" is an example) | Scary Christmas |
-| ![Midnight: Scary Jingles has won](docs/screenshots/7-ending-midnight.jpg) | |
-| Midnight: the clock struck twelve | |
+| Merry Christmas, with the results card and the leaderboard ("Team Rudolph" is an example) | Scary Christmas |
+| ![Midnight: Scary Jingles has won](docs/screenshots/7-ending-midnight.jpg) | ![The weather window with the live weather](docs/screenshots/8-weather-window.jpg) |
+| Midnight: the clock struck twelve | The weather in Nuuk right now, seen through the window |
+| ![The title screen with the three languages](docs/screenshots/9-title-languages.jpg) | |
+| The title screen: English, German or Portuguese | |
 
 ## Run the game
 
@@ -81,7 +100,8 @@ the code yourself, use Godot. It takes about 10 minutes the first time.
 2. The editor opens and imports the pictures and sounds (the first time this takes a
    minute).
 3. Press **▶** at the top right (or **F5** / on a Mac **Cmd + B**). The game starts in its
-   own window: the story (a click skips it), then **Start**, then the lobby.
+   own window: the warning (**Continue**), the story (a click skips it), then the title with
+   the languages and **Start**, then the lobby.
 
 From a terminal it works too (first import once, then start):
 
@@ -146,7 +166,7 @@ godot --headless --path godot --script res://tests/run_tests.gd
 ```
 
 All tests are in `godot/tests/` (one file per part, e.g. `test_bathroom_rules.gd`). The last
-line says how many passed, for example `552 passed, 0 failed`. Import the assets once first
+line says how many passed, for example `623 passed, 0 failed`. Import the assets once first
 (open the project once in the editor, or run the import command above).
 
 ## Update the browser version
@@ -176,7 +196,8 @@ One-time setup by the repository owner: **Settings → Pages → Source: GitHub 
 ## How it is built
 
 The full tour for the walkthrough (where the data is, what the tests cover, limits, how it
-could change) is in [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
+could change) is in [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md), the plan for the live demo in
+[docs/DEMO.md](docs/DEMO.md), and the security review in [SECURITY.md](SECURITY.md).
 
 - **Godot 4.7, GDScript.** Every screen is a scene in `godot/scenes/` with its script in
   `godot/scripts/`.
@@ -188,14 +209,17 @@ could change) is in [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
   Players join with a 4-letter room code on the same Wi-Fi.
 - **Specs first.** Every feature has a short spec in `specs/` (what, why, done when), then
   tests, then the code.
-- **External data.** The living room window shows the real weather in Nuuk, Greenland, from
-  [Open-Meteo](https://open-meteo.com/) (free, no key). If it does not answer within a few
+- **External data.** The windows (living room, bathroom, bedroom) show the real weather in
+  Nuuk, Greenland, from [Open-Meteo](https://open-meteo.com/) (free, no key). If it does not answer within a few
   seconds, the window shows a frosted fallback, so the game never waits for it.
-- **Leaderboard.** The fastest wins (team name, ending, time left) are stored online in a
+- **Languages.** The code, the rules and the tests are English; every screen translates
+  itself when it is shown (`scripts/lang.gd`, texts in `scripts/translations/`).
+- **Leaderboard.** The fastest wins (name, ending, time left, solo or team) are stored online in a
   [Supabase](https://supabase.com/) table when it is set up (see *Online leaderboard*),
   otherwise in a file on the computer. If Supabase does not answer within 4 seconds, the
   local list is shown. The table only accepts sensible rows (name 1-20 letters,
-  merry/scary, 0-3600 seconds).
+  merry/scary, solo/team, 0-3600 seconds). The browser version has no key, so it keeps its own
+  list in that browser.
 - **Save and resume.** The host saves after every action; after a restart the lobby offers
   **Resume**.
 - **Security.** No accounts or passwords, and no keys in the repository. Players only send
@@ -217,7 +241,9 @@ key="YOUR-PUBLISHABLE-KEY"
 Or set the environment variables `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Never put the
 secret (service role) key anywhere in the game.
 The table and its access rules are in `supabase/leaderboard.sql` (run it once in the
-Supabase SQL Editor for a new project). The file `supabase.cfg.example` shows the format; the real `supabase.cfg` is ignored by git
+Supabase SQL Editor for a new project). A table from before the two lists needs
+`supabase/leaderboard_mode.sql` once (ours: done on 23 November 2026). The file
+`supabase.cfg.example` shows the format; the real `supabase.cfg` is ignored by git
 (`.gitignore`), and the rules for secrets are in [AGENTS.md](AGENTS.md).
 
 ## Project structure
@@ -227,14 +253,18 @@ godot/
   scenes/          one scene per screen (hall, bathroom, attic, ...)
   scripts/         the screens' scripts
   scripts/rules/   the game rules (pure functions, tested)
-  scripts/net/     network: rooms, joining, sending the shared game
+  scripts/net/     network: rooms, joining, sending the shared game, the leaderboard
+  scripts/translations/  the German and Portuguese texts
   tests/           all tests and the test runner
   tools/           helper scripts for the pictures (add_image, cut_photo, ...)
   assets/          pictures and sounds, with CREDITS.md
 specs/             one short spec per feature
-docs/              walkthrough, demo plan, screenshots, team guide and asset brief
+docs/              walkthrough, demo plan, screenshots, team guide, asset brief, security audit
 supabase/          the leaderboard table and its access rules (SQL)
 web/               the game exported for the browser (GitHub Pages)
+.github/workflows/ puts web/ online whenever main changes
+AGENTS.md          our rules for coding agents; SECURITY.md: security tests and review
+streamlit_app.py   a placeholder page from the first week (with requirements.txt), not the game
 ```
 
 ## Credits

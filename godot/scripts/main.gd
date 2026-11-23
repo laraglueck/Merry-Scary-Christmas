@@ -704,6 +704,7 @@ func _build_pause() -> void:
 	box.offset_right = 220
 	box.offset_top = -80
 	box.offset_bottom = 80
+	box.grow_horizontal = Control.GROW_DIRECTION_BOTH  # a longer language stays in the middle
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 24)
 	pause_overlay.add_child(box)
@@ -777,10 +778,16 @@ func _on_web_page_changed(args: Array) -> void:
 
 func _set_web_page_away(away: bool) -> void:
 	_web_page_away = away
-	if away and not _web_pause_active:
+	if away and not _web_pause_active and not _nothing_runs_yet():
 		_web_pause_active = true
 		_pause_web_scene()
 	_update_pause()
+
+
+# The warning and "Click to start" stand still and are silent: nothing to pause there. The
+# page may load without the focus, and the pause was then the first thing to see.
+func _nothing_runs_yet() -> bool:
+	return screen_name == "warning" or (screen_name == "intro" and screen.wait_for_click)
 
 
 func _pause_web_scene() -> void:
