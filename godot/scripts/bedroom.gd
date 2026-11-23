@@ -20,7 +20,6 @@ const SYMBOL_ART := {
 const GIFT_ART = preload(IMAGES + "item_gift_3.png")
 const PHOTO_ART = preload(IMAGES + "item_photo_piece_3.png")  # one torn piece (spec 21)
 const CHEST_OPEN_SOUND = preload("res://assets/sounds/sfx_creak.mp3")
-const GIFT_SOUND = preload("res://assets/sounds/sfx_gift.mp3")
 # Spec 28: Easter eggs behind five calendar doors; each screams when first opened.
 const EGG_ART: Array[Texture2D] = [
 	preload(IMAGES + "egg_calendar_1.png"), preload(IMAGES + "egg_calendar_2.png"),
@@ -388,10 +387,8 @@ func _update_room() -> void:
 	room_digit_label.text = str(BedroomRules.gold_digit(room)) if solved else ""
 	var gift_taken: bool = room.get("gift_taken", false)
 	if had_room_state and DisplayServer.get_name() != "headless":
-		if gift_taken and not was_gift_taken:
-			room_sound.stream = GIFT_SOUND
-			room_sound.play()
-		elif solved and not was_solved:
+		# The present's sound plays in main.gd now, for every room (spec 34).
+		if solved and not was_solved:
 			room_sound.stream = CHEST_OPEN_SOUND
 			room_sound.play()
 	had_room_state = not room.is_empty()

@@ -70,6 +70,7 @@ var _mirror_steam: TextureRect
 var _mirror_face: TextureRect
 var _faucet: AudioStreamPlayer
 var _scare: AudioStreamPlayer
+var _rattle: AudioStreamPlayer  # spec 34: a wrong order
 var _drain: AudioStreamPlayer
 var _steam_hiss: AudioStreamPlayer
 
@@ -254,6 +255,8 @@ func _react() -> void:
 		_rise_steam()
 	elif now["turns"] != _seen["turns"] or now["penalty"] > _seen["penalty"]:
 		_play(_faucet, "sfx_faucet.mp3", 1.0, TAP_SOUND_SECONDS)
+		if now["penalty"] > _seen["penalty"]:
+			_play(_rattle, "sfx_key_lock.mp3", 0.7)  # spec 34: the pipes rattle angrily
 	_seen = now
 
 
@@ -516,6 +519,7 @@ func _build_ui() -> void:
 	_scare = _sound("Scare", "sfx_scare.mp3")
 	_drain = _sound("Drain", "sfx_drain.mp3")
 	_steam_hiss = _sound("SteamHiss", "sfx_steam.mp3")
+	_rattle = _sound("Rattle", "sfx_key_lock.mp3")
 
 
 func _picture(node_name: String, file: String, rect: Rect2) -> TextureRect:

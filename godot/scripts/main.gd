@@ -62,6 +62,9 @@ var inventory_bar: PanelContainer
 var _item_pictures := {}  # item id -> its picture in the bar
 var _item_names := {}     # item id -> its name under the picture
 var _piece_pictures := {} # torn photo piece -> its small picture in the photo's slot (spec 21)
+var pickup_sound: AudioStreamPlayer  # spec 34: something new in the inventory, in every room
+var _items_heard := -1     # how many items the inventory had last time; -1 = no game seen yet
+var sounds_played := []    # the sounds this device played (the tests read this)
 
 
 func _ready() -> void:
@@ -75,6 +78,10 @@ func _ready() -> void:
 	_build_inventory()
 	_build_pause()
 	_build_music_button()
+	pickup_sound = AudioStreamPlayer.new()
+	pickup_sound.name = "PickupSound"
+	pickup_sound.stream = load("res://assets/sounds/sfx_gift.mp3")
+	add_child(pickup_sound)
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
@@ -371,10 +378,25 @@ func refresh_hud() -> void:
 	_update_inventory()
 
 
+# Spec 34: a new item in the team's inventory plays the pickup sound on this device. What
+# was already there when this device first saw the game (started, joined, resumed) does not.
+func _hear_new_items() -> void:
+	if net.game.is_empty():
+		_items_heard = -1
+		return
+	var count: int = net.game.get("inventory", []).size()
+	if _items_heard >= 0 and count > _items_heard:
+		sounds_played.append("sfx_gift.mp3")
+		if DisplayServer.get_name() != "headless":  # not in the test run: no sound card
+			pickup_sound.play()
+	_items_heard = count
+
+
 func _update_inventory() -> void:
 	var running: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
 	# While someone looks out of the window, their bar steps aside (it covered the lines there).
 	inventory_bar.visible = running and not _window_is_open()
+	_hear_new_items()
 	if not running:
 		return
 	for item in Settings.ITEMS:
