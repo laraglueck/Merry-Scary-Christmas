@@ -106,3 +106,63 @@ func test_finishes_by_itself_even_without_sound() -> void:
 	intro.finished.connect(func(): done[0] = true)
 	intro.advance(40.0)
 	assert_true(done[0], "finished after the voice's length")
+
+
+# ---------- spec 34: in the browser the story waits for a first click ----------
+
+func open_intro_in_browser() -> Node:
+	var intro = IntroScene.instantiate()
+	intro.wait_for_click = true  # what the browser version does (OS.has_feature("web"))
+	tree.root.add_child(intro)
+	return intro
+
+
+func visible_in(intro: Node, node_name: String) -> bool:
+	var node := find(intro, node_name) as CanvasItem
+	return node != null and node.is_visible_in_tree() and node.modulate.a > 0.0
+
+
+func click(intro: Node) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	intro._gui_input(event)
+
+
+func test_on_the_laptop_the_story_starts_at_once() -> void:
+	var intro := open_intro()
+	assert_eq(intro.wait_for_click, false, "no start click outside the browser")
+	assert_eq(visible_in(intro, "ClickToStart"), false, "no start line")
+
+
+func test_in_the_browser_the_story_waits_for_a_click() -> void:
+	var intro := open_intro_in_browser()
+	assert_eq(visible_in(intro, "ClickToStart"), true, "the start line shows")
+	assert_contains(text_of(intro, "ClickToStart"), "Click to start", "its text")
+	intro.advance(10.0)
+	assert_eq(intro.elapsed, 0.0, "the story's time waits")
+	assert_eq(intro.voice_started, false, "the voice waits")
+	assert_eq(visible_in(intro, "SubtitleLabel"), false, "no subtitle yet")
+
+
+func test_in_the_browser_the_first_click_starts_and_does_not_skip() -> void:
+	var intro := open_intro_in_browser()
+	var done := [false]
+	intro.finished.connect(func(): done[0] = true)
+	click(intro)
+	assert_eq(done[0], false, "the first click starts the story, it does not skip it")
+	assert_eq(visible_in(intro, "ClickToStart"), false, "the start line goes")
+	intro.advance(1.0)
+	assert_eq(intro.voice_started, true, "the voice starts")
+	assert_eq(text_of(intro, "SubtitleLabel"), Intro.STORY_LINES[0], "first line")
+	click(intro)
+	assert_eq(done[0], true, "a second click skips, as before")
+
+
+func test_in_the_browser_enter_also_starts() -> void:
+	var intro := open_intro_in_browser()
+	var done := [false]
+	intro.finished.connect(func(): done[0] = true)
+	press_key(intro, KEY_ENTER)
+	assert_eq(done[0], false, "Enter starts the story")
+	assert_eq(intro.wait_for_click, false, "no longer waiting")

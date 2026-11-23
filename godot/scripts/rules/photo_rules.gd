@@ -14,7 +14,7 @@ const WHOLE := "photo"
 
 
 # A room's piece, once that room's lock is solved.
-static func take_piece(game: Dictionary, room: String) -> String:
+static func take_piece(game: Dictionary, room: String, player := -1) -> String:
 	# 1. Check ...
 	if not PIECE_IN_ROOM.has(room):
 		return "There is no piece of the photo in the %s." % room
@@ -24,7 +24,7 @@ static func take_piece(game: Dictionary, room: String) -> String:
 	if not game.get(room, {}).get("solved", false):
 		return "The piece is not there yet."
 	# 2. ... then change.
-	return InventoryRules.add(game, piece)
+	return InventoryRules.add(game, piece, player)
 
 
 static func all_found(game: Dictionary) -> bool:
@@ -36,7 +36,7 @@ static func all_found(game: Dictionary) -> bool:
 
 # The pieces laid side by side in this order (left to right). Only the right order fits;
 # then the three pieces become the whole photo.
-static func assemble(game: Dictionary, order: Array) -> String:
+static func assemble(game: Dictionary, order: Array, player := -1) -> String:
 	# 1. Check ...
 	if InventoryRules.has(game, WHOLE):
 		return "The photo is already whole."
@@ -47,4 +47,4 @@ static func assemble(game: Dictionary, order: Array) -> String:
 	# 2. ... then change.
 	for piece in PIECES:
 		game["inventory"].erase(piece)
-	return InventoryRules.add(game, WHOLE)
+	return InventoryRules.add(game, WHOLE, player)

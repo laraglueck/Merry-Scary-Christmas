@@ -8,6 +8,8 @@
 # The rules live in fuse_rules.gd and house_rules.gd. This script only shows them.
 extends Control
 
+const HoverGlow = preload("res://scripts/hover_glow.gd")  # spec 34
+
 const ButtonStyle = preload("res://scripts/button_style.gd")
 const Rules = preload("res://scripts/rules/fuse_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
@@ -126,6 +128,8 @@ var _spark: AudioStreamPlayer
 var _creak: AudioStreamPlayer
 var _click: AudioStreamPlayer      # a fuse snaps in (spec 22)
 var _doll_turned := false  # she is looking at the players right now
+var _doll_screamed := false  # spec 34: the first time she screams, later she only creaks
+var _doll_scream: AudioStreamPlayer
 var _note_panel: Control    # single player: the note by the doll with the wire order
 var _note_symbols: Array[TextureRect] = []
 var _mission_card: Control
@@ -448,7 +452,11 @@ func _doll_turns() -> void:
 	_doll_turned = true
 	_doll.texture = load(IMAGES + "prop_doll_turned.png")
 	_doll.modulate = Color.WHITE  # for a moment the lamp lights her up
-	_play(_creak, "sfx_creak.mp3")
+	if _doll_screamed:
+		_play(_creak, "sfx_creak.mp3")
+	else:
+		_doll_screamed = true
+		_play(_doll_scream, "sfx_scare.mp3")  # the bathroom mirror's scream (spec 34)
 	get_tree().create_timer(DOLL_TURN_SECONDS).timeout.connect(_doll_turns_back)
 
 
@@ -856,6 +864,7 @@ func _build_ui() -> void:
 	_doll_note.rotation_degrees = -12
 	_doll_note.tooltip_text = "A crumpled note"
 	_doll_note.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	HoverGlow.item(_doll_note)
 	_place(_doll_note, DOLL_NOTE_RECT)
 	_doll_note.pressed.connect(_on_doll_note_pressed)
 	_doll_note.visible = _alone()
@@ -900,6 +909,7 @@ func _build_ui() -> void:
 	_outline(_penalty_label)
 	_message = _label(self, "", 22, true)
 	_message.name = "Message"
+	_message.z_index = 3000  # spec 34: above the walking figures (drawn by depth, outline at 2000)
 	_message.anchor_top = 1.0
 	_message.anchor_bottom = 1.0
 	_message.offset_left = 24
@@ -935,6 +945,10 @@ func _build_ui() -> void:
 	_creak.stream = load(SOUNDS + "sfx_creak.mp3")
 	_creak.pitch_scale = 0.8  # slower and lower: creepier for the doll
 	add_child(_creak)
+	_doll_scream = AudioStreamPlayer.new()
+	_doll_scream.name = "DollScream"
+	_doll_scream.stream = load(SOUNDS + "sfx_scare.mp3")
+	add_child(_doll_scream)
 
 	_build_story_card()    # over the hall and the flicker, under the mission card (spec 25)
 	_build_mission_card()  # on top of everything, also the flicker
@@ -1224,10 +1238,7 @@ func _style_spot(button: Button, node_name: String, font_size: int) -> void:
 	button.add_theme_color_override("font_disabled_color", Color(0.8, 0.75, 0.7))
 	button.add_theme_color_override("font_outline_color", Color.BLACK)
 	button.add_theme_constant_override("outline_size", 5)
-	button.add_theme_stylebox_override("hover", _spot_style(HIGHLIGHT))
-	button.add_theme_stylebox_override("pressed", _spot_style(HIGHLIGHT))
-	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND  # like in every room (spec 25)
+	HoverGlow.spot(button)  # a soft glow on hover, the hand cursor (spec 25, 34)
 
 
 func _plain_button(node_name: String, text: String, action: Callable) -> Button:

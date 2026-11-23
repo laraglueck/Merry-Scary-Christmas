@@ -8,7 +8,8 @@ extends RefCounted
 const Settings = preload("res://scripts/settings.gd")
 
 
-static func add(game: Dictionary, item: String) -> String:
+# player: who found it (for the results card, spec 34); -1 = nobody in particular.
+static func add(game: Dictionary, item: String, player := -1) -> String:
 	# 1. Check ...
 	var info := item_info(item)
 	if info.is_empty():
@@ -17,6 +18,10 @@ static func add(game: Dictionary, item: String) -> String:
 		return "The team already has the %s" % info["name"].to_lower()
 	# 2. ... then change.
 	game["inventory"].append(item)
+	if player >= 0:
+		if not game.has("found_by"):
+			game["found_by"] = {}
+		game["found_by"][item] = player
 	return ""
 
 

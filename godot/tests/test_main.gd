@@ -658,7 +658,7 @@ func test_the_warning_switch_reduces_flashing() -> void:
 
 
 func test_the_pause_screen_has_the_flashing_switch() -> void:
-	var mains: Array = await make_started_mains(47691)
+	var mains: Array = await make_started_mains(47693)
 	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
 	press(mains[0], "PauseButton")
 	assert_true(await wait_until(func(): return mains[0].find_child("PauseOverlay", true, false).visible), "paused")
@@ -669,3 +669,16 @@ func test_the_pause_screen_has_the_flashing_switch() -> void:
 	switch.pressed.emit()
 	assert_eq(Comfort.reduce_flashing, true, "reduced from the pause screen")
 	assert_contains(switch.text, "On", "says On")
+
+
+# Spec 34: something new in the inventory plays the pickup sound on every device, in every
+# room; starting (or joining) a game does not.
+func test_a_picked_up_item_plays_the_pickup_sound_for_everyone() -> void:
+	var mains: Array = await make_started_mains(47691)
+	await wait_until(screens_are(mains, "hall"))
+	for main in mains:
+		assert_eq(main.sounds_played.count("sfx_gift.mp3"), 0, "no sound for starting the game")
+	mains[0].net.game["bathroom"]["solved"] = true  # the host's game: taps solved
+	mains[1].net.send_action("take_gift", {"room": "bathroom"})
+	var everyone_hears := func(): return mains.all(func(m): return m.sounds_played.count("sfx_gift.mp3") == 1)
+	assert_true(await wait_until(everyone_hears), "all three hear it once: %s" % [mains.map(func(m): return m.sounds_played)])
