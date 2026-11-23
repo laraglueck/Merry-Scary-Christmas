@@ -48,6 +48,9 @@ var music: AudioStreamPlayer
 var menu_music_on := false   # spec 23: true while the menu music plays, only on the title (the tests read this)
 var house_music: AudioStreamPlayer
 var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
+var music_enabled := true    # spec 33: the music button on this device (off pauses both musics)
+var music_button: Button
+var _music_icon: Control
 var clock_label: Label
 var power_button: Button  # the hero's power, once per game (under the clock)
 var power_message: Label  # playtest: what a power did, right under the button (not covered)
@@ -71,6 +74,7 @@ func _ready() -> void:
 	_build_clock()
 	_build_inventory()
 	_build_pause()
+	_build_music_button()
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
@@ -150,6 +154,7 @@ func _set_menu_music(on: bool) -> void:
 		return
 	if on:
 		music.play()
+		music.stream_paused = not music_enabled  # spec 33: switched off stays off
 	else:
 		music.stop()
 
@@ -420,8 +425,55 @@ func _update_house_music() -> void:
 		return  # the test run has no sound card
 	if in_house:
 		house_music.play()
+		house_music.stream_paused = not music_enabled  # spec 33: switched off stays off
 	else:
 		house_music.stop()
+
+
+# ---------- music on/off (spec 33) ----------
+
+# A small square in the top left, on every screen: a music note, crossed out and greyed
+# while the music is off. Only for this device.
+func _build_music_button() -> void:
+	music_button = Button.new()
+	music_button.name = "MusicButton"
+	music_button.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	# 36 px, close to the corner: the living room's window starts at x 44 (it is clickable too).
+	music_button.offset_left = 6
+	music_button.offset_right = 42
+	music_button.offset_top = 6
+	music_button.offset_bottom = 42
+	ButtonStyle.make_clickable(music_button)
+	music_button.focus_mode = Control.FOCUS_NONE  # Space/Enter stay with the game
+	music_button.pressed.connect(toggle_music)
+	get_node("ClockLayer").add_child(music_button)
+	_music_icon = preload("res://scripts/music_icon.gd").new()
+	_music_icon.name = "MusicIcon"
+	_music_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_music_icon.offset_left = 7
+	_music_icon.offset_top = 7
+	_music_icon.offset_right = -7
+	_music_icon.offset_bottom = -7
+	_music_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	music_button.add_child(_music_icon)
+	_show_music_state()
+
+
+func toggle_music() -> void:
+	music_enabled = not music_enabled
+	# Paused, not stopped: switched on again, the music goes on where it was.
+	music.stream_paused = not music_enabled
+	house_music.stream_paused = not music_enabled
+	for player in get_tree().get_nodes_in_group("music"):  # e.g. the ending's music box
+		if is_ancestor_of(player):
+			player.stream_paused = not music_enabled
+	_show_music_state()
+
+
+func _show_music_state() -> void:
+	_music_icon.crossed = not music_enabled
+	music_button.modulate = Color.WHITE if music_enabled else Color(0.65, 0.65, 0.65, 0.75)
+	music_button.tooltip_text = "Music off" if music_enabled else "Music on"
 
 
 # ---------- pause (spec 26) ----------
