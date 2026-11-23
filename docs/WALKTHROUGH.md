@@ -132,6 +132,9 @@ every room owner could work in their own file without breaking the others.
   lobby; only the host can resume the save.
 - **The leaderboard trusts the host.** With the public key, someone could send a fake but
   valid-looking row. The table only blocks rows that make no sense.
+- **The free Supabase project pauses** after a week without use. Then the online list is
+  not reachable and the game shows the local list after 4 seconds (nothing breaks). Before
+  the presentation, open the Supabase dashboard once to wake it up.
 - **The puzzles are random within limits** (clock time, tap order, symbols, fuse orders),
   but the rooms and story are always the same.
 - **Pictures** are fixed 1376 × 768 pictures; a very different window shape shows bars.
