@@ -550,3 +550,78 @@ func test_a_power_shows_its_result_under_the_power_button() -> void:
 	assert_true(rect.position.y >= button.end.y and rect.end.y < 360, "right under the power button, far from the bottom bar")
 	mains[2].close_power_message()
 	assert_eq(box.visible, false, "a click closes it")
+
+
+# ---------- music on/off (spec 33) ----------
+
+func test_music_button_switches_the_music_off_and_on() -> void:
+	var main := make_main_device("MusicButton")
+	main.story_done = true
+	main._update_screen()
+	var button: Button = main.find_child("MusicButton", true, false)
+	assert_true(button != null and button.is_visible_in_tree(), "the music button on the title")
+	if button == null:
+		return
+	var icon: Node = button.find_child("MusicIcon", true, false)
+	assert_true(icon != null, "a drawn note in the button")
+	assert_eq(main.get("music_enabled"), true, "music on at the start")
+	assert_eq(icon.get("crossed"), false, "the note is not crossed out")
+	main.music.play()  # the test run starts no music by itself
+	main.house_music.play()
+	button.pressed.emit()
+	assert_eq(main.get("music_enabled"), false, "off after a click")
+	assert_true(main.get_node("Music").stream_paused and main.get_node("HouseMusic").stream_paused, "both music players paused")
+	assert_eq(icon.get("crossed"), true, "the note crossed out")
+	assert_true(button.modulate.v < 0.9 and button.modulate.a < 1.0, "the button greyed out")
+	assert_eq(button.tooltip_text, "Music on", "says what a click does")
+	button.pressed.emit()
+	assert_eq(main.get("music_enabled"), true, "on again")
+	assert_true(not main.get_node("Music").stream_paused and not main.get_node("HouseMusic").stream_paused, "both music players go on")
+	assert_eq(icon.get("crossed"), false, "the note back")
+	assert_eq(button.modulate, Color.WHITE, "not greyed any more")
+	assert_eq(button.tooltip_text, "Music off", "says what a click does")
+	main.music.stop()
+	main.house_music.stop()
+
+
+func test_music_button_in_the_hall_covers_nothing() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var mains: Array = await make_started_mains(47690)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	await wait_frames(3)
+	var button: Button = mains[0].find_child("MusicButton", true, false)
+	assert_true(button != null and button.is_visible_in_tree(), "the music button in the hall")
+	if button == null:
+		return
+	var m := button.get_global_rect()
+	assert_true(m.position.x < 40 and m.position.y < 30 and m.size.x <= 48, "small, top left: %s" % m)
+	for other in mains[0].find_children("*", "Control", true, false):
+		if other == button or button.is_ancestor_of(other) or not other.is_visible_in_tree():
+			continue
+		if other is BaseButton or other.name in ["ClockLabel", "PenaltyLabel", "InventoryBar"]:
+			assert_true(not m.intersects(other.get_global_rect()), "covers %s" % other.name)
+	# And in every room: no button of the room under it.
+	for i in 3:
+		light_fuse(mains[i].net, i)
+	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"].all(func(f): return f["solved"]))
+	for place in ["living_room", "bathroom", "bedroom", "attic"]:
+		mains[0].net.send_action("go_to", {"place": "hall"})
+		await wait_until(screens_are(mains, "hall"))
+		mains[0].net.send_action("go_to", {"place": place})
+		assert_true(await wait_until(screens_are(mains, place)), "in the " + place)
+		await wait_frames(3)
+		for other in mains[0].screen.find_children("*", "BaseButton", true, false):
+			if other.is_visible_in_tree():
+				assert_true(not m.intersects(other.get_global_rect()), "%s: the music button covers %s" % [place, other.name])
+
+
+func test_the_ending_music_follows_the_music_button() -> void:
+	var main := make_main_device("EndingMusic")
+	main.toggle_music()  # off
+	var ending: Node = load("res://scenes/ending.tscn").instantiate()
+	ending.place = "merry"
+	main.add_child(ending)
+	assert_eq(ending.music_allowed(), false, "the ending asks main: music is off")
+	main.toggle_music()
+	assert_eq(ending.music_allowed(), true, "and on again")
+	ending.queue_free()

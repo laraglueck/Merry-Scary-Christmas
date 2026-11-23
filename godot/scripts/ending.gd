@@ -146,6 +146,15 @@ func _play(file_name: String) -> void:
 	player.stream = load(SOUNDS + file_name)
 	add_child(player)
 	player.play()
+	if file_name.begins_with("music_"):
+		player.add_to_group("music")  # the music button pauses it (spec 33)
+		player.stream_paused = not music_allowed()
+
+
+# Spec 33: the music button lives in main.gd, this screen's parent.
+func music_allowed() -> bool:
+	var main := get_parent()
+	return main == null or main.get("music_enabled") != false
 
 
 # "Presents found: 2 of 3", and for a win the time that was left.
