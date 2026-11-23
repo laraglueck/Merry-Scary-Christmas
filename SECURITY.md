@@ -2,69 +2,124 @@
 
 ## Scope
 
-This game supports solo play and multiplayer on a trusted local network.
-The host manages the shared game state. Clients send action requests.
+The game supports solo play and multiplayer on a trusted local network.
+The host manages the shared game state; clients send action requests.
 
-## Protections reviewed in the code
+The host is trusted. Room codes help discover rooms on the local network;
+they are not passwords or account authentication.
 
-In `godot/scripts/net/network.gd`:
+## Access controls
 
-- The host derives each player's index from the sending peer's connection.
-  Action requests do not accept a client-supplied player index.
-- The host ignores action requests from peers that are not registered
-  in the room.
+Code reviewed: `godot/scripts/net/network.gd`.
+
+- The host derives each player's index from the sending connection.
+- Action RPCs do not accept a client-supplied player-index argument.
+- The host ignores actions from peers not registered in the room.
 - Game-state updates use Godot's authority-only RPC configuration.
-- Game actions are processed through the host's game rules.
+- The host processes actions through the game rules.
 
-These observations come from code review. They are not a claim that
-all possible network attacks have been tested.
+Code inspection and automated tests are separate forms of evidence.
+These checks do not establish resistance to every possible malicious packet.
 
-## Existing automated tests
+## Targeted security tests
 
-The following tests were reviewed for this document.
-The latest local execution result is recorded below.
+File: `godot/tests/test_network_security.gd`.
 
-| Behaviour checked | Test file | Test name |
-|-------------------|-----------|-----------|
-| A fourth device is rejected from a full room | `godot/tests/test_network.gd` | `test_fourth_device_is_rejected` |
-| An invalid IP address is rejected | `godot/tests/test_network.gd` | `test_invalid_address_is_rejected` |
-| Invalid room-code/address input is rejected | `godot/tests/test_network.gd` | `test_invalid_input_is_rejected` |
-| Actions before the game starts do not create a game | `godot/tests/test_network.gd` | `test_actions_before_start_do_nothing` |
-| A client action is processed by the host and shared | `godot/tests/test_network.gd` | `test_player_action_is_decided_by_host_and_shared` |
-| Client clock advancement does not advance game time | `godot/tests/test_network.gd` | `test_only_the_host_counts_the_time_and_everyone_sees_it` |
-| Locking Jingles in is rejected for all seven incomplete present combinations, even with the key | `godot/tests/test_scary_ending_presents.gd` | `test_lock_in_requires_all_three_presents` |
-| Locking Jingles in succeeds with the key and all three presents | `godot/tests/test_scary_ending_presents.gd` | `test_lock_in_succeeds_with_key_and_all_presents` |
+| Test | Behaviour checked |
+|------|-------------------|
+| `test_unknown_sender_cannot_change_the_game` | An unregistered sender cannot change the game or trigger an update. This directly tests the host handler. |
+| `test_client_identity_fields_do_not_override_connection` | A real client request containing false identity fields still acts on that client's own fuse, not the host's fuse. |
+| `test_unknown_action_does_not_change_game` | An unknown action leaves the game unchanged. |
+| `test_invalid_movement_types_do_not_change_game` | Selected string, array, null and boolean movement inputs leave the game unchanged. |
+| `test_invalid_clock_types_do_not_change_puzzle` | Selected invalid clock input types leave the puzzle unchanged, cause no penalty and produce an error message. |
 
-The gift-requirement tests exercise game-rule validation directly.
-They do not simulate malicious network packets.
+The input-validation tests call the game rules directly.
+They cover these specific cases, not all actions, values or message sizes.
+
+## Other test evidence
+
+In `godot/tests/test_network.gd`:
+
+- `test_fourth_device_is_rejected`
+- `test_invalid_address_is_rejected`
+- `test_invalid_input_is_rejected`
+- `test_actions_before_start_do_nothing`
+- `test_player_action_is_decided_by_host_and_shared`
+- `test_only_the_host_counts_the_time_and_everyone_sees_it`
+
+In `godot/tests/test_scary_ending_presents.gd`:
+
+- `test_lock_in_requires_all_three_presents` checks all seven incomplete
+  present combinations, even with the key.
+- `test_lock_in_succeeds_with_key_and_all_presents` checks the valid ending.
+
+The present-requirement tests exercise game rules directly, not malicious packets.
 
 ## Latest local test run
 
-On 23 November 2026, the full test suite completed locally:
-552 passed, 0 failed.
+On 23 November 2026, Lara ran the full local suite:
+557 passed, 0 failed.
 
-This result applies to the local checkout tested on that date.
-It does not establish that the same checks pass on main.
+This includes the five targeted security tests.
+It applies to that local checkout, not automatically to main or the web export.
 
 ## Running the tests
 
-From the `godot` directory, using the Godot executable installed
-on your computer:
+From the godot directory, replace godot with your executable path if needed:
 
 ```sh
 godot --headless --path . --import
 godot --headless --path . --script res://tests/run_tests.gd
 ```
 
-## Security boundaries
+## Dependency review
 
-The game is designed for a trusted local network.
-The host is trusted and controls the shared game state.
-Room codes help discover rooms; they are not passwords.
+Repository inventory reviewed on 23 November 2026 at godot-setup commit
+8248fb7c5f93e0c791548cf7430a841b9d27708f.
+The new security tests were run separately in Lara's local checkout.
 
-## Verification scope
+- The README specifies Godot Standard 4.7.2. Editor and export templates
+  should use matching versions. Installation versions are not enforced.
+- No addons directory, GDExtension descriptors or .NET project manifests
+  were found in the reviewed repository tree.
+- The optional Supabase leaderboard uses Godot's built-in HTTP API,
+  without an installed Supabase SDK.
+- Open-Meteo is an external weather service, not an installed package.
+- Streamlit belongs to the separate placeholder page, not the Godot game.
+  Root requirements.txt specifies streamlit>=1.40,<2.
+- GitHub Pages workflow actions use major-version tags, not immutable SHAs.
 
-This document covers the code and tests listed above.
-It does not establish resistance to forged RPCs, network flooding,
-or all malformed inputs. Repository-history credential scanning
-and dependency vulnerability checks were not verified in this review.
+### Python vulnerability check
+
+Audit output: [python-audit.json](docs/security/python-audit.json). 
+
+On 23 November 2026, pip-audit 2.10.1 resolved the root Streamlit requirement
+in an isolated Python 3.12 Linux environment and checked 33 packages
+using its PyPI vulnerability service.
+
+Streamlit resolved to 1.67.0. No known vulnerabilities were reported
+for that resolution.
+
+This was not a scan of packages installed on team computers or in a
+deployment. Different platforms, Python versions and future resolutions
+can differ. Root requirements.txt still uses a version range.
+
+### Godot advisory check
+
+The official Godot 4.7.2 release notes and maintainer advisory page were
+consulted on 23 November 2026. The advisory page listed no published advisories.
+
+Sources:
+
+- https://godotengine.org/article/maintenance-release-godot-4-7-2/
+- https://github.com/godotengine/godot/security/advisories
+
+This is not proof that Godot or its bundled libraries are vulnerability-free.
+The Python package audit does not cover Godot binaries or WebAssembly exports.
+
+## Security boundaries 
+
+The host and local network are trusted; room codes are not passwords.
+Tests cover the documented cases, not all malformed inputs or network attacks.
+The Python audit covers the resolved package versions, not Godot binaries
+or the deployed Supabase configuration.
