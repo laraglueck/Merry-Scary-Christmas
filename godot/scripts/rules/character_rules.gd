@@ -105,7 +105,7 @@ static func picture_file(character: String, colour: String, accessory := "none")
 	var name := "char_" + character
 	if colour != "red":
 		name += "_" + colour
-	if accessory != "none":
+	if accessory != "none" and accessory in accessory_ids():  # an old save may say "antlers" (taken out)
 		name += "_" + accessory
 	return name + ".png"
 

@@ -46,31 +46,22 @@ When real artwork replaces a placeholder, update its row: source, author, licenc
 | char_nutcracker_yellow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, white background removed with add_image.gd |
 | char_santa_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, bow (spec 27), white background removed with add_image.gd |
 | char_santa_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, red nose (spec 27), white background removed with add_image.gd |
-| char_santa_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
 | char_santa_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, bow (spec 27), white background removed with add_image.gd |
 | char_santa_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, red nose (spec 27), white background removed with add_image.gd |
-| char_santa_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
 | char_santa_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, bow (spec 27), white background removed with add_image.gd |
 | char_santa_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, red nose (spec 27), white background removed with add_image.gd |
-| char_santa_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
 | char_snowman_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, bow (spec 27), white background removed with add_image.gd |
 | char_snowman_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, red nose (spec 27), white background removed with add_image.gd |
-| char_snowman_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
 | char_snowman_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, bow (spec 27), white background removed with add_image.gd |
 | char_snowman_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, red nose (spec 27), white background removed with add_image.gd |
-| char_snowman_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
 | char_snowman_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, bow (spec 27), white background removed with add_image.gd |
 | char_snowman_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, red nose (spec 27), white background removed with add_image.gd |
-| char_snowman_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow scarf, reindeer antlers (spec 27), white background removed with add_image.gd |
 | char_nutcracker_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, bow (spec 27), white background removed with add_image.gd |
 | char_nutcracker_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, red nose (spec 27), white background removed with add_image.gd |
-| char_nutcracker_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | red jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
 | char_nutcracker_green_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, bow (spec 27), white background removed with add_image.gd |
 | char_nutcracker_green_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, red nose (spec 27), white background removed with add_image.gd |
-| char_nutcracker_green_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | green jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
 | char_nutcracker_yellow_bow.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, bow (spec 27), white background removed with add_image.gd |
 | char_nutcracker_yellow_nose.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, red nose (spec 27), white background removed with add_image.gd |
-| char_nutcracker_yellow_antlers.png | images | Gemini (Google), generated image | Leon | own work (AI-generated) | Yes (Gemini) | yellow jacket, reindeer antlers (spec 27), white background removed with add_image.gd |
 | egg_calendar_1.png | images | provided by Leon (source to confirm) | Leon | to confirm | to confirm | Easter egg behind a bedroom calendar door (spec 28), white background removed with add_image.gd |
 | egg_calendar_2.png | images | provided by Leon (source to confirm) | Leon | to confirm | to confirm | Easter egg behind a bedroom calendar door (spec 28), white background removed with add_image.gd |
 | egg_calendar_3.png | images | provided by Leon (source to confirm) | Leon | to confirm | to confirm | Easter egg behind a bedroom calendar door (spec 28), white background removed with add_image.gd |

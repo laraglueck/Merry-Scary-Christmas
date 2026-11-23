@@ -386,3 +386,16 @@ func test_the_turns_do_not_say_how_many_are_needed() -> void:
 	press(bathroom, "Spot_hot_tap")
 	assert_true(not text_of(bathroom, "TurnsLabel").contains("4"), "how many stays a secret")
 	assert_contains(text_of(bathroom, "Message"), "warm tap", "the message says warm too")
+
+
+# Playtest (Lara): a long message ran under the inventory bar at the bottom right.
+# The message line now ends before the bar and wraps onto a second line instead.
+func check_message_clear_of_the_inventory_bar(screen: Node) -> void:
+	var message: Label = screen.find_child("Message", true, false)
+	assert_true(message.position.x + message.size.x <= 690, "ends before the inventory bar (x %d)" % (message.position.x + message.size.x))
+	assert_true(message.autowrap_mode != TextServer.AUTOWRAP_OFF, "a long message wraps")
+	assert_true(message.position.y + message.size.y <= 640, "still on the screen")
+
+
+func test_the_message_is_not_covered_by_the_inventory_bar() -> void:
+	check_message_clear_of_the_inventory_bar(open_bathroom())

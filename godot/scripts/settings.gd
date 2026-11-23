@@ -58,6 +58,7 @@ const CHARACTERS := [
 		"power_text": "Cracks one part of the answer"},
 ]
 const FREEZE_SECONDS := 30  # the snowman's power
+const POWER_MESSAGE_SECONDS := 15.0  # how long the box under the power button shows what a power did
 const NAME_LENGTH := 20     # team or player name for the leaderboard
 # Help in three levels: gentle hints in the rooms, a hero's power whenever the team wants,
 # and a rescue hint (almost the answer) only after this many wrong tries.
@@ -74,7 +75,6 @@ const ACCESSORIES := [  # spec 27: one picture per figure, colour and accessory
 	{"id": "none", "name": "None"},
 	{"id": "bow", "name": "Bow"},
 	{"id": "nose", "name": "Red nose"},
-	{"id": "antlers", "name": "Antlers"},
 ]
 
 # Walking figures (spec 19): WASD, in pixels of the room picture per second.

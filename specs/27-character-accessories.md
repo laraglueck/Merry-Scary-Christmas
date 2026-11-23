@@ -7,6 +7,10 @@ The character selection (spec 18) already had accessory arrows at head height, b
 "None (coming soon)". Now there are pictures of every figure in every colour with a bow,
 a red nose or reindeer antlers, so each player can make their figure their own.
 
+**Change (playtest, 22 Nov):** the antlers did not fit the style of the other pictures and
+were taken out (with Leon's OK). Now there are three choices: none, bow, red nose. An older
+saved game that still says "antlers" shows the hero without an accessory.
+
 ## What
 - 27 new pictures in `godot/assets/images/`: `char_<figure>[_<colour>]_<accessory>.png`
   (red has no colour in the name, like the plain figures), e.g. `char_santa_bow.png`,

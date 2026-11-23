@@ -20,6 +20,12 @@ var _confirm_box: Control  # "Start a new game? The saved game will be lost."
 var _wait_label: Label     # Players 2 and 3: "Waiting for Player 1 ..." (03c)
 var _name_field: LineEdit  # team name, or your own name when playing alone
 var _alone_button: Button
+var _join_row: Control
+var _web_note: Label       # browser only: how to play together (spec 32)
+
+# Spec 32: in the browser there is no room to create or join (a web page may not open a
+# network port), so only "Play alone" is offered. Tests set this to try the browser look.
+var in_browser := OS.has_feature("web")
 
 
 func _ready() -> void:
@@ -113,6 +119,11 @@ func _refresh() -> void:
 	else:
 		_resume_button.text = "Resume saved game (needs %d players)" % 3
 	_wait_label.visible = net.connected and net.my_index > 0
+	_create_button.visible = not in_browser
+	_join_row.visible = not in_browser
+	_web_note.visible = in_browser and not net.connected
+	if in_browser:
+		_status_label.visible = net.connected and net.room_code == ""
 	if not host_with_save:
 		_confirm_box.visible = false
 
@@ -156,6 +167,7 @@ func _build_ui() -> void:
 	page.add_child(_create_button)
 
 	var join_row := HBoxContainer.new()
+	_join_row = join_row
 	join_row.add_theme_constant_override("separation", 12)
 	join_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	page.add_child(join_row)
@@ -181,6 +193,16 @@ func _build_ui() -> void:
 	_alone_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_alone_button.pressed.connect(_on_alone_pressed)
 	page.add_child(_alone_button)
+
+	_web_note = Label.new()
+	_web_note.name = "WebNote"
+	_web_note.text = ("In the browser you play alone: click Play alone.\n"
+		+ "Playing together (3 players) works in the Godot version on one Wi-Fi: see the README.")
+	_web_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_web_note.custom_minimum_size = Vector2(532, 0)
+	_web_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_web_note.add_theme_color_override("font_color", Color("ffd76a"))
+	page.add_child(_web_note)
 
 	_status_label = Label.new()
 	_status_label.name = "StatusLabel"

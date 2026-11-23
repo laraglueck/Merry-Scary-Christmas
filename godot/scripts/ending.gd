@@ -23,6 +23,7 @@ var net: Node = null          # set by main.gd
 const SOUNDS := "res://assets/sounds/"
 const LeaderboardRules = preload("res://scripts/rules/leaderboard_rules.gd")
 const Leaderboard = preload("res://scripts/net/leaderboard.gd")
+const WebText = preload("res://scripts/web_text.gd")
 
 # Sounds this screen played (or would have played in the headless test run), spec 20.
 var sounds_played: Array[String] = []
@@ -64,7 +65,7 @@ func _build_leaderboard(game: Dictionary) -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	panel.add_child(column)
-	var title := _label(column, "LeaderboardTitle", "🏆 Fastest escapes", 22)  # also for one player (playtest)
+	var title := _label(column, "LeaderboardTitle", WebText.clean("🏆 Fastest escapes"), 22)  # also for one player (playtest)
 	title.add_theme_color_override("font_color", Color("ffd76a"))
 	_board_rows = _label(column, "LeaderboardRows", "Loading...", 15)
 	_board_rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -97,7 +98,7 @@ func _show_rows(rows: Array) -> void:
 	for i in rows.size():
 		var row: Dictionary = rows[i]
 		var mine: bool = row == _my_entry
-		lines.append("%s%d. %s  %s  %s" % ["➜ " if mine else "", i + 1, row["name"],
+		lines.append("%s%d. %s  %s  %s" % [WebText.clean("➜ ") if mine else "", i + 1, row["name"],
 			ClockRules.as_text(int(row["seconds_left"])), "Merry" if row["ending"] == "merry" else "Scary"])
 	_board_rows.text = "\n".join(lines)
 

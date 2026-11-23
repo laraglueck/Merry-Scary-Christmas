@@ -25,9 +25,11 @@ Every hero has one power per game: Santa's **Ho ho hint**, the Snowman's **Freez
 
 ## Demo
 
-<!-- TODO: link to the demo video or public URL, if the professor asks for one. -->
-The game is shown live on one laptop: alone with **Play alone**, or with three game windows
-(see *Play with three windows*).
+**Play in the browser (alone): https://laraglueck.github.io/Merry-Scary-Christmas/**
+
+The browser version is for **one player** (a web page may not open the network port that
+playing together needs). The **three-player game** runs in the Godot version on laptops in
+the same Wi-Fi or on one phone hotspot (see *Run the game* and *Play with three windows*).
 
 ## Run the game
 
@@ -80,10 +82,37 @@ godot --headless --path godot --script res://tests/run_tests.gd
 ```
 
 All tests are in `godot/tests/` (one file per part, e.g. `test_bathroom_rules.gd`). The last
-line says how many passed, for example `527 passed, 0 failed`. Import the assets once first
+line says how many passed, for example `552 passed, 0 failed`. Import the assets once first
 (step 3 above).
 
+## Update the browser version
+
+The folder `web/` is the game exported for the browser. After a change to the game, export
+it again and commit the folder; when `main` changes, GitHub Pages puts it online
+(`.github/workflows/pages.yml`).
+
+1. Once: in the Godot editor, **Editor → Manage Export Templates → Download and Install**
+   (the official templates for 4.7.2).
+2. Export:
+
+   ```bash
+   godot --headless --path godot --export-release "Web" ../web/index.html
+   ```
+
+3. Try it locally:
+
+   ```bash
+   python3 -m http.server 8060 --directory web
+   ```
+
+   and open http://localhost:8060.
+
+One-time setup by the repository owner: **Settings → Pages → Source: GitHub Actions**.
+
 ## How it is built
+
+The full tour for the walkthrough (where the data is, what the tests cover, limits, how it
+could change) is in [docs/WALKTHROUGH.md](docs/WALKTHROUGH.md).
 
 - **Godot 4.7, GDScript.** Every screen is a scene in `godot/scenes/` with its script in
   `godot/scripts/`.
@@ -136,7 +165,8 @@ godot/
   tools/           helper scripts for the pictures (add_image, cut_photo, ...)
   assets/          pictures and sounds, with CREDITS.md
 specs/             one short spec per feature
-docs/              team guide and asset brief
+docs/              walkthrough, team guide and asset brief
+web/               the game exported for the browser (GitHub Pages)
 ```
 
 ## Credits

@@ -125,8 +125,8 @@ func test_accessory_arrows_change_the_big_figure() -> void:
 	assert_contains(text_of(screen, "AccessoryLabel"), "Bow", "label")
 	press(screen, "AccessoryPrev")
 	press(screen, "AccessoryPrev")
-	assert_eq(screen.selection()[0]["accessory"], "antlers", "none <- antlers")
-	assert_eq(big_picture(screen), "char_santa_antlers.png", "Santa wears antlers")
+	assert_eq(screen.selection()[0]["accessory"], "nose", "none <- nose (no antlers any more)")
+	assert_eq(big_picture(screen), "char_santa_nose.png", "Santa wears the red nose")
 
 
 func test_accessory_stays_when_colour_or_figure_changes() -> void:

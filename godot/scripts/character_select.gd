@@ -1,5 +1,5 @@
 # Character selection (spec 18): every player picks one of three figures (list on the left),
-# sees it big in the middle, changes its accessory (arrows at head height: bow, red nose, antlers, spec 27)
+# sees it big in the middle, changes its accessory (arrows at head height: bow or red nose, spec 27)
 # and its scarf/jacket colour (arrows at hip height), then presses "Next". The host decides (game_rules.gd -> character_rules.gd); this script
 # only shows net.game and sends actions. When all three are ready the game starts and
 # main.gd switches the screen.

@@ -13,6 +13,7 @@ const Rules = preload("res://scripts/rules/fuse_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
 const HouseRules = preload("res://scripts/rules/house_rules.gd")
 const WalkLayer = preload("res://scripts/walk_layer.gd")
+const WebText = preload("res://scripts/web_text.gd")
 
 const IMAGES := "res://assets/images/"
 const HIGHLIGHT := Color("ffd76a")
@@ -603,7 +604,7 @@ func _build_mission_card() -> void:
 	var text := RichTextLabel.new()
 	text.name = "MissionText"
 	text.bbcode_enabled = true
-	text.text = MISSION_TEXT_ALONE if _alone() else MISSION_TEXT
+	text.text = WebText.clean(MISSION_TEXT_ALONE if _alone() else MISSION_TEXT)
 	text.scroll_active = false
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text.set_anchors_preset(Control.PRESET_FULL_RECT)

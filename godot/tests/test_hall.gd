@@ -743,9 +743,9 @@ func test_figures_wear_their_accessory() -> void:
 	var room: Array = await make_started_room(47626)
 	var hall := open_online_hall(room[1])
 	await wait_frames(2)
-	room[1].game["characters"] = {0: {"character": "santa", "colour": "green", "accessory": "antlers"}}
+	room[1].game["characters"] = {0: {"character": "santa", "colour": "green", "accessory": "nose"}}
 	room[1].game_changed.emit()
-	assert_eq(texture_file(hall, "Figure_0"), "char_santa_green_antlers.png", "Santa with antlers")
+	assert_eq(texture_file(hall, "Figure_0"), "char_santa_green_nose.png", "Santa with the red nose")
 
 
 func test_f3_shows_the_floor_outline() -> void:

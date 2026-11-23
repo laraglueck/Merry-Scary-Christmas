@@ -41,11 +41,11 @@ static func images() -> Dictionary:
 	for character in ["santa", "snowman", "nutcracker"]:
 		for colour in ["green", "yellow"]:
 			list["char_%s_%s.png" % [character, colour]] = SIZE_CHARACTER
-	# Spec 27: every figure in every colour with an accessory (bow, red nose, antlers).
+	# Spec 27: every figure in every colour with an accessory (bow, red nose).
 	# Red has no colour in the name, like above: char_santa_bow.png, char_santa_green_bow.png.
 	for character in ["santa", "snowman", "nutcracker"]:
 		for colour in ["", "_green", "_yellow"]:
-			for accessory in ["bow", "nose", "antlers"]:
+			for accessory in ["bow", "nose"]:
 				list["char_%s%s_%s.png" % [character, colour, accessory]] = SIZE_CHARACTER
 
 	# Items

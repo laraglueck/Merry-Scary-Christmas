@@ -349,3 +349,19 @@ func test_the_moon_is_pale_behind_clouds_and_bright_on_clear_nights() -> void:
 		assert_eq(shows_tint, false, "no dark sky for code %d" % pair[0])
 		screen.free()
 
+
+
+# Playtest (Lara): a long message ran under the inventory bar at the bottom right.
+# The message line now ends before the bar and wraps onto a second line instead.
+func check_message_clear_of_the_inventory_bar(screen: Node) -> void:
+	var message: Label = screen.find_child("Message", true, false)
+	assert_true(message.position.x + message.size.x <= 690, "ends before the inventory bar (x %d)" % (message.position.x + message.size.x))
+	assert_true(message.autowrap_mode != TextServer.AUTOWRAP_OFF, "a long message wraps")
+	assert_true(message.position.y + message.size.y <= 640, "still on the screen")
+
+
+func test_the_message_is_not_covered_by_the_inventory_bar() -> void:
+	var screen = RoomScene.instantiate()
+	screen.seed_value = 42
+	tree.root.add_child(screen)
+	check_message_clear_of_the_inventory_bar(screen)

@@ -80,7 +80,7 @@ func test_picture_file_follows_the_asset_names() -> void:
 	assert_eq(CharacterRules.picture_file("snowman", "green"), "char_snowman_green.png", "green")
 	assert_eq(CharacterRules.picture_file("nutcracker", "yellow"), "char_nutcracker_yellow.png", "yellow")
 	assert_eq(CharacterRules.picture_file("santa", "red", "none"), "char_santa.png", "no accessory = the plain picture")
-	assert_eq(CharacterRules.picture_file("santa", "red", "antlers"), "char_santa_antlers.png", "red with antlers")
+	assert_eq(CharacterRules.picture_file("santa", "red", "nose"), "char_santa_nose.png", "red with a red nose")
 	assert_eq(CharacterRules.picture_file("snowman", "green", "bow"), "char_snowman_green_bow.png", "green with a bow")
 	assert_eq(CharacterRules.picture_file("nutcracker", "yellow", "nose"), "char_nutcracker_yellow_nose.png", "yellow with a red nose")
 
@@ -92,9 +92,10 @@ func test_all_nine_pictures_exist() -> void:
 			assert_true(ResourceLoader.exists(file), file + " exists")
 
 
-# Spec 27: every figure in every colour with every accessory (3 x 3 x 4 = 36 pictures).
+# Spec 27: every figure in every colour with every accessory (3 x 3 x 3 = 27 pictures).
+# Playtest: the antlers did not fit the style of the others and were taken out.
 func test_every_accessory_picture_exists() -> void:
-	assert_eq(CharacterRules.accessory_ids(), ["none", "bow", "nose", "antlers"], "the four accessories")
+	assert_eq(CharacterRules.accessory_ids(), ["none", "bow", "nose"], "the three accessories (no antlers)")
 	for character in CharacterRules.character_ids():
 		for colour in CharacterRules.colour_ids():
 			for accessory in CharacterRules.accessory_ids():
@@ -104,8 +105,14 @@ func test_every_accessory_picture_exists() -> void:
 
 func test_next_accessory_goes_round() -> void:
 	assert_eq(CharacterRules.next_accessory("none", 1), "bow", "none -> bow")
-	assert_eq(CharacterRules.next_accessory("antlers", 1), "none", "antlers -> none (round)")
-	assert_eq(CharacterRules.next_accessory("none", -1), "antlers", "none <- antlers")
+	assert_eq(CharacterRules.next_accessory("nose", 1), "none", "nose -> none (round)")
+	assert_eq(CharacterRules.next_accessory("none", -1), "nose", "none <- nose")
+
+
+# An older saved game may still say "antlers": the hero is shown without an accessory.
+func test_an_accessory_that_no_longer_exists_shows_the_plain_hero() -> void:
+	assert_eq(CharacterRules.picture_file("santa", "red", "antlers"), "char_santa.png", "red, plain")
+	assert_eq(CharacterRules.picture_file("snowman", "green", "antlers"), "char_snowman_green.png", "green, plain")
 
 
 func test_final_characters_drop_the_ready_flag() -> void:

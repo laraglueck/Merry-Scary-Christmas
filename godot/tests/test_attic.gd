@@ -247,3 +247,16 @@ func test_the_attic_scales_as_a_whole_when_the_window_changes() -> void:
 	var stage: Control = find(attic, "Stage")
 	assert_eq(stage.scale, Vector2(1, 1), "as high as the window")
 	assert_eq(stage.position, Vector2(576, 0), "centred, with bars left and right")
+
+
+# Playtest (Lara): a long message ran under the inventory bar at the bottom right.
+# The message line now ends before the bar and wraps onto a second line instead.
+func check_message_clear_of_the_inventory_bar(screen: Node) -> void:
+	var message: Label = screen.find_child("Message", true, false)
+	assert_true(message.position.x + message.size.x <= 690, "ends before the inventory bar (x %d)" % (message.position.x + message.size.x))
+	assert_true(message.autowrap_mode != TextServer.AUTOWRAP_OFF, "a long message wraps")
+	assert_true(message.position.y + message.size.y <= 640, "still on the screen")
+
+
+func test_the_message_is_not_covered_by_the_inventory_bar() -> void:
+	check_message_clear_of_the_inventory_bar(open_attic())

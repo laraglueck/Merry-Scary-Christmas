@@ -35,6 +35,7 @@ const ButtonStyle = preload("res://scripts/button_style.gd")
 const PhotoPuzzle = preload("res://scenes/photo_puzzle.tscn")
 const IMAGES := "res://assets/images/"
 const Settings = preload("res://scripts/settings.gd")
+const WebText = preload("res://scripts/web_text.gd")
 const CLOCK_COLOUR := Color("f3e6cf")
 const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
 
@@ -49,6 +50,8 @@ var house_music: AudioStreamPlayer
 var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
 var clock_label: Label
 var power_button: Button  # the hero's power, once per game (under the clock)
+var power_message: Label  # playtest: what a power did, right under the button (not covered)
+var _powers_seen := 0     # how many powers were used when the box was last updated
 var pause_button: Button   # spec 26: next to the clock while the game runs
 var pause_overlay: Control # spec 26: over every screen while the game is paused
 var pause_label: Label
@@ -188,6 +191,27 @@ func _build_clock() -> void:
 	power_button.visible = false
 	layer.add_child(power_button)
 
+	# What a power did (playtest): under the button, for everyone, in every room. The room's
+	# own message line at the bottom can be covered by the inventory bar (and the bedroom has
+	# none). A click closes it; it also goes after POWER_MESSAGE_SECONDS.
+	power_message = Label.new()
+	power_message.name = "PowerMessage"
+	power_message.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	power_message.offset_left = -290
+	power_message.offset_right = 290
+	power_message.offset_top = 98
+	power_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	power_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	power_message.add_theme_font_size_override("font_size", 18)
+	power_message.add_theme_color_override("font_color", Color("ffd76a"))
+	power_message.add_theme_stylebox_override("normal", _hud_box(Color(0.08, 0.05, 0.05, 0.92), Color("d4af37"), 10))
+	power_message.mouse_filter = Control.MOUSE_FILTER_STOP
+	power_message.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed:
+			close_power_message())
+	power_message.visible = false
+	layer.add_child(power_message)
+
 
 # Shown only while the game runs; red in the last minute.
 func _update_clock() -> void:
@@ -204,10 +228,26 @@ func _update_clock() -> void:
 	if power != "":
 		var used := PowerRules.is_used(net.game, net.my_index)
 		power_button.disabled = used
-		power_button.text = ("%s (used)" % power) if used else ("✨ %s" % power)
+		power_button.text = ("%s (used)" % power) if used else WebText.clean("✨ %s" % power)
 		for info in Settings.CHARACTERS:
 			if info["id"] == PowerRules.hero_of(net.game, net.my_index):
 				power_button.tooltip_text = "%s, once per game" % info["power_text"]
+	# A power was just used (by anyone): show what it did.
+	var used_count: int = net.game.get("powers_used", []).size() if running else 0
+	if used_count > _powers_seen:
+		power_message.text = str(net.game.get("last_event", ""))
+		power_message.visible = true
+		var shown := used_count
+		get_tree().create_timer(Settings.POWER_MESSAGE_SECONDS).timeout.connect(func() -> void:
+			if _powers_seen == shown:  # a newer power keeps its own full time
+				close_power_message())
+	_powers_seen = used_count
+	if not running:
+		power_message.visible = false
+
+
+func close_power_message() -> void:
+	power_message.visible = false
 
 
 # Five slots at the bottom right, above every screen, in the order of Settings.ITEMS.

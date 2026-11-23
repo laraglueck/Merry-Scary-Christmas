@@ -366,8 +366,11 @@ func _build_ui() -> void:
 	back.pressed.connect(_go_to_hall)
 	_message = _label(self, "", 22)
 	_message.name = "Message"
-	_message.position = Vector2(24, 596)
-	_message.size = Vector2(1100, 40)
+	# Playtest (Lara): ends before the inventory bar (bottom right) and wraps instead.
+	_message.position = Vector2(24, 548)
+	_message.size = Vector2(660, 88)
+	_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_message.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_message.add_theme_color_override("font_color", Color("ffd76a"))
 	_message.add_theme_color_override("font_outline_color", Color.BLACK)
 	_message.add_theme_constant_override("outline_size", 6)

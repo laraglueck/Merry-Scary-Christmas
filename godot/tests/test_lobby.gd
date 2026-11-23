@@ -304,3 +304,42 @@ func test_play_alone_needs_no_room() -> void:
 	var alone: Control = lobby.find_child("PlayAloneButton", true, false)
 	assert_eq(alone.visible, false, "once is enough")
 	assert_contains(text_of(lobby, "PlayersLabel"), "alone", "says it")
+
+
+# ---------- the browser version (spec 32): only playing alone ----------
+
+func open_lobby_in_browser() -> Node:
+	var lobby = LobbyScene.instantiate()
+	lobby.in_browser = true
+	tree.root.add_child(lobby)
+	return lobby
+
+
+func test_in_the_browser_there_is_no_room_to_create_or_join() -> void:
+	var lobby := open_lobby_in_browser()
+	assert_eq(find(lobby, "CreateButton").visible, false, "no Create room")
+	assert_eq(find(lobby, "JoinButton").is_visible_in_tree(), false, "no Join")
+	assert_eq(find(lobby, "AddressField").is_visible_in_tree(), false, "no code field")
+	assert_eq(find(lobby, "PlayAloneButton").visible, true, "Play alone stays")
+
+
+func test_the_browser_says_how_to_play_together() -> void:
+	var lobby := open_lobby_in_browser()
+	var note: Label = find(lobby, "WebNote")
+	assert_true(note != null and note.visible, "a note is shown")
+	assert_contains(note.text if note != null else "", "README", "where to read more")
+	assert_eq(find(lobby, "StatusLabel").visible, false, "no 'create a room or join one'")
+
+
+func test_playing_alone_in_the_browser_works() -> void:
+	var lobby := open_lobby_in_browser()
+	press(lobby, "PlayAloneButton")
+	assert_eq(lobby.net.solo, true, "alone")
+	assert_eq(find(lobby, "WebNote").visible, false, "the note goes once you play")
+
+
+func test_on_the_laptop_nothing_changes() -> void:
+	var lobby := open_lobby()
+	assert_eq(lobby.in_browser, false, "the tests run as a laptop")
+	assert_eq(find(lobby, "CreateButton").visible, true, "Create room")
+	assert_eq(find(lobby, "WebNote").visible, false, "no browser note")

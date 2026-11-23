@@ -250,8 +250,11 @@ func _build_clock_submission() -> void:
 
 	_message = Label.new()
 	_message.name = "Message"
-	_message.position = Vector2(24, 596)
-	_message.size = Vector2(1100, 40)
+	# Playtest (Lara): ends before the inventory bar (bottom right) and wraps instead.
+	_message.position = Vector2(24, 548)
+	_message.size = Vector2(660, 88)
+	_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_message.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_message.add_theme_font_size_override("font_size", 20)
 	_message.add_theme_color_override("font_color", Color("ffd76a"))
 	_message.add_theme_color_override("font_outline_color", Color.BLACK)

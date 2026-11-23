@@ -529,3 +529,24 @@ func test_pause_covers_no_button_in_any_room() -> void:
 			if button.is_visible_in_tree():
 				assert_true(not p.intersects(button.get_global_rect()), "%s: Pause covers %s" % [place, button.name])
 
+
+
+# Playtest (Lara): the result of a power was covered at the bottom (and not shown in the
+# bedroom). Now it shows in a box right under the power button, for everyone, in every room.
+func test_a_power_shows_its_result_under_the_power_button() -> void:
+	var mains: Array = await make_started_mains(47681)
+	assert_true(await wait_until(func(): return mains.all(func(m): return m.screen_name == "hall")), "in the hall")
+	await wait_frames(2)
+	var box: Control = mains[2].find_child("PowerMessage", true, false)
+	assert_true(box != null and not box.visible, "no box before a power is used")
+	mains[0].net.game["characters"] = {1: {"character": "snowman", "colour": "green", "accessory": "none"}}  # the host decides
+	mains[1].net.send_action("use_power", {})
+	assert_true(await wait_until(func(): return mains.all(func(m): return m.find_child("PowerMessage", true, false).visible)), "everyone sees it")
+	await wait_frames(2)
+	for m in mains:
+		assert_contains(text_of(m, "PowerMessage"), "Freeze", "what happened")
+	var rect: Rect2 = box.get_global_rect()
+	var button: Rect2 = mains[2].find_child("PowerButton", true, false).get_global_rect()
+	assert_true(rect.position.y >= button.end.y and rect.end.y < 360, "right under the power button, far from the bottom bar")
+	mains[2].close_power_message()
+	assert_eq(box.visible, false, "a click closes it")
