@@ -125,6 +125,8 @@ var _spark: AudioStreamPlayer
 var _creak: AudioStreamPlayer
 var _click: AudioStreamPlayer      # a fuse snaps in (spec 22)
 var _doll_turned := false  # she is looking at the players right now
+var _doll_screamed := false  # spec 34: the first time she screams, later she only creaks
+var _doll_scream: AudioStreamPlayer
 var _note_panel: Control    # single player: the note by the doll with the wire order
 var _note_symbols: Array[TextureRect] = []
 var _mission_card: Control
@@ -447,7 +449,11 @@ func _doll_turns() -> void:
 	_doll_turned = true
 	_doll.texture = load(IMAGES + "prop_doll_turned.png")
 	_doll.modulate = Color.WHITE  # for a moment the lamp lights her up
-	_play(_creak, "sfx_creak.mp3")
+	if _doll_screamed:
+		_play(_creak, "sfx_creak.mp3")
+	else:
+		_doll_screamed = true
+		_play(_doll_scream, "sfx_scare.mp3")  # the bathroom mirror's scream (spec 34)
 	get_tree().create_timer(DOLL_TURN_SECONDS).timeout.connect(_doll_turns_back)
 
 
@@ -890,6 +896,7 @@ func _build_ui() -> void:
 	_outline(_penalty_label)
 	_message = _label(self, "", 22, true)
 	_message.name = "Message"
+	_message.z_index = 3000  # spec 34: above the walking figures (drawn by depth, outline at 2000)
 	_message.anchor_top = 1.0
 	_message.anchor_bottom = 1.0
 	_message.offset_left = 24
@@ -925,6 +932,10 @@ func _build_ui() -> void:
 	_creak.stream = load(SOUNDS + "sfx_creak.mp3")
 	_creak.pitch_scale = 0.8  # slower and lower: creepier for the doll
 	add_child(_creak)
+	_doll_scream = AudioStreamPlayer.new()
+	_doll_scream.name = "DollScream"
+	_doll_scream.stream = load(SOUNDS + "sfx_scare.mp3")
+	add_child(_doll_scream)
 
 	_build_story_card()    # over the hall and the flicker, under the mission card (spec 25)
 	_build_mission_card()  # on top of everything, also the flicker

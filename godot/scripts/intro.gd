@@ -39,8 +39,12 @@ var elapsed := 0.0
 # story in the game, so it does not start too suddenly). 0 = start at once, as before.
 var lead_in := 0.0
 var voice_started := false
+# Spec 34: a browser plays no sound before the first click on the page, so there the story
+# waits behind "Click to start"; that click starts it (and unlocks the sound).
+var wait_for_click := OS.has_feature("web")
 
 var _fade: ColorRect
+var _click_to_start: Label
 
 var _voice: AudioStreamPlayer
 var _subtitle: Label
@@ -58,8 +62,8 @@ func _ready() -> void:
 	_voice.stream = stream
 	# Plays by itself in the real game. Not in the headless test run: there is no sound
 	# card there, and a sound still playing at the end shows up as a leak warning.
-	_voice.autoplay = DisplayServer.get_name() != "headless" and lead_in <= 0.0
-	voice_started = lead_in <= 0.0
+	_voice.autoplay = DisplayServer.get_name() != "headless" and lead_in <= 0.0 and not wait_for_click
+	voice_started = lead_in <= 0.0 and not wait_for_click
 	elapsed = -lead_in  # below 0: still fading in, the story starts at 0
 	_voice.finished.connect(_finish)
 	add_child(_voice)
@@ -73,8 +77,8 @@ func _process(delta: float) -> void:
 
 # Moves the story clock on (the tests call this to fast-forward).
 func advance(seconds: float) -> void:
-	if _done:
-		return
+	if _done or wait_for_click:
+		return  # spec 34: in the browser nothing moves before the first click
 	elapsed += seconds
 	if lead_in > 0.0:
 		_fade.color.a = clampf(-elapsed / lead_in, 0.0, 1.0)
@@ -89,12 +93,27 @@ func advance(seconds: float) -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
-		_finish()
+		_start_or_finish()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and SKIP_KEYS.has(event.keycode):
-		_finish()
+		_start_or_finish()
+
+
+# Spec 34: in the browser the first click starts the story; every other one skips it.
+func _start_or_finish() -> void:
+	if wait_for_click:
+		wait_for_click = false
+		_click_to_start.visible = false
+		elapsed = maxf(elapsed, 0.0)  # the click was the lead-in: no black fade after it
+		_fade.color.a = 0.0
+		var hint := find_child("SkipHint", true, false)
+		if hint != null:
+			hint.visible = true
+		_show_subtitle()
+		return
+	_finish()
 
 
 func _finish() -> void:
@@ -112,7 +131,7 @@ func _finish() -> void:
 
 # The line for the current time, fading in after it starts and out before the next.
 func _show_subtitle() -> void:
-	if elapsed < 0.0:
+	if elapsed < 0.0 or wait_for_click:
 		_subtitle.modulate.a = 0.0  # still fading in (spec 23)
 		return
 	var index := 0
@@ -178,11 +197,25 @@ func _build_ui() -> void:
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hint)
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT, Control.PRESET_MODE_MINSIZE, 20)
+	hint.visible = not wait_for_click
+
+	# Spec 34: browser only, before the story.
+	_click_to_start = Label.new()
+	_click_to_start.name = "ClickToStart"
+	_click_to_start.text = "Click to start"
+	_click_to_start.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_click_to_start.add_theme_font_size_override("font_size", 44)
+	_click_to_start.add_theme_color_override("font_color", Title.TITLE_CREAM)
+	_click_to_start.add_theme_color_override("font_outline_color", Title.NIGHT)
+	_click_to_start.add_theme_constant_override("outline_size", 10)
+	_click_to_start.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_click_to_start.visible = wait_for_click
+	centre.add_child(_click_to_start)
 
 	# Spec 23: black on top at first, fading away during the lead-in.
 	_fade = ColorRect.new()
 	_fade.name = "FadeIn"
-	_fade.color = Color(0, 0, 0, 1.0 if lead_in > 0.0 else 0.0)
+	_fade.color = Color(0, 0, 0, 1.0 if lead_in > 0.0 and not wait_for_click else 0.0)
 	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_fade)

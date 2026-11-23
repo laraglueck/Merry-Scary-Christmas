@@ -831,11 +831,11 @@ func test_the_doll_on_the_stairs_turns_her_head_every_time() -> void:
 	stairs.gui_input.emit(click)
 	assert_contains(text_of(hall, "Message"), "pitch dark", "the stairs are dark")
 	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "she turns her head")
-	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 1, "with a creak")
+	assert_eq(hall.sounds_played.count("sfx_scare.mp3"), 1, "with a scream the first time (spec 34)")
 	hall._doll_turns_back()  # after a moment she looks away again
 	stairs.gui_input.emit(click)
 	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "and turns again on the next click")
-	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 2, "creaking again")
+	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 1, "creaking the next time")
 
 
 # ---------- sound pack (spec 22) ----------
@@ -1122,3 +1122,27 @@ func test_in_a_team_the_doll_has_no_note() -> void:
 	var hall := open_hall()
 	hall._close_mission()
 	assert_eq(is_shown(hall, "DollNote"), false, "no note in her lap: it is only for single player")
+
+
+# Spec 34: the walking figures are drawn by depth (z_index = how far down they stand, at
+# most the picture's height; their outline at 2000): the hall's message stays above them.
+func test_the_message_is_drawn_above_the_walking_figures() -> void:
+	var hall := open_hall()
+	var message: Label = find(hall, "Message")
+	assert_true(message.z_index > 2000, "above every figure and its outline: %d" % message.z_index)
+
+
+# Spec 34: the first time the doll turns she screams (the mirror's scream), later she creaks.
+func test_the_doll_screams_the_first_time_and_creaks_after() -> void:
+	var hall := open_hall()
+	var stairs: Button = find(hall, "StairsButton")
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = false
+	stairs.gui_input.emit(click)
+	assert_eq(hall.sounds_played.count("sfx_scare.mp3"), 1, "a scream the first time")
+	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 0, "no creak with it")
+	hall._doll_turns_back()
+	stairs.gui_input.emit(click)
+	assert_eq(hall.sounds_played.count("sfx_scare.mp3"), 1, "no second scream")
+	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 1, "a creak the next time")
