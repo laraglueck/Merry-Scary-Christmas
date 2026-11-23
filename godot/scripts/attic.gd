@@ -359,7 +359,7 @@ func _build_ui() -> void:
 
 	# Title, way back, and message line.
 	var title := _label(self, "The Attic", 34)
-	title.position = Vector2(24, 12)
+	title.position = Vector2(52, 12)  # right of the music button (spec 33)
 	title.add_theme_color_override("font_color", Color("e8d9c0"))
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	title.add_theme_constant_override("outline_size", 6)

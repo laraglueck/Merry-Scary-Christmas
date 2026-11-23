@@ -604,7 +604,7 @@ func test_music_button_in_the_hall_covers_nothing() -> void:
 	for other in mains[0].find_children("*", "Control", true, false):
 		if other == button or button.is_ancestor_of(other) or not other.is_visible_in_tree():
 			continue
-		if other is BaseButton or other.name in ["ClockLabel", "PenaltyLabel", "InventoryBar"]:
+		if other is BaseButton or other.name in ["ClockLabel", "PenaltyLabel", "InventoryBar", "HallTitle"]:
 			assert_true(not m.intersects(other.get_global_rect()), "covers %s" % other.name)
 	# And in every room: no button of the room under it.
 	for i in 3:

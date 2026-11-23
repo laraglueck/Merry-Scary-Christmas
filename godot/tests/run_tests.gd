@@ -39,6 +39,9 @@ func _run_all() -> void:
 	OS.set_environment("MERRY_SCARY_SAVE", TEST_SAVE)
 	# The leaderboard too: tests never touch the real list or the internet.
 	OS.set_environment("MERRY_SCARY_LEADERBOARD", "user://test_leaderboard.json")
+	# And the language (spec 34): the tests read the English texts, whatever was chosen last.
+	OS.set_environment("MERRY_SCARY_LANGUAGE_FILE", "user://test_language.cfg")
+	DirAccess.remove_absolute("user://test_language.cfg")
 	var catcher := ErrorCatcher.new()
 	OS.add_logger(catcher)
 	var passed := 0
