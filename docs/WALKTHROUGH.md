@@ -50,6 +50,7 @@ and the rules can be tested without starting any screen.
 | How do players connect? | `scripts/net/network.gd` (Godot high-level multiplayer, ENet, port 47411) and `room_code.gd` (4-letter code, found on the Wi-Fi via port 47412) |
 | Playing alone? | `network.play_alone()`: the computer is host with one player, no network at all |
 | Where is the data stored? | the running game in memory on the host (`net.game`); the **save** in `user://saved_game.save` on the host's computer; the **leaderboard** in a Supabase table online, or `user://leaderboard.json` locally |
+| The database table? | `supabase/leaderboard.sql`: columns, checks and the two access rules |
 | External API? | weather in Nuuk from **Open-Meteo** (`window_view.gd`, `weather_rules.gd`, no key) and **Supabase** for the leaderboard (`net/leaderboard.gd`) |
 | Pictures and sounds? | `godot/assets/`, every source and licence in `assets/CREDITS.md`; helper scripts in `godot/tools/` |
 | The browser version? | `web/` (Godot's Web export, preset in `godot/export_presets.cfg`), put online by `.github/workflows/pages.yml` (spec 32) |
@@ -107,7 +108,8 @@ every room owner could work in their own file without breaking the others.
   Supabase's **Row Level Security** is switched on for the `leaderboard` table with exactly
   two rules: "anyone can read" (SELECT) and "anyone can add a win" (INSERT). There is no
   rule for UPDATE or DELETE, so with the public key nobody can change or delete an entry.
-  (Checked in the Supabase dashboard: *Database → Policies*.)
+  (Checked in the Supabase dashboard: *Database → Policies*; the SQL is in
+  `supabase/leaderboard.sql`.)
 - Input is checked in two places: the host's rules check every action, and leaderboard
   rows from outside are checked (name 1-20 letters, merry/scary, 0-3600 s) both by the
   Supabase table and in the game.

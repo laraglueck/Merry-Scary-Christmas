@@ -192,7 +192,8 @@ key="YOUR-PUBLISHABLE-KEY"
 
 Or set the environment variables `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Never put the
 secret (service role) key anywhere in the game.
-The file `supabase.cfg.example` shows the format; the real `supabase.cfg` is ignored by git
+The table and its access rules are in `supabase/leaderboard.sql` (run it once in the
+Supabase SQL Editor for a new project). The file `supabase.cfg.example` shows the format; the real `supabase.cfg` is ignored by git
 (`.gitignore`), and the rules for secrets are in [AGENTS.md](AGENTS.md).
 
 ## Project structure
@@ -208,6 +209,7 @@ godot/
   assets/          pictures and sounds, with CREDITS.md
 specs/             one short spec per feature
 docs/              walkthrough, team guide and asset brief
+supabase/          the leaderboard table and its access rules (SQL)
 web/               the game exported for the browser (GitHub Pages)
 ```
 
