@@ -46,10 +46,12 @@ and the rules can be tested without starting any screen.
 | --- | --- |
 | Where does the game start? | `scenes/main.tscn` + `scripts/main.gd`: story → title → lobby → hero choice → hall/rooms → ending |
 | Where are the puzzles' rules? | `scripts/rules/` one file per part: `fuse_rules`, `living_room_rules`, `bathroom_rules`, `bedroom_rules`, `attic_rules`, `photo_rules`, `clock_rules`, `inventory_rules`, `power_rules`, `walk_rules`, `leaderboard_rules`, `weather_rules`, `character_rules`; `game_rules.gd` puts them together (`new_game`, `apply`) |
+| How is the ending decided? | `attic_rules.gd` `choose(attic, choice, has_photo, has_cookies)`: "lock him in" always works (Scary); "leave the photo and cookies" (Merry) only with the whole photo **and** the cookies, otherwise it is refused with a hint. Midnight comes from `clock_rules.gd` |
 | Where are numbers like the 20 minutes? | `scripts/settings.gd` (`GAME_SECONDS`, ports, items, heroes, rescue tries) |
 | How do players connect? | `scripts/net/network.gd` (Godot high-level multiplayer, ENet, port 47411) and `room_code.gd` (4-letter code, found on the Wi-Fi via port 47412) |
 | Playing alone? | `network.play_alone()`: the computer is host with one player, no network at all |
 | Where is the data stored? | the running game in memory on the host (`net.game`); the **save** in `user://saved_game.save` on the host's computer; the **leaderboard** in a Supabase table online, or `user://leaderboard.json` locally |
+| The database table? | `supabase/leaderboard.sql`: columns, checks and the two access rules |
 | External API? | weather in Nuuk from **Open-Meteo** (`window_view.gd`, `weather_rules.gd`, no key) and **Supabase** for the leaderboard (`net/leaderboard.gd`) |
 | Pictures and sounds? | `godot/assets/`, every source and licence in `assets/CREDITS.md`; helper scripts in `godot/tools/` |
 | The browser version? | `web/` (Godot's Web export, preset in `godot/export_presets.cfg`), put online by `.github/workflows/pages.yml` (spec 32) |
@@ -103,9 +105,20 @@ every room owner could work in their own file without breaking the others.
   variables or `user://supabase.cfg`, which lies in Godot's user folder on each computer,
   outside the repository.
 - The secret (service role) key is never used.
+- **Lowest permissions (access control):** the game only has the public key, and
+  Supabase's **Row Level Security** is switched on for the `leaderboard` table with exactly
+  two rules: "anyone can read" (SELECT) and "anyone can add a win" (INSERT). There is no
+  rule for UPDATE or DELETE, so with the public key nobody can change or delete an entry.
+  (Checked in the Supabase dashboard: *Database → Policies*; the SQL is in
+  `supabase/leaderboard.sql`.)
 - Input is checked in two places: the host's rules check every action, and leaderboard
   rows from outside are checked (name 1-20 letters, merry/scary, 0-3600 s) both by the
   Supabase table and in the game.
+- **The rules for secrets** are written down in `AGENTS.md`; `supabase.cfg.example` shows
+  the format with placeholders, and the real `supabase.cfg` is in `.gitignore`. The Git
+  history contains no key.
+- **In the presentation:** close the Supabase dashboard and `supabase.cfg` before sharing
+  the screen.
 
 ## 5. Limits (be honest; the top grade asks for them)
 
@@ -113,6 +126,10 @@ every room owner could work in their own file without breaking the others.
   Create room and Join are hidden there (`lobby.gd`, `in_browser`). The browser also has
   no emoji font (`web_text.gd`) and no key for the online leaderboard, so it keeps its
   own local list.
+- **Laptop or computer only.** The URL opens on a phone, but the browser version opens no
+  on-screen keyboard (so no name can be typed and the game cannot start) and walking needs
+  W A S D. How it could change: switch on Godot's on-screen keyboard for the web export and
+  add buttons for walking.
 - **Multiplayer needs the same network.** Players find the host on the local Wi-Fi (or
   type the host's address). It does not work across the internet, and university Wi-Fi may
   block it, so the demo uses three windows on one laptop or **Play alone**.
@@ -120,6 +137,9 @@ every room owner could work in their own file without breaking the others.
   lobby; only the host can resume the save.
 - **The leaderboard trusts the host.** With the public key, someone could send a fake but
   valid-looking row. The table only blocks rows that make no sense.
+- **The free Supabase project pauses** after a week without use. Then the online list is
+  not reachable and the game shows the local list after 4 seconds (nothing breaks). Before
+  the presentation, open the Supabase dashboard once to wake it up.
 - **The puzzles are random within limits** (clock time, tap order, symbols, fuse orders),
   but the rooms and story are always the same.
 - **Pictures** are fixed 1376 × 768 pictures; a very different window shape shows bars.

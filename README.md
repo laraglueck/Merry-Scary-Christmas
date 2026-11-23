@@ -9,6 +9,11 @@ the puzzles in the living room, bathroom and bedroom, collect the presents, a to
 the cookies, and open the attic. There they decide his fate: lock him in (**Scary Christmas**) or leave
 him the photo of his happier days and the cookies (**Merry Christmas**). If the clock strikes twelve, he wins.
 
+**The Merry ending has to be earned:** it is only possible if the team has found the three
+pieces of the torn photo (one in the living room, bathroom and bedroom), put them together,
+**and** taken the cookies from the living room table. Without both, only "lock him in" is
+left, and the game says what is missing.
+
 Every hero has one power per game: Santa's **Ho ho hint**, the Snowman's **Freeze**
 (+30 seconds) and the Nutcracker's **Crack** (part of an answer). The fastest wins go on a
 **leaderboard** on the end screen, with a countdown to Christmas Eve.
@@ -27,9 +32,28 @@ Every hero has one power per game: Santa's **Ho ho hint**, the Snowman's **Freez
 
 **Play in the browser (alone): https://laraglueck.github.io/Merry-Scary-Christmas/**
 
+Play it in a desktop browser on a laptop or computer (Chrome, Firefox, Safari, Edge).
+Phones and tablets are not supported: the game needs a keyboard (for the name and for
+walking).
+
 The browser version is for **one player** (a web page may not open the network port that
 playing together needs). The **three-player game** runs in the Godot version on laptops in
 the same Wi-Fi or on one phone hotspot (see *Play together* below).
+
+### Screenshots
+
+Moments a short demo cannot reach (made from the game itself):
+
+| | |
+| --- | --- |
+| ![The bathroom after the steam: the mirror shows the symbols for the chest](docs/screenshots/1-bathroom-after-steam.jpg) | ![The advent calendar with the five team easter eggs](docs/screenshots/2-advent-calendar-eggs.jpg) |
+| The bathroom: the steam shows the symbols for the chest in the bedroom | The advent calendar: five easter eggs of our team |
+| ![The attic after a wrong code: Jingles opens one eye](docs/screenshots/3-attic-wrong-code.jpg) | ![The attic choice: lock him in or leave the photo and cookies](docs/screenshots/4-attic-choice.jpg) |
+| A wrong code: Jingles opens one eye, and it costs 20 seconds | The choice: lock him in, or leave the photo and cookies (only possible with the whole photo and the cookies) |
+| ![Merry Christmas ending with the leaderboard](docs/screenshots/5-ending-merry.jpg) | ![Scary Christmas ending](docs/screenshots/6-ending-scary.jpg) |
+| Merry Christmas, with the leaderboard ("Team Rudolph" is an example) | Scary Christmas |
+| ![Midnight: Scary Jingles has won](docs/screenshots/7-ending-midnight.jpg) | |
+| Midnight: the clock struck twelve | |
 
 ## Run the game
 
@@ -192,6 +216,9 @@ key="YOUR-PUBLISHABLE-KEY"
 
 Or set the environment variables `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Never put the
 secret (service role) key anywhere in the game.
+The table and its access rules are in `supabase/leaderboard.sql` (run it once in the
+Supabase SQL Editor for a new project). The file `supabase.cfg.example` shows the format; the real `supabase.cfg` is ignored by git
+(`.gitignore`), and the rules for secrets are in [AGENTS.md](AGENTS.md).
 
 ## Project structure
 
@@ -205,7 +232,8 @@ godot/
   tools/           helper scripts for the pictures (add_image, cut_photo, ...)
   assets/          pictures and sounds, with CREDITS.md
 specs/             one short spec per feature
-docs/              walkthrough, team guide and asset brief
+docs/              walkthrough, demo plan, screenshots, team guide and asset brief
+supabase/          the leaderboard table and its access rules (SQL)
 web/               the game exported for the browser (GitHub Pages)
 ```
 
