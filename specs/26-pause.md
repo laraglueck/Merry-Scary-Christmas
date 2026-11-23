@@ -21,7 +21,8 @@ pause that stops the clock for all three players at once.
 - A saved game (spec 15) keeps the pause; after resuming it the team presses Continue.
 - In the browser, changing tabs or leaving the browser window pauses the game and its
   audio. On return, the pause overlay waits for Continue. Audio resumes where it left off,
-  preserving the music switch. This also applies to the story, menus and endings.
+  preserving the music switch. This also applies to the story, menus and endings, but not
+  to the warning and "Click to start": nothing runs there yet, so there is nothing to pause.
 
 ## Out of scope
 Pausing room sounds and animation with the team's manual Pause button, and a pause key.
