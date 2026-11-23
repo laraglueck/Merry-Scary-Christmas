@@ -33,6 +33,15 @@ static func setup() -> void:
 	TranslationServer.set_locale(saved_language())
 
 
+# When the game closes (main.gd): our translations are scripts, so they have to go before
+# Godot puts its scripts away. Otherwise Godot crashes while it closes.
+static func cleanup() -> void:
+	for code in CATALOGS:
+		var translation := TranslationServer.get_translation_object(code)
+		if translation is TemplateTranslation:
+			TranslationServer.remove_translation(translation)
+
+
 static func current() -> String:
 	var locale := TranslationServer.get_locale().substr(0, 2)
 	return locale if CATALOGS.has(locale) else "en"

@@ -25,6 +25,11 @@ Playing in your own language makes the riddles fairer and the story stronger.
 - Not translated: the game name, "Scary Jingles", the ending titles "Merry Christmas!" and
   "Scary Christmas!", the English voice of the story (its subtitles are translated), texts
   inside pictures.
+- **The texts fit** (Gloria, 23 Nov): no word breaks in the middle in the hall, the heroes'
+  names and the power line fit on the hero screen, the leaderboard box grows to the left
+  and stays on the screen, in all three languages.
+- **Closing the game** (Gloria, 23 Nov): the translations are taken out first
+  (`Lang.cleanup()`); before, Godot crashed while it closed.
 
 ## Out of scope
 More languages (adding one = one more file in `scripts/translations/` and one line in
