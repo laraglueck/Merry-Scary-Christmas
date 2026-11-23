@@ -36,6 +36,7 @@ const PhotoPuzzle = preload("res://scenes/photo_puzzle.tscn")
 const IMAGES := "res://assets/images/"
 const Settings = preload("res://scripts/settings.gd")
 const WebText = preload("res://scripts/web_text.gd")
+const Lang = preload("res://scripts/lang.gd")
 const CLOCK_COLOUR := Color("f3e6cf")
 const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
 
@@ -50,6 +51,7 @@ var house_music: AudioStreamPlayer
 var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
 var music_enabled := true    # spec 33: the music button on this device (off pauses both musics)
 var music_button: Button
+var language_picker: Control  # spec 34: top right on the title
 var _music_icon: Control
 var clock_label: Label
 var power_button: Button  # the hero's power, once per game (under the clock)
@@ -65,6 +67,7 @@ var _piece_pictures := {} # torn photo piece -> its small picture in the photo's
 
 
 func _ready() -> void:
+	Lang.setup()  # spec 34: the translations and the language chosen last time
 	add_to_group("hud_owner")  # a window view asks for refresh_hud() (spec 29)
 	net = NetworkScript.new()
 	net.name = "Network"
@@ -75,6 +78,7 @@ func _ready() -> void:
 	_build_inventory()
 	_build_pause()
 	_build_music_button()
+	_build_language_picker()
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
@@ -114,6 +118,7 @@ func _update_screen() -> void:
 		story_done = true
 	var wanted := current_screen()
 	_set_menu_music(wanted == "title")
+	language_picker.visible = wanted == "title"
 	if wanted == screen_name:
 		return
 	if screen != null:
@@ -540,3 +545,20 @@ func _update_pause() -> void:
 	pause_overlay.visible = paused
 	if paused:
 		pause_label.text = "Paused by Player %d" % (int(net.game.get("paused_by", 0)) + 1)
+
+
+# ---------- languages (spec 34) ----------
+
+func _build_language_picker() -> void:
+	language_picker = preload("res://scripts/language_picker.gd").new()
+	language_picker.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	language_picker.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	language_picker.offset_left = -16
+	language_picker.offset_right = -16
+	language_picker.offset_top = 12
+	language_picker.visible = false
+	language_picker.language_changed.connect(func(_code: String) -> void:
+		# Texts made with tr() when a screen was built: build the screen again.
+		screen_name = ""
+		_update_screen())
+	get_node("ClockLayer").add_child(language_picker)
