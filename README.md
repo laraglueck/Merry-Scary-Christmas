@@ -29,32 +29,72 @@ Every hero has one power per game: Santa's **Ho ho hint**, the Snowman's **Freez
 
 The browser version is for **one player** (a web page may not open the network port that
 playing together needs). The **three-player game** runs in the Godot version on laptops in
-the same Wi-Fi or on one phone hotspot (see *Run the game* and *Play with three windows*).
+the same Wi-Fi or on one phone hotspot (see *Play together* below).
 
 ## Run the game
 
-1. Install **Godot 4.7.2** (standard version, not .NET) from [godotengine.org](https://godotengine.org/download).
-2. Clone this repository.
-3. Let Godot import the pictures and sounds once (needed before the first run and before the tests):
+The quickest way to play alone is the browser link above. To play **together**, or to run
+the code yourself, use Godot. It takes about 10 minutes the first time.
 
-   ```bash
-   godot --headless --path godot --import
-   ```
+### 1. Get Godot (once)
 
-4. Start the game:
+1. Download **Godot 4.7.2, standard version** (not ".NET") from
+   [godotengine.org/download](https://godotengine.org/download). If a newer version is
+   offered, take 4.7.2 from the [download archive](https://godotengine.org/download/archive/).
+2. **Mac:** open the downloaded file and drag **Godot** into *Applications*.
+   **Windows:** unzip it; the `.exe` inside is Godot (no installation needed).
 
-   ```bash
-   godot --path godot
-   ```
+### 2. Get the game (once)
 
-   Or open `godot/project.godot` in the Godot editor and press ▶ (F5).
+- **Without Git:** on this GitHub page click the green **Code** button → **Download ZIP**,
+  and unzip it.
+- **With Git:** `git clone https://github.com/laraglueck/Merry-Scary-Christmas.git`
 
-On a Mac, `godot` is `/Applications/Godot.app/Contents/MacOS/Godot`.
+### 3. Start it
+
+1. Open Godot. In the *Project Manager* click **Import**, choose the file
+   `godot/project.godot` inside the game folder, and click **Import** (or **Import & Edit**).
+2. The editor opens and imports the pictures and sounds (the first time this takes a
+   minute).
+3. Press **▶** at the top right (or **F5** / on a Mac **Cmd + B**). The game starts in its
+   own window: the story (a click skips it), then **Start**, then the lobby.
+
+From a terminal it works too (first import once, then start):
+
+```bash
+godot --headless --path godot --import
+```
+
+```bash
+godot --path godot
+```
+
+`godot` is the Godot program: on a Mac `/Applications/Godot.app/Contents/MacOS/Godot`, on
+Windows the path to the `.exe`.
 
 ### Play alone
 
-In the lobby type your name and click **Play alone**, then **Start game**. You choose one
+In the lobby click **Play alone**, type your name and click **Start game**. You choose one
 hero; the order for the fuse box is on a note by the doll on the stairs.
+
+### Play together (three laptops)
+
+Every laptop needs Godot and the game (steps 1 to 3 above). All three laptops must be in
+**the same network**, for example:
+
+- **the same Wi-Fi**, e.g. at home, or
+- **one phone's hotspot** that all three join. Use this where the Wi-Fi does not let
+  laptops talk to each other, which is often the case on university Wi-Fi (eduroam).
+
+1. **Laptop 1 (the host, e.g. on the projector):** click **Create room**. A 4-letter room
+   code appears. If the computer asks *"Allow incoming network connections?"* (Mac) or shows
+   a firewall window (Windows), click **Allow**, otherwise the others cannot join.
+2. **Laptops 2 and 3:** type the code and click **Join**.
+3. **If the code is not found:** type the host's address instead of the code (four numbers
+   with dots, e.g. `172.20.10.2`). On the host's Mac: *System Settings → Wi-Fi → Details*
+   (IP address); on Windows: *Settings → Network → Properties* (IPv4 address).
+4. When all three are in, the host types a team name and clicks **Start game**. Each player
+   chooses a hero, then **Next**.
 
 ### Play with three windows (one laptop)
 
@@ -83,7 +123,7 @@ godot --headless --path godot --script res://tests/run_tests.gd
 
 All tests are in `godot/tests/` (one file per part, e.g. `test_bathroom_rules.gd`). The last
 line says how many passed, for example `552 passed, 0 failed`. Import the assets once first
-(step 3 above).
+(open the project once in the editor, or run the import command above).
 
 ## Update the browser version
 
