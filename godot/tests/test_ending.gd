@@ -10,6 +10,7 @@ class FakeNet extends Node:
 	signal game_changed
 	var game: Dictionary = {}
 	var my_index := 0
+	var solo := false
 
 
 # Opens the end screen like main.gd does: with the net and the phase as place.
@@ -129,8 +130,9 @@ func use_test_board() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_BOARD))
 
 
-func open_won_ending(name: String, seconds_left: int) -> Node:
+func open_won_ending(name: String, seconds_left: int, solo := false) -> Node:
 	var net := FakeNet.new()
+	net.solo = solo
 	tree.root.add_child(net)
 	net.game = {"phase": "merry", "inventory": [], "seconds_played": Settings.GAME_SECONDS - seconds_left,
 			"penalty_seconds": 0, "last_event": "", "team_name": name}
@@ -184,3 +186,18 @@ func test_the_end_screen_counts_down_to_christmas() -> void:
 	use_test_board()
 	var ending := open_won_ending("Team Comet", 450)
 	assert_contains(text_of(ending, "Countdown"), "Christmas Eve", "the countdown")
+
+
+# ---------- solo and team lists (spec 34) ----------
+
+func test_solo_and_team_wins_are_on_separate_lists() -> void:
+	use_test_board()
+	open_won_ending("Team Rudolph", 300)
+	var solo := open_won_ending("Lonely Elf", 100, true)
+	assert_contains(text_of(solo, "LeaderboardTitle"), "Solo", "the solo list")
+	assert_contains(text_of(solo, "LeaderboardRows"), "Lonely Elf", "the solo win")
+	assert_true(not text_of(solo, "LeaderboardRows").contains("Team Rudolph"), "no team on the solo list")
+	var team := open_won_ending("Team Comet", 450)
+	assert_contains(text_of(team, "LeaderboardTitle"), "Team", "the team list")
+	assert_contains(text_of(team, "LeaderboardRows"), "Team Rudolph", "the other team")
+	assert_true(not text_of(team, "LeaderboardRows").contains("Lonely Elf"), "no solo win on the team list")

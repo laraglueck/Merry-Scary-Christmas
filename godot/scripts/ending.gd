@@ -65,7 +65,9 @@ func _build_leaderboard(game: Dictionary) -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)
 	panel.add_child(column)
-	var title := _label(column, "LeaderboardTitle", WebText.clean("🏆 Fastest escapes"), 22)  # also for one player (playtest)
+	var solo: bool = net != null and net.get("solo") == true
+	# Spec 34: players alone and teams each have their own list.
+	var title := _label(column, "LeaderboardTitle", WebText.clean("🏆 Fastest escapes: %s" % ("Solo" if solo else "Team")), 22)
 	title.add_theme_color_override("font_color", Color("ffd76a"))
 	_board_rows = _label(column, "LeaderboardRows", "Loading...", 15)
 	_board_rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -75,9 +77,10 @@ func _build_leaderboard(game: Dictionary) -> void:
 
 	var board := Leaderboard.new()
 	board.name = "Leaderboard"
+	board.mode = "solo" if solo else "team"
 	add_child(board)
 	board.updated.connect(_show_rows)
-	_my_entry = LeaderboardRules.entry_for(game)
+	_my_entry = LeaderboardRules.entry_for(game, solo)
 	var index = net.get("my_index") if net != null else null
 	var host: bool = index == null or index == 0
 	if host and not _my_entry.is_empty():
@@ -90,7 +93,7 @@ func _show_rows(rows: Array) -> void:
 	# Players 2 and 3 load the list before the host's save arrives (playtest): our own
 	# win is always in the list we show.
 	if not _my_entry.is_empty() and not rows.has(_my_entry):
-		rows = LeaderboardRules.top(rows + [_my_entry])
+		rows = LeaderboardRules.top(rows + [_my_entry], _my_entry["mode"])
 	if rows.is_empty():
 		_board_rows.text = "No wins yet. Be the first!"
 		return

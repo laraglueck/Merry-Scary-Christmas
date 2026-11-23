@@ -15,6 +15,7 @@ const TABLE := "leaderboard"
 signal updated(rows: Array)  # the best rows, after loading or saving
 
 var rows: Array = []
+var mode := "team"    # spec 34: which list this board shows, "solo" or "team"
 var online := false   # true when Supabase is set up
 var _url := ""
 var _key := ""
@@ -41,11 +42,11 @@ func _read_config() -> void:
 	online = _url != "" and _key != "" and OS.get_environment("MERRY_SCARY_LEADERBOARD") == ""
 
 
-# Loads the best rows: online if possible, else (or on failure) the local file.
+# Loads the best rows of this board's mode: online if possible, else (or on failure) the local file.
 func load_top() -> void:
 	if online:
 		_request(HTTPClient.METHOD_GET,
-			"%s/rest/v1/%s?select=name,ending,seconds_left&order=seconds_left.desc&limit=%d" % [_url, TABLE, Rules.TOP], "")
+			"%s/rest/v1/%s?select=name,ending,seconds_left,mode&mode=eq.%s&order=seconds_left.desc&limit=%d" % [_url, TABLE, mode, Rules.TOP], "")
 	else:
 		_show(_read_local())
 
@@ -65,7 +66,7 @@ func submit(entry: Dictionary) -> void:
 
 
 func _show(all_rows: Array) -> void:
-	rows = Rules.top(all_rows)
+	rows = Rules.top(all_rows, mode)
 	updated.emit(rows)
 
 
@@ -78,7 +79,8 @@ func _read_local() -> Array:
 func _write_local(all_rows: Array) -> void:
 	var file := FileAccess.open(local_path(), FileAccess.WRITE)
 	if file != null:
-		file.store_string(JSON.stringify(Rules.top(all_rows) if all_rows.size() > 50 else all_rows))
+		# A long file keeps only the best of each list.
+		file.store_string(JSON.stringify(Rules.top(all_rows, "solo") + Rules.top(all_rows, "team") if all_rows.size() > 50 else all_rows))
 
 
 # One request to Supabase. Whatever goes wrong (no internet, slow, refused), the local
