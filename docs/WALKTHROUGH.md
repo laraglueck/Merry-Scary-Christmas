@@ -103,9 +103,19 @@ every room owner could work in their own file without breaking the others.
   variables or `user://supabase.cfg`, which lies in Godot's user folder on each computer,
   outside the repository.
 - The secret (service role) key is never used.
+- **Lowest permissions (access control):** the game only has the public key, and
+  Supabase's **Row Level Security** is switched on for the `leaderboard` table with exactly
+  two rules: "anyone can read" (SELECT) and "anyone can add a win" (INSERT). There is no
+  rule for UPDATE or DELETE, so with the public key nobody can change or delete an entry.
+  (Checked in the Supabase dashboard: *Database → Policies*.)
 - Input is checked in two places: the host's rules check every action, and leaderboard
   rows from outside are checked (name 1-20 letters, merry/scary, 0-3600 s) both by the
   Supabase table and in the game.
+- **The rules for secrets** are written down in `AGENTS.md`; `supabase.cfg.example` shows
+  the format with placeholders, and the real `supabase.cfg` is in `.gitignore`. The Git
+  history contains no key.
+- **In the presentation:** close the Supabase dashboard and `supabase.cfg` before sharing
+  the screen.
 
 ## 5. Limits (be honest; the top grade asks for them)
 
