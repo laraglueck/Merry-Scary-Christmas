@@ -9,6 +9,7 @@ const HallScene = preload("res://scenes/hall.tscn")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const HallScript = preload("res://scripts/hall.gd")
 const Settings = preload("res://scripts/settings.gd")
+const Comfort = preload("res://scripts/comfort.gd")
 
 const RED_RIGHT := ["white", "blue", "yellow", "black"]
 const GREEN_RIGHT := ["blue", "black", "yellow", "white"]
@@ -831,11 +832,11 @@ func test_the_doll_on_the_stairs_turns_her_head_every_time() -> void:
 	stairs.gui_input.emit(click)
 	assert_contains(text_of(hall, "Message"), "pitch dark", "the stairs are dark")
 	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "she turns her head")
-	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 1, "with a creak")
+	assert_eq(hall.sounds_played.count("sfx_scare.mp3"), 1, "with a scream the first time (spec 34)")
 	hall._doll_turns_back()  # after a moment she looks away again
 	stairs.gui_input.emit(click)
 	assert_eq(texture_file(hall, "Doll"), "prop_doll_turned.png", "and turns again on the next click")
-	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 2, "creaking again")
+	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 1, "creaking the next time")
 
 
 # ---------- sound pack (spec 22) ----------
@@ -1122,3 +1123,79 @@ func test_in_a_team_the_doll_has_no_note() -> void:
 	var hall := open_hall()
 	hall._close_mission()
 	assert_eq(is_shown(hall, "DollNote"), false, "no note in her lap: it is only for single player")
+
+
+# Spec 34: with "Reduce flashing" the hall stays steadily a little dark, no flicker.
+func test_reduced_flashing_keeps_the_hall_steady() -> void:
+	Comfort.reduce_flashing = true
+	var hall := open_hall()
+	var overlay: ColorRect = find(hall, "FlickerOverlay")
+	var seen := {}
+	for i in 40:
+		hall._on_flicker_tick()
+		seen[snappedf(overlay.color.a, 0.001)] = true
+	assert_eq(seen.size(), 1, "one steady darkness: %s" % [seen.keys()])
+	var a: float = seen.keys()[0]
+	assert_true(a > 0.0 and a <= HallScript.flicker_strength(0) * 0.5 + 0.001, "a little dark: %s" % a)
+	Comfort.reduce_flashing = false
+
+
+# ---------- not by colour alone (spec 34) ----------
+
+func test_every_fuse_has_its_own_shape() -> void:
+	var marks := {}
+	for fuse in Settings.FUSES:
+		assert_true(fuse.has("mark"), fuse["colour"] + " has a shape")
+		marks[fuse.get("mark", "")] = true
+	assert_eq(marks.size(), Settings.FUSES.size(), "three different shapes")
+	assert_eq(Settings.FUSES[0].get("mark"), "circle", "red = circle")
+
+
+func test_title_and_frame_show_the_fuses_shapes() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	var seen := {0: 2, 1: 0, 2: 1}  # player -> the fuse whose order they see
+	for player in seen:
+		press(hall, "PlayerButton%d" % player)
+		var own: Node = find(hall, "FuseTitleMark")
+		var frame: Node = find(hall, "FrameMark")
+		if own == null or frame == null:
+			return
+		assert_eq(own.get("shape"), Settings.FUSES[player]["mark"], "player %d: own shape in the title" % [player + 1])
+		assert_eq(frame.get("shape"), Settings.FUSES[seen[player]]["mark"], "player %d: the order's shape on the frame" % [player + 1])
+		assert_true(own.is_visible_in_tree() and frame.is_visible_in_tree(), "both shown")
+	var row: Node = find(hall, "LabelSymbols")
+	assert_true(row != null and not row.is_ancestor_of(find(hall, "FrameMark")), "not in the row of symbols")
+	assert_eq(row.get_child_count() if row != null else -1, 4, "still four symbols in the row")
+
+
+func test_the_rescue_hint_names_the_shape() -> void:
+	var hall := open_hall()
+	press(hall, "FuseBoxButton")
+	for i in Settings.RESCUE_TRIES:
+		click_wires(hall, RED_WRONG)
+	assert_contains(text_of(hall, "FuseHint"), "GOLD fuse (diamond)", "colour and shape")
+
+
+# Spec 34: the walking figures are drawn by depth (z_index = how far down they stand, at
+# most the picture's height; their outline at 2000): the hall's message stays above them.
+func test_the_message_is_drawn_above_the_walking_figures() -> void:
+	var hall := open_hall()
+	var message: Label = find(hall, "Message")
+	assert_true(message.z_index > 2000, "above every figure and its outline: %d" % message.z_index)
+
+
+# Spec 34: the first time the doll turns she screams (the mirror's scream), later she creaks.
+func test_the_doll_screams_the_first_time_and_creaks_after() -> void:
+	var hall := open_hall()
+	var stairs: Button = find(hall, "StairsButton")
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = false
+	stairs.gui_input.emit(click)
+	assert_eq(hall.sounds_played.count("sfx_scare.mp3"), 1, "a scream the first time")
+	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 0, "no creak with it")
+	hall._doll_turns_back()
+	stairs.gui_input.emit(click)
+	assert_eq(hall.sounds_played.count("sfx_scare.mp3"), 1, "no second scream")
+	assert_eq(hall.sounds_played.count("sfx_creak.mp3"), 1, "a creak the next time")

@@ -5,6 +5,8 @@
 # this script only shows the state and reacts to keys and clicks.
 extends Control
 
+const HoverGlow = preload("res://scripts/hover_glow.gd")  # spec 34
+
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 const BathroomRules = preload("res://scripts/rules/bathroom_rules.gd")
@@ -70,6 +72,7 @@ var _mirror_steam: TextureRect
 var _mirror_face: TextureRect
 var _faucet: AudioStreamPlayer
 var _scare: AudioStreamPlayer
+var _rattle: AudioStreamPlayer  # spec 34: a wrong order
 var _drain: AudioStreamPlayer
 var _steam_hiss: AudioStreamPlayer
 
@@ -254,6 +257,8 @@ func _react() -> void:
 		_rise_steam()
 	elif now["turns"] != _seen["turns"] or now["penalty"] > _seen["penalty"]:
 		_play(_faucet, "sfx_faucet.mp3", 1.0, TAP_SOUND_SECONDS)
+		if now["penalty"] > _seen["penalty"]:
+			_play(_rattle, "sfx_key_lock.mp3", 0.7)  # spec 34: the pipes rattle angrily
 	_seen = now
 
 
@@ -316,7 +321,7 @@ func _refresh() -> void:
 	# The turns made so far, in the rhyme's words ("warm  cold"); how many are needed stays a secret.
 	var words := []
 	for tap in _bathroom()["turns"]:
-		words.append(_tap_word(tap))
+		words.append(tr(_tap_word(tap)))
 	_turns_label.text = "  ".join(words)
 
 	var solved: bool = _bathroom()["solved"]
@@ -373,6 +378,7 @@ func _build_ui() -> void:
 	_gift.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	_gift.tooltip_text = "Take the present"
 	_gift.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	HoverGlow.item(_gift)
 	_gift.pressed.connect(func() -> void: _send("take_gift", {"room": "bathroom"}))
 	_gift.position = GIFT_RECT.position
 	_gift.size = GIFT_RECT.size
@@ -387,6 +393,7 @@ func _build_ui() -> void:
 	_piece.rotation_degrees = -12  # lying a little crooked in the tub
 	_piece.tooltip_text = "A torn piece of paper"
 	_piece.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	HoverGlow.item(_piece)
 	_piece.pressed.connect(func() -> void: _send("take_piece", {"room": "bathroom"}))
 	add_child(_piece)
 	_digit_label = _label(self, "", 44)
@@ -433,9 +440,7 @@ func _build_ui() -> void:
 		button.add_theme_font_size_override("font_size", 16)
 		button.add_theme_color_override("font_outline_color", Color.BLACK)
 		button.add_theme_constant_override("outline_size", 5)
-		button.add_theme_stylebox_override("hover", _spot_style(HIGHLIGHT))
-		button.add_theme_stylebox_override("pressed", _spot_style(HIGHLIGHT))
-		button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		HoverGlow.spot(button)  # a soft gold glow on hover (spec 34)
 		button.pressed.connect(_on_spot_pressed.bind(i))
 		add_child(button)
 		_spot_buttons.append(button)
@@ -449,7 +454,7 @@ func _build_ui() -> void:
 
 	# Title and message line.
 	var title := _label(self, "The Bathroom", 34)
-	title.position = Vector2(24, 12)
+	title.position = Vector2(52, 12)  # right of the music button (spec 33)
 	title.add_theme_color_override("font_color", Color("e8d9c0"))
 	_message = _label(self, "", 22)
 	_message.name = "Message"
@@ -516,6 +521,7 @@ func _build_ui() -> void:
 	_scare = _sound("Scare", "sfx_scare.mp3")
 	_drain = _sound("Drain", "sfx_drain.mp3")
 	_steam_hiss = _sound("SteamHiss", "sfx_steam.mp3")
+	_rattle = _sound("Rattle", "sfx_key_lock.mp3")
 
 
 func _picture(node_name: String, file: String, rect: Rect2) -> TextureRect:

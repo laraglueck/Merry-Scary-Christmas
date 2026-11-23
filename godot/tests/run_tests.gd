@@ -20,6 +20,7 @@ class ErrorCatcher extends Logger:
 		pass
 
 
+const Comfort = preload("res://scripts/comfort.gd")
 const TEST_SAVE := "user://test_saved_game.save"
 
 var _started := false
@@ -38,6 +39,9 @@ func _run_all() -> void:
 	OS.set_environment("MERRY_SCARY_SAVE", TEST_SAVE)
 	# The leaderboard too: tests never touch the real list or the internet.
 	OS.set_environment("MERRY_SCARY_LEADERBOARD", "user://test_leaderboard.json")
+	# And the language (spec 34): the tests read the English texts, whatever was chosen last.
+	OS.set_environment("MERRY_SCARY_LANGUAGE_FILE", "user://test_language.cfg")
+	DirAccess.remove_absolute("user://test_language.cfg")
 	var catcher := ErrorCatcher.new()
 	OS.add_logger(catcher)
 	var passed := 0
@@ -63,6 +67,7 @@ func _run_all() -> void:
 			if not name.begins_with("test_"):
 				continue
 			DirAccess.remove_absolute(TEST_SAVE)  # every test starts without a save
+			Comfort.reduce_flashing = false        # and with the flashing as it is (spec 34)
 			var suite = script.new()
 			suite.tree = self
 			catcher.errors.clear()

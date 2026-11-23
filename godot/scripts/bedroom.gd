@@ -1,5 +1,7 @@
 extends Control
 
+const HoverGlow = preload("res://scripts/hover_glow.gd")  # spec 34
+
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const BedroomRules = preload("res://scripts/rules/bedroom_rules.gd")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
@@ -20,7 +22,6 @@ const SYMBOL_ART := {
 const GIFT_ART = preload(IMAGES + "item_gift_3.png")
 const PHOTO_ART = preload(IMAGES + "item_photo_piece_3.png")  # one torn piece (spec 21)
 const CHEST_OPEN_SOUND = preload("res://assets/sounds/sfx_creak.mp3")
-const GIFT_SOUND = preload("res://assets/sounds/sfx_gift.mp3")
 # Spec 28: Easter eggs behind five calendar doors; each screams when first opened.
 const EGG_ART: Array[Texture2D] = [
 	preload(IMAGES + "egg_calendar_1.png"), preload(IMAGES + "egg_calendar_2.png"),
@@ -120,7 +121,7 @@ func _build_room() -> void:
 
 	var title := Label.new()
 	title.text = "The Bedroom"
-	title.position = Vector2(24, 12)
+	title.position = Vector2(52, 12)  # right of the music button (spec 33)
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	title.add_theme_font_size_override("font_size", 34)
 	title.add_theme_color_override("font_color", Color("#e8d9c0"))
@@ -145,11 +146,7 @@ func _build_room() -> void:
 	door_hall.name = "DoorHall"
 	door_hall.tooltip_text = "Back to the hall"
 	door_hall.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	door_hall.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	var door_outline := _box(Color.TRANSPARENT, Color("ffd76a"), 3, 10, 0)  # gold, as in the other rooms (spec 24)
-	door_outline.draw_center = false
-	for state in ["hover", "pressed", "focus"]:
-		door_hall.add_theme_stylebox_override(state, door_outline)
+	HoverGlow.spot(door_hall)  # a soft gold glow, as in the other rooms (spec 24, 34)
 	room_view.add_child(door_hall)
 	_anchor_to_bounds(door_hall, DOOR_BOUNDS)
 	door_hall.pressed.connect(func(): _send("go_to", {"place": "hall"}))
@@ -175,11 +172,7 @@ func _add_hotspot(node_name: String, hint: String, bounds: Rect2, page: String) 
 	button.name = node_name
 	button.tooltip_text = hint
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	var outline := _box(Color.TRANSPARENT, Color("ffd76a"), 3, 10, 0)  # gold, as in the other rooms (spec 24)
-	outline.draw_center = false
-	for state in ["hover", "pressed", "focus"]:
-		button.add_theme_stylebox_override(state, outline)
+	HoverGlow.spot(button)  # a soft gold glow, as in the other rooms (spec 24, 34)
 	room_view.add_child(button)
 	_anchor_to_bounds(button, bounds)
 	button.pressed.connect(func():
@@ -388,10 +381,8 @@ func _update_room() -> void:
 	room_digit_label.text = str(BedroomRules.gold_digit(room)) if solved else ""
 	var gift_taken: bool = room.get("gift_taken", false)
 	if had_room_state and DisplayServer.get_name() != "headless":
-		if gift_taken and not was_gift_taken:
-			room_sound.stream = GIFT_SOUND
-			room_sound.play()
-		elif solved and not was_solved:
+		# The present's sound plays in main.gd now, for every room (spec 34).
+		if solved and not was_solved:
 			room_sound.stream = CHEST_OPEN_SOUND
 			room_sound.play()
 	had_room_state = not room.is_empty()

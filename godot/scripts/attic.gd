@@ -7,6 +7,8 @@
 # to keys and clicks.
 extends Control
 
+const HoverGlow = preload("res://scripts/hover_glow.gd")  # spec 34
+
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const AtticRules = preload("res://scripts/rules/attic_rules.gd")
 const InventoryRules = preload("res://scripts/rules/inventory_rules.gd")
@@ -340,6 +342,7 @@ func _build_ui() -> void:
 	_key.size = KEY_RECT.size
 	_key.tooltip_text = "Take the key"
 	_key.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	HoverGlow.item(_key)
 	_key.pressed.connect(_take_key)
 	add_child(_key)
 
@@ -356,7 +359,7 @@ func _build_ui() -> void:
 
 	# Title, way back, and message line.
 	var title := _label(self, "The Attic", 34)
-	title.position = Vector2(24, 12)
+	title.position = Vector2(52, 12)  # right of the music button (spec 33)
 	title.add_theme_color_override("font_color", Color("e8d9c0"))
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	title.add_theme_constant_override("outline_size", 6)

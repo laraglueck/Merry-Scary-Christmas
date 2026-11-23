@@ -24,6 +24,9 @@ const SOUNDS := "res://assets/sounds/"
 const LeaderboardRules = preload("res://scripts/rules/leaderboard_rules.gd")
 const Leaderboard = preload("res://scripts/net/leaderboard.gd")
 const WebText = preload("res://scripts/web_text.gd")
+const Settings = preload("res://scripts/settings.gd")
+const ButtonStyle = preload("res://scripts/button_style.gd")
+const ResultsRules = preload("res://scripts/rules/results_rules.gd")
 
 # Sounds this screen played (or would have played in the headless test run), spec 20.
 var sounds_played: Array[String] = []
@@ -38,11 +41,40 @@ func _ready() -> void:
 	var ending: Dictionary = ENDINGS.get(place, ENDINGS["midnight"])
 	_build_ui(ending, _result_text(game), str(game.get("last_event", "")))
 	_build_leaderboard(game)
+	_build_results_card(game)
+	_build_credits()  # last: its full-screen page lies above the results card
 	if place == "midnight":
 		_wake_up()  # spec 21: the clock strikes and he wakes, then the end screen
 	else:
 		for file_name in ending["sounds"]:
 			_play(file_name)
+
+
+# ---------- results card (spec 34) ----------
+
+# How the game went, top left: time left, mistakes, powers, who found what.
+func _build_results_card(game: Dictionary) -> void:
+	var panel := PanelContainer.new()
+	panel.name = "ResultsCard"
+	panel.position = Vector2(24, 70)
+	panel.custom_minimum_size = Vector2(280, 0)
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.05, 0.03, 0.03, 0.78)
+	box.border_color = Color("d4af37")
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(10)
+	box.set_content_margin_all(14)
+	panel.add_theme_stylebox_override("panel", box)
+	add_child(panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	panel.add_child(column)
+	var title := _label(column, "ResultsTitle", "Your escape", 22)
+	title.add_theme_color_override("font_color", Color("ffd76a"))
+	# Line by line through tr(): the translations match one text at a time (spec 34).
+	var lines: Array = ResultsRules.lines(game).map(func(line: String) -> String: return tr(line))
+	var rows := _label(column, "ResultsRows", "\n".join(lines), 15)
+	rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
 
 # ---------- leaderboard and countdown (second test round) ----------
@@ -67,7 +99,7 @@ func _build_leaderboard(game: Dictionary) -> void:
 	panel.add_child(column)
 	var solo: bool = net != null and net.get("solo") == true
 	# Spec 34: players alone and teams each have their own list.
-	var title := _label(column, "LeaderboardTitle", WebText.clean("🏆 Fastest escapes: %s" % ("Solo" if solo else "Team")), 22)
+	var title := _label(column, "LeaderboardTitle", WebText.clean("🏆 Fastest escapes: Solo" if solo else "🏆 Fastest escapes: Team"), 22)
 	title.add_theme_color_override("font_color", Color("ffd76a"))
 	_board_rows = _label(column, "LeaderboardRows", "Loading...", 15)
 	_board_rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -149,6 +181,15 @@ func _play(file_name: String) -> void:
 	player.stream = load(SOUNDS + file_name)
 	add_child(player)
 	player.play()
+	if file_name.begins_with("music_"):
+		player.add_to_group("music")  # the music button pauses it (spec 33)
+		player.stream_paused = not music_allowed()
+
+
+# Spec 33: the music button lives in main.gd, this screen's parent.
+func music_allowed() -> bool:
+	var main := get_parent()
+	return main == null or main.get("music_enabled") != false
 
 
 # "Presents found: 2 of 3", and for a win the time that was left.
@@ -227,6 +268,59 @@ func _build_ui(ending: Dictionary, result: String, last_event: String) -> void:
 	wait.position = Vector2(760, 596)
 	wait.size = Vector2(372, 30)
 	wait.visible = online and index > 0
+
+
+# ---------- credits (spec 34) ----------
+
+# "Credits" at the bottom left; a click shows the team over the end screen.
+func _build_credits() -> void:
+	var button := Button.new()
+	button.name = "CreditsButton"
+	button.text = "Credits"
+	button.position = Vector2(20, 584)
+	button.custom_minimum_size = Vector2(120, 48)
+	button.add_theme_font_size_override("font_size", 20)
+	ButtonStyle.make_clickable(button)
+	add_child(button)
+
+	var credits := ColorRect.new()
+	credits.name = "Credits"
+	credits.color = Color(0.04, 0.02, 0.03, 0.94)
+	credits.set_anchors_preset(Control.PRESET_FULL_RECT)
+	credits.mouse_filter = Control.MOUSE_FILTER_STOP
+	credits.visible = false
+	add_child(credits)
+	var column := VBoxContainer.new()
+	column.set_anchors_preset(Control.PRESET_FULL_RECT)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 14)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	credits.add_child(column)
+	var title := _label(column, "CreditsTitle", "Merry Scary Christmas", 48)
+	title.add_theme_color_override("font_color", Color("ffd76a"))
+	var made := _label(column, "CreditsMadeBy", "Made by", 22)
+	made.add_theme_color_override("font_color", Color("d8c8ae"))
+	var lines: Array[String] = []
+	for member in Settings.TEAM:
+		lines.append("%s   %s" % [member["name"], member["number"]])
+	var team := _label(column, "CreditsTeam", "\n".join(lines), 26)
+	team.add_theme_constant_override("line_spacing", 8)
+	var course := _label(column, "CreditsCourse", Settings.COURSE, 18)
+	course.add_theme_color_override("font_color", Color("a9c4e8"))
+	var close := Button.new()
+	close.name = "CreditsCloseButton"
+	close.text = "Close"
+	close.custom_minimum_size = Vector2(160, 48)
+	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close.add_theme_font_size_override("font_size", 20)
+	ButtonStyle.make_clickable(close)
+	column.add_child(close)
+
+	button.pressed.connect(func() -> void: credits.visible = true)
+	close.pressed.connect(func() -> void: credits.visible = false)
+	credits.gui_input.connect(func(event: InputEvent) -> void:  # a click anywhere closes it too
+		if event is InputEventMouseButton and event.pressed:
+			credits.visible = false)
 
 
 # Red: lighter on hover, darker when pressed.

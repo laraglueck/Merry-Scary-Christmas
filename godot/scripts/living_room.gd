@@ -1,5 +1,7 @@
 extends Control
 
+const HoverGlow = preload("res://scripts/hover_glow.gd")  # spec 34
+
 const GameRules = preload("res://scripts/rules/game_rules.gd")
 const FuseRules = preload("res://scripts/rules/fuse_rules.gd")
 
@@ -289,6 +291,7 @@ func _build_reward() -> void:
 	_gift_button.position = Vector2(205, 420)
 	_gift_button.size = Vector2(90, 90)
 	_gift_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	HoverGlow.item(_gift_button)
 	_gift_button.tooltip_text = "Take present"
 	_gift_button.pressed.connect(_take_gift)
 	add_child(_gift_button)
@@ -303,6 +306,7 @@ func _build_reward() -> void:
 	_piece_button.size = Vector2(70, 70)
 	_piece_button.rotation_degrees = 10
 	_piece_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	HoverGlow.item(_piece_button)
 	_piece_button.tooltip_text = "A torn piece of paper"
 	_piece_button.pressed.connect(func() -> void: _send("take_piece", {"room": "living_room"}))
 	add_child(_piece_button)
@@ -376,7 +380,7 @@ func _open_note() -> void:
 		return
 
 	var lines := LivingRoomRules.rhyme_for(game["bathroom"]["tap_order"])
-	_note_text.text = "\n\n".join(lines)
+	_note_text.text = "\n\n".join(lines.map(func(line: String) -> String: return tr(line)))
 	_clock_panel.hide()
 	_note_panel.get_parent().move_child(_note_panel, -1)  # on top (it lives on the stage, spec 21)
 	_note_panel.show()
@@ -397,6 +401,7 @@ func _build_cookies() -> void:
 	_cookies.size = Vector2(52, 23)
 	_cookies.modulate = Color(0.74, 0.7, 0.65)  # a little darker, like the rest of the room
 	_cookies.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	HoverGlow.item(_cookies)
 	_cookies.tooltip_text = "A plate of cookies"
 	_cookies.pressed.connect(_take_cookies)
 	add_child(_cookies)
@@ -452,12 +457,5 @@ func _open_window_view() -> void:
 # Spec 24: like in the other rooms, an object is invisible until the mouse is over it,
 # then it shows a gold frame.
 func _frame_on_hover(button: Button) -> void:
-	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	var frame := StyleBoxFlat.new()
-	frame.draw_center = false
-	frame.border_color = Color("ffd76a")
-	frame.set_border_width_all(3)
-	frame.set_corner_radius_all(8)
-	for state in ["hover", "pressed", "focus"]:
-		button.add_theme_stylebox_override(state, frame)
+	HoverGlow.spot(button)  # a soft gold glow, as in every room (spec 34)
 

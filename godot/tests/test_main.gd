@@ -4,6 +4,7 @@ extends "res://tests/base_test.gd"
 const MainScene = preload("res://scenes/main.tscn")
 const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
+const Comfort = preload("res://scripts/comfort.gd")
 
 
 # One device running the whole game (main scene), with its own multiplayer.
@@ -36,6 +37,7 @@ func make_started_mains(port: int) -> Array:
 
 func test_main_starts_with_the_story() -> void:
 	var main := make_main_device("Solo")
+	main.screen.accepted.emit()  # the flashing warning (spec 34)
 	assert_eq(main.screen_name, "intro", "the story first, before the title (spec 25)")
 	await wait_frames(2)
 	assert_true(main.find_child("SubtitleLabel", true, false) != null, "story shown")
@@ -44,6 +46,7 @@ func test_main_starts_with_the_story() -> void:
 
 func test_main_story_then_title_then_lobby() -> void:
 	var main := make_main_device("Solo2")
+	main.screen.accepted.emit()  # the flashing warning (spec 34)
 	main.screen.finished.emit()  # voice over, click or key
 	assert_eq(main.screen_name, "title", "the title after the story")
 	await wait_frames(2)
@@ -61,6 +64,8 @@ func test_menu_music_only_on_the_title() -> void:
 	var music: AudioStreamPlayer = main.get_node_or_null("Music")
 	assert_true(music != null and music.stream != null, "music in main")
 	assert_true(music != null and music.stream.loop, "music loops")
+	assert_eq(main.get("menu_music_on"), false, "no music under the warning")
+	main.screen.accepted.emit()  # the flashing warning (spec 34)
 	assert_eq(main.get("menu_music_on"), false, "no music under the story")
 	main.screen.finished.emit()
 	assert_eq(main.get("menu_music_on"), true, "music on the title")
@@ -358,6 +363,7 @@ func test_house_music_plays_quietly_while_the_game_runs() -> void:
 # Spec 25: the story comes first on each device, before the title, on its own.
 func test_the_story_at_the_start_fades_in_without_music() -> void:
 	var main := make_main_device("Story25")
+	main.screen.accepted.emit()  # the flashing warning (spec 34)
 	await wait_frames(2)
 	assert_eq(main.screen_name, "intro", "the story")
 	assert_true(main.screen.get("lead_in") != null and main.screen.lead_in >= 1.5, "the story fades in first")
@@ -550,3 +556,246 @@ func test_a_power_shows_its_result_under_the_power_button() -> void:
 	assert_true(rect.position.y >= button.end.y and rect.end.y < 360, "right under the power button, far from the bottom bar")
 	mains[2].close_power_message()
 	assert_eq(box.visible, false, "a click closes it")
+
+
+# ---------- a penalty you can see (spec 34) ----------
+
+func test_a_wrong_fuse_floats_the_lost_seconds_and_shakes_everyone() -> void:
+	var mains: Array = await make_started_mains(47692)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	await wait_frames(2)
+	for m in mains:
+		var float_label: Node = m.find_child("PenaltyFloat", true, false)
+		assert_true(float_label == null or not float_label.visible, "nothing floats at the start")
+		assert_eq(m.get("shakes"), 0, "no shake at the start")
+	var wrong: Array = mains[1].net.game["puzzle"]["fuses"][1]["order"].duplicate()
+	wrong.reverse()
+	mains[1].net.send_action("try_fuse", {"wires": wrong})
+	var all_see := func(): return mains.all(func(m):
+		var f: Node = m.find_child("PenaltyFloat", true, false)
+		return f != null and f.visible)
+	assert_true(await wait_until(all_see), "all three see the lost seconds")
+	for m in mains:
+		assert_eq(text_of(m, "PenaltyFloat"), "−%d s" % Settings.FUSE_PENALTY_SECONDS, "how much")
+		assert_eq(m.get("shakes"), 1, "the screen shook once")
+
+
+func test_a_resumed_game_with_penalties_does_not_shake() -> void:
+	var main := make_main_device("Resumed")
+	main._update_penalty()  # no game yet
+	main.net.game = {"phase": "hall", "penalty_seconds": 40}  # as if loaded from a save
+	main._update_penalty()
+	assert_eq(main.get("shakes"), 0, "an old penalty does not shake")
+	var float_label: Node = main.find_child("PenaltyFloat", true, false)
+	assert_true(float_label == null or not float_label.visible, "and does not float")
+	main.net.game["penalty_seconds"] = 60  # a new wrong answer after the resume
+	main._update_penalty()
+	assert_eq(main.get("shakes"), 1, "a new one does")
+	assert_eq(text_of(main, "PenaltyFloat"), "−20 s", "the 20 seconds just lost")
+	main.net.game = {}
+
+
+# ---------- music on/off (spec 33) ----------
+
+func test_music_button_switches_the_music_off_and_on() -> void:
+	var main := make_main_device("MusicButton")
+	main.story_done = true
+	main._update_screen()
+	var button: Button = main.find_child("MusicButton", true, false)
+	assert_true(button != null and button.is_visible_in_tree(), "the music button on the title")
+	if button == null:
+		return
+	var icon: Node = button.find_child("MusicIcon", true, false)
+	assert_true(icon != null, "a drawn note in the button")
+	assert_eq(main.get("music_enabled"), true, "music on at the start")
+	assert_eq(icon.get("crossed"), false, "the note is not crossed out")
+	main.music.play()  # the test run starts no music by itself
+	main.house_music.play()
+	button.pressed.emit()
+	assert_eq(main.get("music_enabled"), false, "off after a click")
+	assert_true(main.get_node("Music").stream_paused and main.get_node("HouseMusic").stream_paused, "both music players paused")
+	assert_eq(icon.get("crossed"), true, "the note crossed out")
+	assert_true(button.modulate.v < 0.9 and button.modulate.a < 1.0, "the button greyed out")
+	assert_eq(button.tooltip_text, "Music on", "says what a click does")
+	button.pressed.emit()
+	assert_eq(main.get("music_enabled"), true, "on again")
+	assert_true(not main.get_node("Music").stream_paused and not main.get_node("HouseMusic").stream_paused, "both music players go on")
+	assert_eq(icon.get("crossed"), false, "the note back")
+	assert_eq(button.modulate, Color.WHITE, "not greyed any more")
+	assert_eq(button.tooltip_text, "Music off", "says what a click does")
+	main.music.stop()
+	main.house_music.stop()
+
+
+func test_music_button_in_the_hall_covers_nothing() -> void:
+	tree.root.size = Vector2i(1152, 648)
+	var mains: Array = await make_started_mains(47690)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	await wait_frames(3)
+	var button: Button = mains[0].find_child("MusicButton", true, false)
+	assert_true(button != null and button.is_visible_in_tree(), "the music button in the hall")
+	if button == null:
+		return
+	var m := button.get_global_rect()
+	assert_true(m.position.x < 40 and m.position.y < 30 and m.size.x <= 48, "small, top left: %s" % m)
+	for other in mains[0].find_children("*", "Control", true, false):
+		if other == button or button.is_ancestor_of(other) or not other.is_visible_in_tree():
+			continue
+		if other is BaseButton or other.name in ["ClockLabel", "PenaltyLabel", "InventoryBar", "HallTitle"]:
+			assert_true(not m.intersects(other.get_global_rect()), "covers %s" % other.name)
+	# And in every room: no button of the room under it.
+	for i in 3:
+		light_fuse(mains[i].net, i)
+	await wait_until(func(): return mains[0].net.game["puzzle"]["fuses"].all(func(f): return f["solved"]))
+	for place in ["living_room", "bathroom", "bedroom", "attic"]:
+		mains[0].net.send_action("go_to", {"place": "hall"})
+		await wait_until(screens_are(mains, "hall"))
+		mains[0].net.send_action("go_to", {"place": place})
+		assert_true(await wait_until(screens_are(mains, place)), "in the " + place)
+		await wait_frames(3)
+		for other in mains[0].screen.find_children("*", "BaseButton", true, false):
+			if other.is_visible_in_tree():
+				assert_true(not m.intersects(other.get_global_rect()), "%s: the music button covers %s" % [place, other.name])
+
+
+func test_the_ending_music_follows_the_music_button() -> void:
+	var main := make_main_device("EndingMusic")
+	main.toggle_music()  # off
+	var ending: Node = load("res://scenes/ending.tscn").instantiate()
+	ending.place = "merry"
+	main.add_child(ending)
+	assert_eq(ending.music_allowed(), false, "the ending asks main: music is off")
+	main.toggle_music()
+	assert_eq(ending.music_allowed(), true, "and on again")
+	ending.queue_free()
+
+
+# ---------- flashing warning (spec 34) ----------
+
+func test_the_flashing_warning_comes_before_the_story() -> void:
+	var main := make_main_device("Warning")
+	assert_eq(main.screen_name, "warning", "the warning first")
+	await wait_frames(2)
+	assert_contains(text_of(main, "WarningText"), "photosensitive epilepsy", "says why")
+	assert_true(main.find_child("SubtitleLabel", true, false) == null, "no story yet")
+	press(main, "WarningContinue")
+	assert_eq(main.screen_name, "intro", "then the story")
+
+
+func test_the_warning_switch_reduces_flashing() -> void:
+	var main := make_main_device("WarningSwitch")
+	await wait_frames(1)
+	assert_eq(Comfort.reduce_flashing, false, "flashing on at the start")
+	assert_contains(text_of(main, "ReduceFlashingSwitch"), "Off", "the switch says Off")
+	press(main, "ReduceFlashingSwitch")
+	assert_eq(Comfort.reduce_flashing, true, "reduced after a click")
+	assert_contains(text_of(main, "ReduceFlashingSwitch"), "On", "the switch says On")
+	press(main, "ReduceFlashingSwitch")
+	assert_eq(Comfort.reduce_flashing, false, "and back")
+
+
+func test_the_pause_screen_has_the_flashing_switch() -> void:
+	var mains: Array = await make_started_mains(47693)
+	assert_true(await wait_until(screens_are(mains, "hall")), "in the hall")
+	press(mains[0], "PauseButton")
+	assert_true(await wait_until(func(): return mains[0].find_child("PauseOverlay", true, false).visible), "paused")
+	var switch: Button = mains[0].find_child("PauseReduceFlashing", true, false)
+	assert_true(switch != null and switch.is_visible_in_tree(), "the switch on the pause screen")
+	if switch == null:
+		return
+	switch.pressed.emit()
+	assert_eq(Comfort.reduce_flashing, true, "reduced from the pause screen")
+	assert_contains(switch.text, "On", "says On")
+
+
+# Spec 34: something new in the inventory plays the pickup sound on every device, in every
+# room; starting (or joining) a game does not.
+func test_a_picked_up_item_plays_the_pickup_sound_for_everyone() -> void:
+	var mains: Array = await make_started_mains(47691)
+	await wait_until(screens_are(mains, "hall"))
+	for main in mains:
+		assert_eq(main.sounds_played.count("sfx_gift.mp3"), 0, "no sound for starting the game")
+	mains[0].net.game["bathroom"]["solved"] = true  # the host's game: taps solved
+	mains[1].net.send_action("take_gift", {"room": "bathroom"})
+	var everyone_hears := func(): return mains.all(func(m): return m.sounds_played.count("sfx_gift.mp3") == 1)
+	assert_true(await wait_until(everyone_hears), "all three hear it once: %s" % [mains.map(func(m): return m.sounds_played)])
+
+# ---------- the last minutes (spec 35) ----------
+
+# A game alone on this device, with `left` seconds to midnight.
+func make_solo_at(device_name: String, left: int) -> Node:
+	var main := make_main_device(device_name)
+	main.net.game = {"phase": "hall", "seconds_played": Settings.GAME_SECONDS - left}
+	main._update_dread()
+	return main
+
+
+func test_calm_before_the_last_five_minutes() -> void:
+	var main := make_solo_at("Dread0", 400)
+	assert_eq(main.dread_stage, 0, "calm")
+	assert_eq(main.get_node("HouseMusic").pitch_scale, 1.0, "music normal")
+	assert_eq(main.dread_sounds, [], "no snore, no chime")
+	var flicker: Control = main.find_child("DreadFlicker", true, false)
+	assert_true(flicker != null and not flicker.visible, "no flicker")
+
+
+func test_five_minutes_left_snoring_faster_music_and_a_chime() -> void:
+	var main := make_solo_at("Dread1", 301)
+	main.net.game["seconds_played"] += 1  # 5:00 left
+	main._update_dread()
+	assert_eq(main.dread_stage, 1, "stage 1")
+	assert_true(is_equal_approx(main.get_node("HouseMusic").pitch_scale, Settings.DREAD_MUSIC_PITCH), "music a bit faster")
+	assert_true("sfx_snore.mp3" in main.dread_sounds, "Jingles snores in every room")
+	assert_eq(main.dread_sounds.count("sfx_clock_chime.mp3"), 1, "the clock strikes")
+	var snore: AudioStreamPlayer = main.get_node_or_null("DreadSnore")
+	assert_true(snore != null and snore.volume_db <= -18.0, "quietly")
+	main.net.game["seconds_played"] += 1
+	main._update_dread()
+	assert_eq(main.dread_sounds.count("sfx_clock_chime.mp3"), 1, "only once for 5:00")
+	assert_true(not main.find_child("DreadFlicker", true, false).visible, "no flicker yet")
+
+
+func test_two_minutes_left_flicker_everywhere_and_jingles_twitches_once() -> void:
+	var main := make_solo_at("Dread2", 121)
+	main.net.game["seconds_played"] += 1
+	main._update_dread()
+	assert_eq(main.dread_stage, 2, "stage 2")
+	assert_true(is_equal_approx(main.get_node("HouseMusic").pitch_scale, Settings.PANIC_MUSIC_PITCH), "faster still")
+	var flicker: ColorRect = main.find_child("DreadFlicker", true, false)
+	assert_true(flicker != null and flicker.visible, "the lights flicker")
+	assert_eq(flicker.mouse_filter, Control.MOUSE_FILTER_IGNORE, "clicks go through")
+	var shot: Control = main.find_child("JinglesTwitch", true, false)
+	assert_true(shot != null and shot.visible, "Jingles twitches")
+	assert_eq(main.jingles_shots, 1, "once")
+	main.net.game["seconds_played"] += 5
+	main._update_dread()
+	assert_eq(main.jingles_shots, 1, "still once")
+
+
+func test_nothing_while_paused_and_calm_again_after_the_game() -> void:
+	var main := make_solo_at("Dread3", 100)
+	assert_eq(main.dread_stage, 2, "panic")
+	main.net.game["paused"] = true
+	main._update_dread()
+	assert_eq(main.dread_stage, 0, "paused: calm")
+	assert_true(not main.find_child("DreadFlicker", true, false).visible, "no flicker in the pause")
+	main.net.game["paused"] = false
+	main.net.game["phase"] = "scary"
+	main._update_dread()
+	assert_eq(main.dread_stage, 0, "the game is over")
+	assert_eq(main.get_node("HouseMusic").pitch_scale, 1.0, "music back to normal")
+
+
+func test_with_reduced_flashing_the_last_minutes_do_not_flicker() -> void:
+	Comfort.reduce_flashing = true
+	var main := make_solo_at("Dread4", 100)
+	var flicker: ColorRect = main.find_child("DreadFlicker", true, false)
+	await tree.create_timer(0.3).timeout
+	var seen := []
+	for i in 6:
+		seen.append(flicker.color.a)
+		await tree.create_timer(0.1).timeout
+	Comfort.reduce_flashing = false
+	assert_true(seen.all(func(a): return is_equal_approx(a, seen[0])), "steady, no flicker: %s" % [seen])
+	assert_true(seen[0] > 0.0, "but a little dark")
+	main.net.game = {}
