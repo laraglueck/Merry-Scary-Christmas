@@ -24,6 +24,7 @@ const SOUNDS := "res://assets/sounds/"
 const LeaderboardRules = preload("res://scripts/rules/leaderboard_rules.gd")
 const Leaderboard = preload("res://scripts/net/leaderboard.gd")
 const WebText = preload("res://scripts/web_text.gd")
+const ResultsRules = preload("res://scripts/rules/results_rules.gd")
 
 # Sounds this screen played (or would have played in the headless test run), spec 20.
 var sounds_played: Array[String] = []
@@ -38,11 +39,37 @@ func _ready() -> void:
 	var ending: Dictionary = ENDINGS.get(place, ENDINGS["midnight"])
 	_build_ui(ending, _result_text(game), str(game.get("last_event", "")))
 	_build_leaderboard(game)
+	_build_results_card(game)
 	if place == "midnight":
 		_wake_up()  # spec 21: the clock strikes and he wakes, then the end screen
 	else:
 		for file_name in ending["sounds"]:
 			_play(file_name)
+
+
+# ---------- results card (spec 34) ----------
+
+# How the game went, top left: time left, mistakes, powers, who found what.
+func _build_results_card(game: Dictionary) -> void:
+	var panel := PanelContainer.new()
+	panel.name = "ResultsCard"
+	panel.position = Vector2(24, 70)
+	panel.custom_minimum_size = Vector2(280, 0)
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(0.05, 0.03, 0.03, 0.78)
+	box.border_color = Color("d4af37")
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(10)
+	box.set_content_margin_all(14)
+	panel.add_theme_stylebox_override("panel", box)
+	add_child(panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	panel.add_child(column)
+	var title := _label(column, "ResultsTitle", "Your escape", 22)
+	title.add_theme_color_override("font_color", Color("ffd76a"))
+	var rows := _label(column, "ResultsRows", "\n".join(ResultsRules.lines(game)), 15)
+	rows.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 
 
 # ---------- leaderboard and countdown (second test round) ----------
