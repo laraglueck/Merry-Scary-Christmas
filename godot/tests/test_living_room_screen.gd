@@ -350,6 +350,37 @@ func test_the_moon_is_pale_behind_clouds_and_bright_on_clear_nights() -> void:
 		screen.free()
 
 
+func test_window_audio_follows_the_visible_weather() -> void:
+	var screen := open_window()
+	press(screen, "WindowButton")
+	var view := find(screen, "WindowView")
+	var audio := find(view, "WeatherAudio") as AudioStreamPlayer
+	if audio == null:
+		return
+
+	view.show_weather({"kind": "rain"})
+	assert_true(audio.stream == null, "the sound waits for the frost wipe")
+	view.finish_wipe()
+	var rain := audio.stream as AudioStreamMP3
+	assert_true(rain != null and rain.loop, "rain loops after the wipe")
+	if rain != null:
+		assert_eq(rain.data == preload("res://assets/sounds/sfx_rain.mp3").data, true, "uses the rain clip")
+	view.show_weather({"kind": "rain"})
+	assert_eq(audio.stream, rain, "a repeat weather update keeps the same loop")
+
+	view.show_weather({"kind": "storm"})
+	var storm := audio.stream as AudioStreamMP3
+	assert_true(storm != null and storm.loop, "storms use a looping clip")
+	if storm != null:
+		assert_eq(storm.data == preload("res://assets/sounds/sfx_storm.mp3").data, true, "uses the storm clip")
+
+	view._on_request_completed(HTTPRequest.RESULT_CANT_CONNECT, 0, PackedStringArray(), PackedByteArray())
+	assert_true(audio.stream == null, "fallback snow is quiet")
+	view.show_weather({"kind": "rain"})
+	key_press("ui_cancel")
+	assert_true(audio.stream == null, "closing the view clears its audio immediately")
+
+
 
 # Playtest (Lara): a long message ran under the inventory bar at the bottom right.
 # The message line now ends before the bar and wraps onto a second line instead.

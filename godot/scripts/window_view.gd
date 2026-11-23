@@ -1,4 +1,4 @@
-# The view out of the living room window (spec 26): the front garden at night through the
+# The view out of the living room and bedroom windows (spec 26): the front garden through the
 # window, with the full moon in the sky behind the trees (view_window_garden.png, made by
 # tools/make_window_view.gd), and the real weather in Nuuk (Greenland) now, from Open-Meteo.
 # First the frost is wiped off the glass, from left to right (Settings.WINDOW_WIPE_SECONDS),
@@ -23,6 +23,10 @@ const WAITING_TEXT := "Wiping the frost off the glass..."
 const CLEAR_PICTURE := "view_window_garden.png"         # bright moon
 const CLOUDY_PICTURE := "view_window_garden_cloudy.png"  # pale moon behind clouds
 const CLOUDY_KINDS := ["cloudy", "fog"]  # rain and storm keep the bright moon, like snow
+const WEATHER_SOUNDS := {
+	"rain": preload("res://assets/sounds/sfx_rain.mp3"),
+	"storm": preload("res://assets/sounds/sfx_storm.mp3"),
+}
 const FROST := Color(0.82, 0.87, 0.93, 0.9)
 const FROST_EDGE := 80.0  # the soft edge of the frost, where the cloth is
 
@@ -41,6 +45,8 @@ var _storm: CPUParticles2D
 var _rain: CPUParticles2D
 var _mist: ColorRect
 var _tint: ColorRect
+var _weather_audio: AudioStreamPlayer
+var _audible_weather := ""
 var _request: HTTPRequest
 var _frost: Control
 var _wipe_tween: Tween
@@ -55,6 +61,9 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)  # added after the room is built: fill it
 	mouse_filter = Control.MOUSE_FILTER_STOP  # a click anywhere closes the view
 	_build()
+	_weather_audio = AudioStreamPlayer.new()
+	_weather_audio.name = "WeatherAudio"
+	add_child(_weather_audio)
 	wipe = 0.0
 	_wipe_tween = create_tween()
 	_wipe_tween.tween_property(self, "wipe", 1.0, Settings.WINDOW_WIPE_SECONDS) \
@@ -101,6 +110,25 @@ func _show_now(weather: Dictionary) -> void:
 	_mist.color.a = 0.45 if kind == "fog" else 0.25
 	_tint.visible = kind in ["rain", "storm"]  # a darker, heavier sky
 	_weather_line.text = weather.get("text", WeatherRules.FALLBACK_TEXT)
+	_set_weather_audio(kind)
+
+
+func _set_weather_audio(kind: String) -> void:
+	if kind == _audible_weather:
+		return
+	_audible_weather = kind
+	_weather_audio.stop()
+	var clip: AudioStreamMP3 = WEATHER_SOUNDS.get(kind)
+	if clip == null:
+		_weather_audio.stream = null
+		return
+	var looped := clip.duplicate() as AudioStreamMP3
+	looped.loop = true
+	_weather_audio.stream = looped
+	_weather_audio.volume_db = -22.0 if kind == "rain" else -17.0
+	if DisplayServer.get_name() != "headless":
+		_weather_audio.play()
+		_weather_audio.stream_paused = not _weather_audio.can_process()
 
 
 func _ask_the_service() -> void:
@@ -132,6 +160,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _close() -> void:
+	if _request != null:
+		_request.cancel_request()
+	_set_weather_audio("")
 	visible = false
 	remove_from_group("hides_inventory")
 	_tell_the_hud()

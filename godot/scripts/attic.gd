@@ -240,7 +240,7 @@ func _stir(alert: bool = false) -> void:
 		_play(_voice, "voice_jingles_whos_at_the_door.wav")
 
 	_refresh()
-	await get_tree().create_timer(duration).timeout
+	await get_tree().create_timer(duration, false).timeout
 	if sequence == _stir_sequence:
 		_fall_asleep()
 

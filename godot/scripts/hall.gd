@@ -460,7 +460,7 @@ func _doll_turns() -> void:
 	else:
 		_doll_screamed = true
 		_play(_doll_scream, "sfx_scare.mp3")  # the bathroom mirror's scream (spec 34)
-	get_tree().create_timer(DOLL_TURN_SECONDS).timeout.connect(_doll_turns_back)
+	get_tree().create_timer(DOLL_TURN_SECONDS, false).timeout.connect(_doll_turns_back)
 
 
 func _doll_turns_back() -> void:
@@ -505,7 +505,7 @@ func _show_story(spot: String) -> void:
 	sounds_played.append(story["sound"])
 	if DisplayServer.get_name() != "headless":  # not in the test run: no sound card
 		_story_sound.play()
-		get_tree().create_timer(STORY_SOUND_SECONDS).timeout.connect(_story_sound.stop)
+		get_tree().create_timer(STORY_SOUND_SECONDS, false).timeout.connect(_story_sound.stop)
 
 
 func _close_story() -> void:
