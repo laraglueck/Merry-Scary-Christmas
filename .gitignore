@@ -179,3 +179,12 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+.DS_Store
+
+# Godot cache
+godot/.godot/
+
+# Secrets and local settings (see AGENTS.md): never in the repository.
+.streamlit/secrets.toml
+supabase.cfg
+.claude/

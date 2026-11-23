@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# The browser version (spec 32) is a finished export: keep its files exactly as they are.
+web/*.wasm binary
+web/*.pck binary

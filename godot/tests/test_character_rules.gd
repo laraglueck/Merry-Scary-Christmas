@@ -1,0 +1,157 @@
+# Tests for spec 18: the rules of the character selection (pure functions).
+extends "res://tests/base_test.gd"
+
+const CharacterRules = preload("res://scripts/rules/character_rules.gd")
+
+
+func test_a_pick_is_saved_and_not_ready() -> void:
+	var selection := {}
+	assert_eq(CharacterRules.pick(selection, 0, "santa", "green"), "", "allowed")
+	assert_eq(selection[0], {"character": "santa", "colour": "green", "accessory": "none", "ready": false}, "saved")
+
+
+func test_unknown_character_or_colour_is_refused() -> void:
+	var selection := {}
+	assert_contains(CharacterRules.pick(selection, 0, "elf", "red"), "unknown character", "character")
+	assert_contains(CharacterRules.pick(selection, 0, "santa", "pink"), "unknown colour", "colour")
+	assert_eq(selection, {}, "nothing changed")
+
+
+func test_a_taken_character_is_refused() -> void:
+	var selection := {}
+	CharacterRules.pick(selection, 0, "santa", "red")
+	assert_contains(CharacterRules.pick(selection, 1, "santa", "green"), "taken by Player 1", "character")
+	assert_eq(selection.has(1), false, "Player 2 has nothing yet")
+
+
+# Spec 18, change: two players may share a colour, the figures tell them apart.
+func test_a_colour_can_be_shared() -> void:
+	var selection := {}
+	CharacterRules.pick(selection, 0, "santa", "red")
+	assert_eq(CharacterRules.pick(selection, 1, "snowman", "red"), "", "red twice is fine")
+	assert_eq(selection[1]["colour"], "red", "Player 2 is red too")
+
+
+func test_a_player_can_change_their_own_pick() -> void:
+	var selection := {}
+	CharacterRules.pick(selection, 0, "santa", "red")
+	assert_eq(CharacterRules.pick(selection, 0, "santa", "yellow"), "", "same character, new colour")
+	assert_eq(selection[0]["colour"], "yellow", "new colour")
+	assert_eq(CharacterRules.pick(selection, 0, "snowman", "yellow"), "", "new character")
+	assert_eq(CharacterRules.pick(selection, 1, "santa", "red"), "", "the old ones are free again")
+
+
+func test_unknown_player_is_refused() -> void:
+	var selection := {}
+	assert_contains(CharacterRules.pick(selection, 3, "santa", "red"), "unknown player", "player")
+	assert_eq(selection, {}, "nothing changed")
+
+
+func test_ready_needs_a_pick_and_a_new_pick_resets_it() -> void:
+	var selection := {}
+	assert_contains(CharacterRules.set_ready(selection, 0), "choose a character", "no pick")
+	CharacterRules.pick(selection, 0, "santa", "red")
+	assert_eq(CharacterRules.set_ready(selection, 0), "", "ready")
+	assert_eq(selection[0]["ready"], true, "marked ready")
+	CharacterRules.pick(selection, 0, "santa", "green")
+	assert_eq(selection[0]["ready"], false, "changing the pick is not ready any more")
+
+
+func test_all_ready_needs_all_three_players() -> void:
+	var selection := {}
+	var picks := [["santa", "red"], ["snowman", "green"], ["nutcracker", "yellow"]]
+	for player in 3:
+		assert_eq(CharacterRules.all_ready(selection), false, "not yet (%d ready)" % player)
+		CharacterRules.pick(selection, player, picks[player][0], picks[player][1])
+		CharacterRules.set_ready(selection, player)
+	assert_eq(CharacterRules.all_ready(selection), true, "all three ready")
+
+
+func test_first_free_colour_skips_the_taken_ones() -> void:
+	var selection := {}
+	assert_eq(CharacterRules.first_free_colour(selection, 0), "red", "red first")
+	CharacterRules.pick(selection, 1, "santa", "red")
+	assert_eq(CharacterRules.first_free_colour(selection, 0), "green", "red is taken")
+	assert_eq(CharacterRules.first_free_colour(selection, 1), "red", "my own colour counts as free")
+
+
+func test_picture_file_follows_the_asset_names() -> void:
+	assert_eq(CharacterRules.picture_file("santa", "red"), "char_santa.png", "red = the plain picture")
+	assert_eq(CharacterRules.picture_file("snowman", "green"), "char_snowman_green.png", "green")
+	assert_eq(CharacterRules.picture_file("nutcracker", "yellow"), "char_nutcracker_yellow.png", "yellow")
+	assert_eq(CharacterRules.picture_file("santa", "red", "none"), "char_santa.png", "no accessory = the plain picture")
+	assert_eq(CharacterRules.picture_file("santa", "red", "nose"), "char_santa_nose.png", "red with a red nose")
+	assert_eq(CharacterRules.picture_file("snowman", "green", "bow"), "char_snowman_green_bow.png", "green with a bow")
+	assert_eq(CharacterRules.picture_file("nutcracker", "yellow", "nose"), "char_nutcracker_yellow_nose.png", "yellow with a red nose")
+
+
+func test_all_nine_pictures_exist() -> void:
+	for character in CharacterRules.character_ids():
+		for colour in CharacterRules.colour_ids():
+			var file := "res://assets/images/" + CharacterRules.picture_file(character, colour)
+			assert_true(ResourceLoader.exists(file), file + " exists")
+
+
+# Spec 27: every figure in every colour with every accessory (3 x 3 x 3 = 27 pictures).
+# Playtest: the antlers did not fit the style of the others and were taken out.
+func test_every_accessory_picture_exists() -> void:
+	assert_eq(CharacterRules.accessory_ids(), ["none", "bow", "nose"], "the three accessories (no antlers)")
+	for character in CharacterRules.character_ids():
+		for colour in CharacterRules.colour_ids():
+			for accessory in CharacterRules.accessory_ids():
+				var file := "res://assets/images/" + CharacterRules.picture_file(character, colour, accessory)
+				assert_true(ResourceLoader.exists(file), file + " exists")
+
+
+func test_next_accessory_goes_round() -> void:
+	assert_eq(CharacterRules.next_accessory("none", 1), "bow", "none -> bow")
+	assert_eq(CharacterRules.next_accessory("nose", 1), "none", "nose -> none (round)")
+	assert_eq(CharacterRules.next_accessory("none", -1), "nose", "none <- nose")
+
+
+# An older saved game may still say "antlers": the hero is shown without an accessory.
+func test_an_accessory_that_no_longer_exists_shows_the_plain_hero() -> void:
+	assert_eq(CharacterRules.picture_file("santa", "red", "antlers"), "char_santa.png", "red, plain")
+	assert_eq(CharacterRules.picture_file("snowman", "green", "antlers"), "char_snowman_green.png", "green, plain")
+
+
+func test_final_characters_drop_the_ready_flag() -> void:
+	var selection := {}
+	CharacterRules.pick(selection, 0, "santa", "red")
+	CharacterRules.set_ready(selection, 0)
+	assert_eq(CharacterRules.final_characters(selection), {0: {"character": "santa", "colour": "red", "accessory": "none"}}, "only the choice")
+
+
+func test_unknown_accessory_is_refused() -> void:
+	var selection := {}
+	assert_contains(CharacterRules.pick(selection, 0, "santa", "red", "top_hat"), "unknown accessory", "accessory")
+	assert_eq(selection, {}, "nothing changed")
+
+
+func test_next_colour_goes_round_through_all_colours() -> void:
+	var selection := {}
+	CharacterRules.pick(selection, 0, "santa", "red")
+	assert_eq(CharacterRules.next_colour(selection, 0, 1), "green", "red -> green")
+	assert_eq(CharacterRules.next_colour(selection, 0, -1), "yellow", "red <- yellow (round)")
+	CharacterRules.pick(selection, 1, "snowman", "green")
+	CharacterRules.pick(selection, 2, "nutcracker", "yellow")
+	assert_eq(CharacterRules.next_colour(selection, 0, 1), "green", "all taken: still changes (shared)")
+
+
+# Playtest: with all three heroes taken nobody could change any more. Now a player can
+# give their hero back (before pressing Next), so someone else can take it.
+func test_a_player_can_give_their_hero_back() -> void:
+	var selection := {}
+	CharacterRules.pick(selection, 0, "santa", "red")
+	assert_eq(CharacterRules.release(selection, 0), "", "allowed")
+	assert_eq(selection.has(0), false, "no hero any more")
+	assert_eq(CharacterRules.pick(selection, 1, "santa", "red"), "", "Santa is free for Player 2")
+
+
+func test_no_giving_back_after_next_or_without_a_hero() -> void:
+	var selection := {}
+	assert_contains(CharacterRules.release(selection, 0), "no hero", "nothing to give back")
+	CharacterRules.pick(selection, 0, "santa", "red")
+	CharacterRules.set_ready(selection, 0)
+	assert_contains(CharacterRules.release(selection, 0), "ready", "after Next it stays")
+	assert_eq(selection[0]["character"], "santa", "unchanged")
