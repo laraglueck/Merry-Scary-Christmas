@@ -13,6 +13,7 @@ extends Node
 
 const NetworkScript = preload("res://scripts/net/network.gd")
 const SCREENS := {
+	"warning": preload("res://scenes/flash_warning.tscn"),  # flickering lights (spec 34)
 	"intro": preload("res://scenes/intro.tscn"),
 	"title": preload("res://scenes/title.tscn"),
 	"lobby": preload("res://scenes/lobby.tscn"),
@@ -36,6 +37,9 @@ const PhotoPuzzle = preload("res://scenes/photo_puzzle.tscn")
 const IMAGES := "res://assets/images/"
 const Settings = preload("res://scripts/settings.gd")
 const WebText = preload("res://scripts/web_text.gd")
+const Comfort = preload("res://scripts/comfort.gd")
+const Lang = preload("res://scripts/lang.gd")
+const HallScript = preload("res://scripts/hall.gd")  # its loose-bulb flicker (spec 05, 35)
 const CLOCK_COLOUR := Color("f3e6cf")
 const CLOCK_WARNING_COLOUR := Color("ff4b3a")  # the last minute
 
@@ -43,6 +47,7 @@ var net: Node
 var screen: Node
 var screen_name := ""
 var title_done := false  # "Start" pressed, or a game already started on this device
+var warning_done := false  # the flashing warning was answered on this device (spec 34)
 var story_done := false  # the story ended or was skipped on this device (spec 25)
 var music: AudioStreamPlayer
 var menu_music_on := false   # spec 23: true while the menu music plays, only on the title (the tests read this)
@@ -50,8 +55,23 @@ var house_music: AudioStreamPlayer
 var house_music_on := false  # spec 22: true while the house music plays (the tests read this)
 var music_enabled := true    # spec 33: the music button on this device (off pauses both musics)
 var music_button: Button
+var language_picker: Control  # spec 34: top right on the title
 var _music_icon: Control
+var dread_stage := 0         # spec 35: 0 calm, 1 the last 5 minutes, 2 the last 2 (the tests read this)
+var dread_sounds: Array[String] = []  # spec 35: sounds started (or, headless, that would have been)
+var jingles_shots := 0       # spec 35: how often Jingles twitched on this device (once per game)
+var _last_left := -1         # time left at the last update, for the chimes (-1: no game running)
+var _dread_snore: AudioStreamPlayer
+var _chime: AudioStreamPlayer
+var _dread_flicker: ColorRect
+var _dread_timer: Timer
+var _dread_steps: Array = []
+var _dread_rng := RandomNumberGenerator.new()
+var _jingles_shot: TextureRect
 var clock_label: Label
+var penalty_float: Label   # spec 34: "−20 s" floats up under the clock after a wrong answer
+var shakes := 0            # spec 34: how often the screen shook (the tests read this)
+var _penalty_seen := -1    # the penalty last shown; -1 = no game yet (a resumed game does not shake)
 var power_button: Button  # the hero's power, once per game (under the clock)
 var power_message: Label  # playtest: what a power did, right under the button (not covered)
 var _powers_seen := 0     # how many powers were used when the box was last updated
@@ -68,6 +88,7 @@ var sounds_played := []    # the sounds this device played (the tests read this)
 
 
 func _ready() -> void:
+	Lang.setup()  # spec 34: the translations and the language chosen last time
 	add_to_group("hud_owner")  # a window view asks for refresh_hud() (spec 29)
 	net = NetworkScript.new()
 	net.name = "Network"
@@ -75,22 +96,31 @@ func _ready() -> void:
 	_start_music()
 	_build_house_music()
 	_build_clock()
+	_build_penalty_float()
 	_build_inventory()
 	_build_pause()
 	_build_music_button()
+	_build_language_picker()
 	pickup_sound = AudioStreamPlayer.new()
 	pickup_sound.name = "PickupSound"
 	pickup_sound.stream = load("res://assets/sounds/sfx_gift.mp3")
 	add_child(pickup_sound)
+	_build_dread()
 	net.changed.connect(_update_screen)
 	net.game_changed.connect(_update_screen)
 	_update_screen()
+
+
+func _exit_tree() -> void:
+	Lang.cleanup()
 
 
 # First the story; then before "Start" -> title; no game yet (or game over) -> lobby; in the house -> where
 # the team is; later phases (e.g. an end screen) -> that phase.
 func current_screen() -> String:
 	if net.game.is_empty():
+		if not warning_done:
+			return "warning"
 		if not story_done:
 			return "intro"
 		return "lobby" if title_done else "title"
@@ -106,6 +136,11 @@ func _on_intro_finished() -> void:
 	_update_screen()
 
 
+func _on_warning_accepted() -> void:
+	warning_done = true
+	_update_screen()
+
+
 func _on_title_start_pressed() -> void:
 	title_done = true
 	_update_screen()
@@ -113,14 +148,18 @@ func _on_title_start_pressed() -> void:
 
 func _update_screen() -> void:
 	_update_clock()
+	_update_penalty()
 	_update_house_music()
+	_update_dread()
 	_update_inventory()
 	_update_pause()
 	if not net.game.is_empty():
 		title_done = true
 		story_done = true
+		warning_done = true
 	var wanted := current_screen()
 	_set_menu_music(wanted == "title")
+	language_picker.visible = wanted == "title"
 	if wanted == screen_name:
 		return
 	if screen != null:
@@ -133,6 +172,8 @@ func _update_screen() -> void:
 		screen.lead_in = Settings.STORY_LEAD_IN_SECONDS  # fade in, then the voice (spec 23)
 	if screen.has_signal("finished"):
 		screen.finished.connect(_on_intro_finished)
+	if screen.has_signal("accepted"):
+		screen.accepted.connect(_on_warning_accepted)
 	if screen.has_signal("start_pressed"):
 		screen.start_pressed.connect(_on_title_start_pressed)
 	add_child(screen)
@@ -497,6 +538,117 @@ func _show_music_state() -> void:
 	music_button.modulate = Color.WHITE if music_enabled else Color(0.65, 0.65, 0.65, 0.75)
 	music_button.tooltip_text = "Music off" if music_enabled else "Music on"
 
+# ---------- the last minutes (spec 35) ----------
+
+# Snoring, the chime, a flickering dark layer under the HUD and Jingles' twitch over it.
+func _build_dread() -> void:
+	_dread_snore = AudioStreamPlayer.new()
+	_dread_snore.name = "DreadSnore"
+	var snore: AudioStreamMP3 = load("res://assets/sounds/sfx_snore.mp3").duplicate()
+	snore.loop = true
+	_dread_snore.stream = snore
+	_dread_snore.volume_db = Settings.DREAD_SNORE_DB
+	add_child(_dread_snore)
+	_chime = AudioStreamPlayer.new()
+	_chime.name = "DreadChime"
+	_chime.stream = load("res://assets/sounds/sfx_clock_chime.mp3")
+	add_child(_chime)
+
+	var layer := CanvasLayer.new()  # above the screens, under the clock and inventory (layer 5)
+	layer.name = "DreadLayer"
+	layer.layer = 4
+	add_child(layer)
+	_dread_flicker = ColorRect.new()
+	_dread_flicker.name = "DreadFlicker"
+	_dread_flicker.color = Color(0, 0, 0, 0)
+	_dread_flicker.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_dread_flicker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dread_flicker.visible = false
+	layer.add_child(_dread_flicker)
+	_dread_rng.randomize()
+	_dread_timer = Timer.new()
+	_dread_timer.one_shot = true
+	_dread_timer.timeout.connect(_on_dread_flicker_tick)
+	add_child(_dread_timer)
+	_jingles_shot = TextureRect.new()
+	_jingles_shot.name = "JinglesTwitch"
+	_jingles_shot.texture = load(IMAGES + "char_jingles_peek.png")
+	_jingles_shot.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_jingles_shot.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_jingles_shot.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_jingles_shot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_jingles_shot.visible = false
+	layer.add_child(_jingles_shot)
+
+
+func _update_dread() -> void:
+	var in_house: bool = not net.game.is_empty() and net.game.get("phase") == "hall"
+	var running: bool = in_house and not net.game.get("paused", false)
+	var left := ClockRules.time_left(net.game) if in_house else 0
+	if running and _last_left >= 0 and ClockRules.chime_due(_last_left, left):
+		_dread_play(_chime, "sfx_clock_chime.mp3")
+	_last_left = left if in_house else -1
+	if not in_house:
+		jingles_shots = 0  # a new game may twitch again
+	var stage := ClockRules.dread_stage(left) if running else 0
+	# The attic has its own, louder snoring.
+	_dread_snore.volume_db = -80.0 if screen_name == "attic" else Settings.DREAD_SNORE_DB
+	if stage == dread_stage:
+		return
+	dread_stage = stage
+	house_music.pitch_scale = [1.0, Settings.DREAD_MUSIC_PITCH, Settings.PANIC_MUSIC_PITCH][stage]
+	if stage >= 1 and not _dread_snore.playing:
+		_dread_play(_dread_snore, "sfx_snore.mp3")
+	elif stage == 0:
+		_dread_snore.stop()
+	_dread_flicker.visible = stage == 2
+	if stage == 2:
+		_dread_steps.clear()
+		_dread_timer.start(0.1)
+		if jingles_shots == 0:
+			_show_jingles_twitch()
+	else:
+		_dread_timer.stop()
+		_dread_flicker.color.a = 0.0
+
+
+func _dread_play(player: AudioStreamPlayer, file_name: String) -> void:
+	dread_sounds.append(file_name)
+	if DisplayServer.get_name() != "headless":  # the test run has no sound card
+		player.play()
+
+
+func _on_dread_flicker_tick() -> void:
+	if _dread_steps.is_empty():
+		_dread_steps = HallScript.flicker_cycle(_dread_rng, Settings.PANIC_FLICKER_DARKNESS)
+	var step: Array = _dread_steps.pop_front()
+	_dread_flicker.color.a = step[0]
+	if Comfort.reduce_flashing:  # spec 34: steadily a little dark, no flicker
+		_dread_steps.clear()
+		_dread_flicker.color.a = Settings.PANIC_FLICKER_DARKNESS * 0.5
+		_dread_timer.start(0.5)  # looks again soon: the switch may change
+		return
+	_dread_timer.start(step[1])
+
+
+# Jingles twitches in his sleep: his face flashes up and fades, about a second.
+func _show_jingles_twitch() -> void:
+	jingles_shots += 1
+	_jingles_shot.visible = true
+	var tween := create_tween()
+	if Comfort.reduce_flashing:  # spec 34: no sudden flash, he fades in and out softly
+		_jingles_shot.modulate.a = 0.0
+		tween.tween_property(_jingles_shot, "modulate:a", 0.6, 0.8)
+		tween.tween_property(_jingles_shot, "modulate:a", 0.0, Settings.JINGLES_SHOT_SECONDS)
+		tween.tween_callback(func() -> void: _jingles_shot.visible = false)
+		return
+	_jingles_shot.modulate.a = 0.85
+	tween.tween_property(_jingles_shot, "position:x", 6.0, 0.05)
+	tween.tween_property(_jingles_shot, "position:x", -6.0, 0.08)
+	tween.tween_property(_jingles_shot, "position:x", 0.0, 0.05)
+	tween.tween_property(_jingles_shot, "modulate:a", 0.0, Settings.JINGLES_SHOT_SECONDS)
+	tween.tween_callback(func() -> void: _jingles_shot.visible = false)
+
 
 # ---------- pause (spec 26) ----------
 
@@ -553,6 +705,19 @@ func _build_pause() -> void:
 	go_on.add_theme_font_size_override("font_size", 28)
 	go_on.pressed.connect(func(): net.send_action("resume", {}))
 	box.add_child(go_on)
+	# Spec 34: switch the flickering off without starting again (only on this device).
+	var flashing := Button.new()
+	flashing.name = "PauseReduceFlashing"
+	flashing.text = Comfort.switch_text()
+	flashing.custom_minimum_size = Vector2(300, 44)
+	flashing.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	flashing.add_theme_font_size_override("font_size", 18)
+	ButtonStyle.make_clickable(flashing)
+	flashing.pressed.connect(func() -> void:
+		Comfort.reduce_flashing = not Comfort.reduce_flashing
+		flashing.text = Comfort.switch_text())
+	pause_overlay.visibility_changed.connect(func() -> void: flashing.text = Comfort.switch_text())
+	box.add_child(flashing)
 
 
 func _update_pause() -> void:
@@ -562,3 +727,74 @@ func _update_pause() -> void:
 	pause_overlay.visible = paused
 	if paused:
 		pause_label.text = "Paused by Player %d" % (int(net.game.get("paused_by", 0)) + 1)
+
+
+# ---------- a penalty you can see (spec 34) ----------
+
+func _build_penalty_float() -> void:
+	penalty_float = Label.new()
+	penalty_float.name = "PenaltyFloat"
+	penalty_float.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	penalty_float.offset_left = -80
+	penalty_float.offset_right = 80
+	penalty_float.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	penalty_float.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	penalty_float.add_theme_font_size_override("font_size", 30)
+	penalty_float.add_theme_color_override("font_color", CLOCK_WARNING_COLOUR)
+	penalty_float.add_theme_color_override("font_outline_color", Color.BLACK)
+	penalty_float.add_theme_constant_override("outline_size", 7)
+	penalty_float.visible = false
+	get_node("ClockLayer").add_child(penalty_float)
+
+
+# Only when the penalty grows while we watch: not at the start, not after a resume.
+func _update_penalty() -> void:
+	if net.game.is_empty():
+		_penalty_seen = -1
+		return
+	var penalty: int = net.game.get("penalty_seconds", 0)
+	if _penalty_seen >= 0 and penalty > _penalty_seen:
+		_show_penalty(penalty - _penalty_seen)
+	_penalty_seen = penalty
+
+
+func _show_penalty(seconds: int) -> void:
+	penalty_float.text = "−%d s" % seconds
+	penalty_float.visible = true
+	penalty_float.modulate.a = 1.0
+	penalty_float.offset_top = 46   # just under the clock
+	penalty_float.offset_bottom = 86
+	var tween := penalty_float.create_tween().set_parallel()
+	tween.tween_property(penalty_float, "offset_top", 6.0, 1.2).set_ease(Tween.EASE_OUT)
+	tween.tween_property(penalty_float, "offset_bottom", 46.0, 1.2).set_ease(Tween.EASE_OUT)
+	tween.tween_property(penalty_float, "modulate:a", 0.0, 0.6).set_delay(0.6)
+	tween.chain().tween_callback(func() -> void: penalty_float.visible = false)
+	_shake()
+
+
+# Shakes only the screen below (canvas layer 0), not the clock, inventory or buttons.
+func _shake() -> void:
+	shakes += 1
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	var tween := create_tween()
+	for offset in [Vector2(9, -4), Vector2(-8, 5), Vector2(6, 3), Vector2(-4, -3), Vector2(2, 1), Vector2.ZERO]:
+		tween.tween_property(viewport, "canvas_transform", Transform2D(0.0, offset), 0.055)
+
+
+# ---------- languages (spec 34) ----------
+
+func _build_language_picker() -> void:
+	language_picker = preload("res://scripts/language_picker.gd").new()
+	language_picker.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	language_picker.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	language_picker.offset_left = -16
+	language_picker.offset_right = -16
+	language_picker.offset_top = 12
+	language_picker.visible = false
+	language_picker.language_changed.connect(func(_code: String) -> void:
+		# Texts made with tr() when a screen was built: build the screen again.
+		screen_name = ""
+		_update_screen())
+	get_node("ClockLayer").add_child(language_picker)

@@ -11,6 +11,7 @@ signal start_pressed
 
 const Hall = preload("res://scripts/hall.gd")
 const Settings = preload("res://scripts/settings.gd")
+const Comfort = preload("res://scripts/comfort.gd")
 
 const IMAGES := "res://assets/images/"
 const SOUNDS := "res://assets/sounds/"
@@ -67,6 +68,11 @@ func _on_start_pressed() -> void:
 
 # Shows the next step of the flicker and returns how long it lasts (seconds).
 func flicker_step() -> float:
+	if Comfort.reduce_flashing:  # spec 34: the window light stays steadily dim
+		_flicker_steps.clear()
+		_window_dark.color.a = 0.4
+		_window_glow.modulate.a = 0.6
+		return 0.5
 	if _flicker_steps.is_empty():
 		_flicker_steps = Hall.flicker_cycle(_flicker_rng, Settings.TITLE_FLICKER_DARKNESS)
 	var step: Array = _flicker_steps.pop_front()

@@ -2,6 +2,7 @@
 extends "res://tests/base_test.gd"
 
 const TitleScene = preload("res://scenes/title.tscn")
+const Comfort = preload("res://scripts/comfort.gd")
 
 
 func open_title() -> Node:
@@ -52,3 +53,15 @@ func test_window_light_flickers() -> void:
 		title.flicker_step()
 		seen[snappedf(dark.color.a, 0.01)] = true
 	assert_true(seen.size() > 1, "the window goes dark and light again")
+
+
+func test_reduced_flashing_keeps_the_window_steady() -> void:
+	Comfort.reduce_flashing = true
+	var title := open_title()
+	var dark: ColorRect = find(title, "WindowDark")
+	var seen := {}
+	for i in 40:
+		title.flicker_step()
+		seen[snappedf(dark.color.a, 0.01)] = true
+	assert_eq(seen.size(), 1, "the window light stays steady")
+	Comfort.reduce_flashing = false

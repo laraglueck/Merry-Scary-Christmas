@@ -10,6 +10,7 @@ class FakeNet extends Node:
 	signal game_changed
 	var game: Dictionary = {}
 	var my_index := 0
+	var solo := false
 
 
 # Opens the end screen like main.gd does: with the net and the phase as place.
@@ -129,8 +130,9 @@ func use_test_board() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_BOARD))
 
 
-func open_won_ending(name: String, seconds_left: int) -> Node:
+func open_won_ending(name: String, seconds_left: int, solo := false) -> Node:
 	var net := FakeNet.new()
+	net.solo = solo
 	tree.root.add_child(net)
 	net.game = {"phase": "merry", "inventory": [], "seconds_played": Settings.GAME_SECONDS - seconds_left,
 			"penalty_seconds": 0, "last_event": "", "team_name": name}
@@ -184,3 +186,60 @@ func test_the_end_screen_counts_down_to_christmas() -> void:
 	use_test_board()
 	var ending := open_won_ending("Team Comet", 450)
 	assert_contains(text_of(ending, "Countdown"), "Christmas Eve", "the countdown")
+
+
+# ---------- solo and team lists (spec 34) ----------
+
+func test_solo_and_team_wins_are_on_separate_lists() -> void:
+	use_test_board()
+	open_won_ending("Team Rudolph", 300)
+	var solo := open_won_ending("Lonely Elf", 100, true)
+	assert_contains(text_of(solo, "LeaderboardTitle"), "Solo", "the solo list")
+	assert_contains(text_of(solo, "LeaderboardRows"), "Lonely Elf", "the solo win")
+	assert_true(not text_of(solo, "LeaderboardRows").contains("Team Rudolph"), "no team on the solo list")
+	var team := open_won_ending("Team Comet", 450)
+	assert_contains(text_of(team, "LeaderboardTitle"), "Team", "the team list")
+	assert_contains(text_of(team, "LeaderboardRows"), "Team Rudolph", "the other team")
+	assert_true(not text_of(team, "LeaderboardRows").contains("Lonely Elf"), "no solo win on the team list")
+
+
+# ---------- credits (spec 34) ----------
+
+func test_every_ending_has_a_credits_button() -> void:
+	for phase in ["merry", "scary", "midnight"]:
+		var ending := open_ending(phase, [])
+		var button: Node = ending.find_child("CreditsButton", true, false)
+		assert_true(button != null and button.visible, phase + ": a Credits button")
+		var credits: Node = ending.find_child("Credits", true, false)
+		assert_true(credits == null or not credits.visible, phase + ": credits closed at first")
+
+
+func test_the_credits_show_the_team_and_close_again() -> void:
+	var ending := open_ending("merry", [])
+	press(ending, "CreditsButton")
+	var credits: Control = find(ending, "Credits")
+	assert_true(credits != null and credits.visible, "the credits open")
+	var names := text_of(ending, "CreditsTeam")
+	for member in [["Gloria Bogea Heinzel", "79191"], ["Lara Victoria Glück", "70426"],
+			["Leon Blieffert", "73695"], ["Carl Mathies Rumohr", "71317"], ["Mika Nolte", "71772"]]:
+		assert_contains(names, member[0], "name")
+		assert_contains(names, member[1], "student number of " + member[0])
+	assert_contains(text_of(ending, "CreditsCourse"), "Nova SBE", "the course")
+	press(ending, "CreditsCloseButton")
+	assert_eq(credits.visible, false, "closed again")
+
+
+func test_the_credits_button_covers_nothing() -> void:
+	var ending := open_ending("scary", [])
+	await wait_frames(2)
+	var rect: Rect2 = find(ending, "CreditsButton").get_global_rect()
+	for name in ["BackButton", "LeaderboardPanel"]:
+		assert_true(not rect.intersects(find(ending, name).get_global_rect()), "covers " + name)
+	# The centred lines are as wide as the screen: only their text counts.
+	for name in ["PlaceTitle", "Line", "Result"]:
+		var label: Label = find(ending, name)
+		var font := label.get_theme_font("font")
+		var width := font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, label.get_theme_font_size("font_size")).x
+		var box := label.get_global_rect()
+		var text_rect := Rect2(box.get_center().x - width / 2.0, box.position.y, width, box.size.y)
+		assert_true(not rect.intersects(text_rect), "covers the text of " + name)

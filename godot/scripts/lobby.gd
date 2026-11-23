@@ -88,7 +88,7 @@ func _refresh() -> void:
 	_room_code_label.visible = net.room_code != ""  # no empty gap before a room exists
 	var names := []
 	for index in net.players:
-		names.append("Player %d%s" % [index + 1, " (you)" if index == net.my_index else ""])
+		names.append(tr("Player %d%s" % [index + 1, " (you)" if index == net.my_index else ""]))
 	_players_label.text = "Players: " + (", ".join(names) if not names.is_empty() else "nobody yet")
 	if net.solo:
 		_players_label.text = "You play alone tonight."

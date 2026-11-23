@@ -34,6 +34,28 @@ static func check_midnight(game: Dictionary) -> void:
 		game["last_event"] = MIDNIGHT_EVENT
 
 
+# ---------- the last minutes (spec 35) ----------
+
+# 0 = calm, 1 = the last 5 minutes, 2 = the last 2 minutes.
+static func dread_stage(left: int) -> int:
+	if left <= Settings.PANIC_SECONDS:
+		return 2
+	if left <= Settings.DREAD_SECONDS:
+		return 1
+	return 0
+
+
+# The clock strikes when the time left reaches a full minute in the last five, going from
+# `before` down to `now` (a penalty may jump over one: it still rings, once).
+static func chime_due(before: int, now: int) -> bool:
+	if now >= before:
+		return false
+	for minute in range(Settings.DREAD_SECONDS, 0, -60):
+		if now <= minute and minute < before:
+			return true
+	return false
+
+
 # 598 -> "09:58"
 @warning_ignore("integer_division")
 static func as_text(seconds: int) -> String:

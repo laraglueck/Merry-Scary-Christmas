@@ -22,6 +22,7 @@ const ARROW_SIZE := Vector2(64, 64)
 const ACCESSORY_ROW_Y := 40.0           # head height inside the figure area
 const COLOUR_ROW_Y := 235.0             # hip height
 const ARROW_GAP := 40.0
+const POWER_WIDTH := 700.0              # the power line, also in the longest language (spec 34)
 const LABELS_HEIGHT := 92.0             # "Accessory: ...", "Colour: ..." and the power under the figure
 
 var net: Node = null  # main.gd hands this in; started alone, it stays null
@@ -333,6 +334,10 @@ func _build_figure_area() -> Control:
 	_colour_label = _build_choice_label("ColourLabel", area, FIGURE_BOX.y + 32)
 	_power_label = _build_choice_label("PowerLabel", area, FIGURE_BOX.y + 60)
 	_power_label.add_theme_color_override("font_color", GOLD)
+	# Spec 34: the German and Portuguese lines are longer: wider than the area, still centred.
+	_power_label.add_theme_font_size_override("font_size", 16)
+	_power_label.position.x = middle_x - POWER_WIDTH / 2.0
+	_power_label.size.x = POWER_WIDTH
 	_choose_hint = _build_choice_label("ChooseHint", area, FIGURE_BOX.y / 2.0 - 20)
 	_choose_hint.text = "Choose your hero on the left"
 	_choose_hint.add_theme_font_size_override("font_size", 26)
@@ -376,7 +381,7 @@ func _build_card(info: Dictionary) -> Button:
 	var card := Button.new()
 	card.name = "Card_" + id
 	card.toggle_mode = true
-	card.custom_minimum_size = Vector2(230, 140)  # room for the power text (playtest)
+	card.custom_minimum_size = Vector2(290, 140)  # room for the power text (playtest) and long names (spec 34: "Weihnachtsmann")
 	_paint(card, Color(0.1, 0.07, 0.07, 0.85))
 	card.pressed.connect(_on_card_pressed.bind(id))
 	_cards[id] = card

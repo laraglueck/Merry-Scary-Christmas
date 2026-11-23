@@ -102,3 +102,29 @@ func test_the_clock_waits_while_paused() -> void:
 	game["paused"] = false
 	assert_eq(ClockRules.tick(game, 5), "", "runs again")
 	assert_eq(game["seconds_played"], 15, "five seconds on")
+
+
+# ---------- the last minutes (spec 35) ----------
+
+func test_dread_stages_from_the_time_left() -> void:
+	assert_eq(ClockRules.dread_stage(FULL), 0, "calm at the start")
+	assert_eq(ClockRules.dread_stage(301), 0, "calm until 5 minutes")
+	assert_eq(ClockRules.dread_stage(300), 1, "stage 1 at 5:00")
+	assert_eq(ClockRules.dread_stage(121), 1, "still 1")
+	assert_eq(ClockRules.dread_stage(120), 2, "stage 2 at 2:00")
+	assert_eq(ClockRules.dread_stage(0), 2, "and to the end")
+
+
+func test_the_clock_strikes_each_full_minute_in_the_last_five_once() -> void:
+	var rings := []
+	for left in range(400, -1, -1):  # second by second from 6:40 to 0
+		if ClockRules.chime_due(left + 1, left):
+			rings.append(left)
+	assert_eq(rings, [300, 240, 180, 120, 60], "5, 4, 3, 2 and 1 minute left")
+
+
+func test_a_penalty_over_a_full_minute_rings_once() -> void:
+	assert_eq(ClockRules.chime_due(250, 230), true, "jumped over 4:00")
+	assert_eq(ClockRules.chime_due(250, 170), true, "over two minutes: one chime")
+	assert_eq(ClockRules.chime_due(230, 230), false, "no time passed")
+	assert_eq(ClockRules.chime_due(400, 320), false, "above 5 minutes: quiet")
