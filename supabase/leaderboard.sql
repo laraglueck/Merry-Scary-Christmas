@@ -9,6 +9,7 @@ create table leaderboard (
   -- Input validation in the database: only sensible rows are accepted.
   name text not null check (char_length(name) between 1 and 20),
   ending text not null check (ending in ('merry', 'scary')),
+  mode text not null default 'team' check (mode in ('solo', 'team')),  -- spec 34
   seconds_left int not null check (seconds_left between 0 and 3600),
   created_at timestamptz default now()
 );

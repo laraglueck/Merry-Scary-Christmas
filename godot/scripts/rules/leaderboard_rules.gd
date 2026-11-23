@@ -8,17 +8,19 @@ const ClockRules = preload("res://scripts/rules/clock_rules.gd")
 
 const TOP := 10
 const ENDINGS := ["merry", "scary"]
+const MODES := ["solo", "team"]  # spec 34: one list for players alone, one for teams
+const OLD_MODE := "team"         # rows saved before spec 34 have no mode
 const NO_NAME := "Nameless heroes"
 
 
 # The leaderboard row for a finished game, or {} when it is not a win.
-static func entry_for(game: Dictionary) -> Dictionary:
+static func entry_for(game: Dictionary, solo := false) -> Dictionary:
 	var ending := str(game.get("phase", ""))
 	if ending not in ENDINGS:
 		return {}
 	var name := str(game.get("team_name", "")).strip_edges().left(Settings.NAME_LENGTH)
 	return {"name": name if name != "" else NO_NAME, "ending": ending,
-		"seconds_left": ClockRules.time_left(game)}
+		"seconds_left": ClockRules.time_left(game), "mode": "solo" if solo else "team"}
 
 
 # Is this a row we accept (from our own game or from the online list)?
@@ -29,12 +31,13 @@ static func is_valid(row) -> bool:
 	var seconds = row.get("seconds_left", -1)
 	return name != "" and name.length() <= Settings.NAME_LENGTH \
 		and str(row.get("ending", "")) in ENDINGS \
+		and str(row.get("mode", OLD_MODE)) in MODES \
 		and (seconds is int or seconds is float) and seconds >= 0 and seconds <= 3600
 
 
-# The best TOP rows: most time left first.
-static func top(rows: Array) -> Array:
-	var good := rows.filter(is_valid)
+# The best TOP rows of one mode ("" = all modes): most time left first.
+static func top(rows: Array, mode := "") -> Array:
+	var good := rows.filter(func(row): return is_valid(row) and (mode == "" or str(row.get("mode", OLD_MODE)) == mode))
 	good.sort_custom(func(a, b): return int(a["seconds_left"]) > int(b["seconds_left"]))
 	return good.slice(0, TOP)
 
@@ -49,7 +52,7 @@ static func rows_from_text(text: String) -> Array:
 	for row in data:
 		if is_valid(row):
 			rows.append({"name": str(row["name"]).strip_edges(), "ending": str(row["ending"]),
-				"seconds_left": int(row["seconds_left"])})
+				"seconds_left": int(row["seconds_left"]), "mode": str(row.get("mode", OLD_MODE))})
 	return rows
 
 

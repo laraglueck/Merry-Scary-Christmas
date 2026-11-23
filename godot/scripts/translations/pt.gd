@@ -342,6 +342,11 @@ const TEXTS := {
 	"You play alone tonight.": "Esta noite jogas sozinho.",
 	"Your name": "O teu nome",
 	"🏆 Fastest escapes": "🏆 Fugas mais rápidas",
+	# spec 34: solo and team lists
+	"Fastest escapes: Solo": "Fugas mais rápidas: Sozinho",
+	"🏆 Fastest escapes: Solo": "🏆 Fugas mais rápidas: Sozinho",
+	"Fastest escapes: Team": "Fugas mais rápidas: Equipa",
+	"🏆 Fastest escapes: Team": "🏆 Fugas mais rápidas: Equipa",
 	# ---------- rooms ----------
 	"A torn piece of an old photograph: Santa's red coat... and a sleigh. Where is the rest?": "Um pedaço rasgado de uma fotografia antiga: o casaco vermelho do Pai Natal... e um trenó. Onde está o resto?",
 	"A torn piece of paper": "Um pedaço de papel rasgado",
