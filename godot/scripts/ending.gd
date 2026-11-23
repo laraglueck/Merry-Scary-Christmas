@@ -24,6 +24,8 @@ const SOUNDS := "res://assets/sounds/"
 const LeaderboardRules = preload("res://scripts/rules/leaderboard_rules.gd")
 const Leaderboard = preload("res://scripts/net/leaderboard.gd")
 const WebText = preload("res://scripts/web_text.gd")
+const Settings = preload("res://scripts/settings.gd")
+const ButtonStyle = preload("res://scripts/button_style.gd")
 const ResultsRules = preload("res://scripts/rules/results_rules.gd")
 
 # Sounds this screen played (or would have played in the headless test run), spec 20.
@@ -40,6 +42,7 @@ func _ready() -> void:
 	_build_ui(ending, _result_text(game), str(game.get("last_event", "")))
 	_build_leaderboard(game)
 	_build_results_card(game)
+	_build_credits()  # last: its full-screen page lies above the results card
 	if place == "midnight":
 		_wake_up()  # spec 21: the clock strikes and he wakes, then the end screen
 	else:
@@ -262,6 +265,59 @@ func _build_ui(ending: Dictionary, result: String, last_event: String) -> void:
 	wait.position = Vector2(760, 596)
 	wait.size = Vector2(372, 30)
 	wait.visible = online and index > 0
+
+
+# ---------- credits (spec 34) ----------
+
+# "Credits" at the bottom left; a click shows the team over the end screen.
+func _build_credits() -> void:
+	var button := Button.new()
+	button.name = "CreditsButton"
+	button.text = "Credits"
+	button.position = Vector2(20, 584)
+	button.custom_minimum_size = Vector2(120, 48)
+	button.add_theme_font_size_override("font_size", 20)
+	ButtonStyle.make_clickable(button)
+	add_child(button)
+
+	var credits := ColorRect.new()
+	credits.name = "Credits"
+	credits.color = Color(0.04, 0.02, 0.03, 0.94)
+	credits.set_anchors_preset(Control.PRESET_FULL_RECT)
+	credits.mouse_filter = Control.MOUSE_FILTER_STOP
+	credits.visible = false
+	add_child(credits)
+	var column := VBoxContainer.new()
+	column.set_anchors_preset(Control.PRESET_FULL_RECT)
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 14)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	credits.add_child(column)
+	var title := _label(column, "CreditsTitle", "Merry Scary Christmas", 48)
+	title.add_theme_color_override("font_color", Color("ffd76a"))
+	var made := _label(column, "CreditsMadeBy", "Made by", 22)
+	made.add_theme_color_override("font_color", Color("d8c8ae"))
+	var lines: Array[String] = []
+	for member in Settings.TEAM:
+		lines.append("%s   %s" % [member["name"], member["number"]])
+	var team := _label(column, "CreditsTeam", "\n".join(lines), 26)
+	team.add_theme_constant_override("line_spacing", 8)
+	var course := _label(column, "CreditsCourse", Settings.COURSE, 18)
+	course.add_theme_color_override("font_color", Color("a9c4e8"))
+	var close := Button.new()
+	close.name = "CreditsCloseButton"
+	close.text = "Close"
+	close.custom_minimum_size = Vector2(160, 48)
+	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close.add_theme_font_size_override("font_size", 20)
+	ButtonStyle.make_clickable(close)
+	column.add_child(close)
+
+	button.pressed.connect(func() -> void: credits.visible = true)
+	close.pressed.connect(func() -> void: credits.visible = false)
+	credits.gui_input.connect(func(event: InputEvent) -> void:  # a click anywhere closes it too
+		if event is InputEventMouseButton and event.pressed:
+			credits.visible = false)
 
 
 # Red: lighter on hover, darker when pressed.

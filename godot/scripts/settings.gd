@@ -30,6 +30,16 @@ const MENU_MUSIC_DB := -10.0    # music_lobby.mp3: intro, title, lobby
 const HOUSE_MUSIC_DB := -18.0   # music_house.mp3: quietly under the rooms while the game runs
 const STORY_LEAD_IN_SECONDS := 2.0  # the story fades in from black before the voice starts (spec 23)
 
+# The team, shown on the credits screen after the ending (spec 34).
+const TEAM := [
+	{"name": "Gloria Bogea Heinzel", "number": "79191"},
+	{"name": "Lara Victoria Glück", "number": "70426"},
+	{"name": "Leon Blieffert", "number": "73695"},
+	{"name": "Carl Mathies Rumohr", "number": "71317"},
+	{"name": "Mika Nolte", "number": "71772"},
+]
+const COURSE := "Nova SBE · Introduction to Programming · Fall 2026"
+
 # The clock (spec 13)
 const GAME_SECONDS := 1200           # 20 minutes until midnight (second test round: 10 were too short)
 const CLOCK_WARNING_SECONDS := 60    # the last minute: the clock turns red
