@@ -133,7 +133,7 @@ static func _try_fuse(game: Dictionary, player: int, data: Dictionary) -> void:
 		if game.get("solo", false):
 			game["last_event"] = "All three breakers flip up. Every room is lit!"
 	else:
-		game["penalty_seconds"] += result["penalty_seconds"]
+		_add_mistake(game, result["penalty_seconds"])
 		game["last_event"] = "%s: wrong order, -%d s" % [who, result["penalty_seconds"]]
 
 
@@ -153,7 +153,7 @@ static func _turn_tap(game: Dictionary, player: int, data: Dictionary) -> void:
 	elif result["correct"]:
 		game["last_event"] = "%s: the pipes rattle and the water drains away." % who
 	else:
-		game["penalty_seconds"] += result["penalty_seconds"]
+		_add_mistake(game, result["penalty_seconds"])
 		game["last_event"] = "%s: the pipes rattle angrily, -%d s" % [who, result["penalty_seconds"]]
 
 
@@ -161,7 +161,7 @@ static func _take_bathroom_gift(game: Dictionary, player: int) -> void:
 	var who := "Player %d" % (player + 1)
 	var result := BathroomRules.take_gift(game["bathroom"])
 	if result["ok"]:
-		InventoryRules.add(game, "gift_2")
+		InventoryRules.add(game, "gift_2", player)
 		game["last_event"] = "%s found the second present!" % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
@@ -220,7 +220,7 @@ static func _set_clock(
 	elif result["correct"]:
 		game["last_event"] = "%s: the clock opens!" % who
 	else:
-		game["penalty_seconds"] += result["penalty_seconds"]
+		_add_mistake(game, result["penalty_seconds"])
 		game["last_event"] = "%s: wrong clock setting, -%d s" % [
 			who, result["penalty_seconds"]
 		]
@@ -234,7 +234,7 @@ static func _take_living_room_gift(game: Dictionary, player: int) -> void:
 	var result := LivingRoomRules.take_gift(game["living_room"])
 
 	if result["taken"]:
-		InventoryRules.add(game, "gift_1")
+		InventoryRules.add(game, "gift_1", player)
 		game["last_event"] = "%s found the first present!" % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
@@ -246,7 +246,7 @@ static func _take_cookies(game: Dictionary, player: int) -> void:
 	if not _can_use_living_room(game, player):
 		return
 	var who := "Player %d" % (player + 1)
-	var error := InventoryRules.add(game, "cookies")
+	var error := InventoryRules.add(game, "cookies", player)
 	if error != "":
 		game["last_event"] = "%s: %s." % [who, error]
 	else:
@@ -276,7 +276,7 @@ static func _try_attic_code(game: Dictionary, player: int, data: Dictionary) -> 
 	elif result["correct"]:
 		game["last_event"] = "%s: the attic lock clicks open." % who
 	else:
-		game["penalty_seconds"] += result["penalty_seconds"]
+		_add_mistake(game, result["penalty_seconds"])
 		game["last_event"] = "%s: wrong code, -%d s" % [who, result["penalty_seconds"]]
 
 
@@ -337,7 +337,7 @@ static func _set_wheels(game: Dictionary, player: int, data: Dictionary) -> void
 	elif result["correct"]:
 		game["last_event"] = "%s opened the toy chest!" % who
 	else:
-		game["penalty_seconds"] += result["penalty_seconds"]
+		_add_mistake(game, result["penalty_seconds"])
 		game["last_event"] = "%s: wrong symbols, -%d s" % [
 			who, result["penalty_seconds"]
 		]
@@ -371,7 +371,7 @@ static func _take_bedroom_gift(game: Dictionary, player: int) -> void:
 	var result := BedroomRules.take_gift(game["bedroom"])
 
 	if result["ok"]:
-		InventoryRules.add(game, "gift_3")
+		InventoryRules.add(game, "gift_3", player)
 		game["last_event"] = "%s found the third present!" % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
@@ -386,7 +386,7 @@ static func _take_bedroom_photo(game: Dictionary, player: int) -> void:
 	var result := BedroomRules.take_photo(game["bedroom"])
 
 	if result["ok"]:
-		InventoryRules.add(game, "photo_piece_3")  # the photo is torn in three (spec 21)
+		InventoryRules.add(game, "photo_piece_3", player)  # the photo is torn in three (spec 21)
 		game["last_event"] = _photo_piece_message(game, who)
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
@@ -399,7 +399,7 @@ static func _take_key(game: Dictionary, player: int) -> void:
 	var who := "Player %d" % (player + 1)
 	var result := AtticRules.take_key(game["attic"])
 	if result["ok"]:
-		InventoryRules.add(game, "key")
+		InventoryRules.add(game, "key", player)
 		game["last_event"] = "%s took the key. He didn't wake up... yet." % who
 	else:
 		game["last_event"] = "%s: %s" % [who, result["error"]]
@@ -412,7 +412,7 @@ static func _take_piece(game: Dictionary, player: int, data: Dictionary) -> void
 	if game.get("location") != room:
 		game["last_event"] = "%s: go into the %s first" % [who, room]
 		return
-	var error := PhotoRules.take_piece(game, room)
+	var error := PhotoRules.take_piece(game, room, player)
 	if error == "":
 		game["last_event"] = _photo_piece_message(game, who)
 	else:
@@ -425,7 +425,7 @@ static func _assemble_photo(game: Dictionary, player: int, data: Dictionary) -> 
 	var order = data.get("order", [])
 	if typeof(order) != TYPE_ARRAY:
 		order = []
-	var error := PhotoRules.assemble(game, order)
+	var error := PhotoRules.assemble(game, order, player)
 	if error == "":
 		game["last_event"] = "%s put the photo together: Santa and a young, laughing Jingles. Perhaps this memory of happier times could change his mind." % who
 	else:
@@ -441,3 +441,10 @@ static func _photo_piece_message(game: Dictionary, who: String) -> String:
 		return "%s found a torn piece of a photo! You have all three photo pieces. Click the photo slot in your inventory to put them together." % who
 
 	return "%s found a torn piece of a photo!" % who
+
+
+# A wrong try that costs time: the clock and the results card (spec 34).
+static func _add_mistake(game: Dictionary, seconds: int) -> void:
+	game["penalty_seconds"] += seconds
+	game["mistakes"] = game.get("mistakes", 0) + 1
+	game["mistake_seconds"] = game.get("mistake_seconds", 0) + seconds
