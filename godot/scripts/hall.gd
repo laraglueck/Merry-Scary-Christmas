@@ -8,6 +8,8 @@
 # The rules live in fuse_rules.gd and house_rules.gd. This script only shows them.
 extends Control
 
+const HoverGlow = preload("res://scripts/hover_glow.gd")  # spec 34
+
 const ButtonStyle = preload("res://scripts/button_style.gd")
 const Rules = preload("res://scripts/rules/fuse_rules.gd")
 const Settings = preload("res://scripts/settings.gd")
@@ -846,6 +848,7 @@ func _build_ui() -> void:
 	_doll_note.rotation_degrees = -12
 	_doll_note.tooltip_text = "A crumpled note"
 	_doll_note.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	HoverGlow.item(_doll_note)
 	_place(_doll_note, DOLL_NOTE_RECT)
 	_doll_note.pressed.connect(_on_doll_note_pressed)
 	_doll_note.visible = _alone()
@@ -1214,10 +1217,7 @@ func _style_spot(button: Button, node_name: String, font_size: int) -> void:
 	button.add_theme_color_override("font_disabled_color", Color(0.8, 0.75, 0.7))
 	button.add_theme_color_override("font_outline_color", Color.BLACK)
 	button.add_theme_constant_override("outline_size", 5)
-	button.add_theme_stylebox_override("hover", _spot_style(HIGHLIGHT))
-	button.add_theme_stylebox_override("pressed", _spot_style(HIGHLIGHT))
-	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND  # like in every room (spec 25)
+	HoverGlow.spot(button)  # a soft glow on hover, the hand cursor (spec 25, 34)
 
 
 func _plain_button(node_name: String, text: String, action: Callable) -> Button:
